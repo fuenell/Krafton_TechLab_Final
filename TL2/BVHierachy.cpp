@@ -5,52 +5,6 @@
 #include <algorithm>
 #include <cfloat>
 
-namespace
-{
-    // 배열에서 특정 액터 1개를 인-플레이스 제거 (순서 보존, 추가 할당 없음)
-    bool RemoveActorOnce(TArray<AActor*>& Arr, AActor* Actor)
-    {
-        auto it = std::find(Arr.begin(), Arr.end(), Actor);
-        if (it == Arr.end()) return false;
-        Arr.erase(it);
-        return true;
-    }
-
-    // 디버그 라인 데이터 생성(UAABoundingBoxComponent::CreateLineData와 유사)
-    void BuildBoxLines(const FBound& B, OUT TArray<FVector>& Start, OUT TArray<FVector>& End, OUT TArray<FVector4>& Color, const FVector4& LineColor)
-    {
-        const FVector Min = B.Min;
-        const FVector Max = B.Max;
-
-        const FVector v0(Min.X, Min.Y, Min.Z);
-        const FVector v1(Max.X, Min.Y, Min.Z);
-        const FVector v2(Max.X, Max.Y, Min.Z);
-        const FVector v3(Min.X, Max.Y, Min.Z);
-        const FVector v4(Min.X, Min.Y, Max.Z);
-        const FVector v5(Max.X, Min.Y, Max.Z);
-        const FVector v6(Max.X, Max.Y, Max.Z);
-        const FVector v7(Min.X, Max.Y, Max.Z);
-
-        // 아래쪽 면
-        Start.Add(v0); End.Add(v1); Color.Add(LineColor);
-        Start.Add(v1); End.Add(v2); Color.Add(LineColor);
-        Start.Add(v2); End.Add(v3); Color.Add(LineColor);
-        Start.Add(v3); End.Add(v0); Color.Add(LineColor);
-
-        // 위쪽 면
-        Start.Add(v4); End.Add(v5); Color.Add(LineColor);
-        Start.Add(v5); End.Add(v6); Color.Add(LineColor);
-        Start.Add(v6); End.Add(v7); Color.Add(LineColor);
-        Start.Add(v7); End.Add(v4); Color.Add(LineColor);
-
-        // 기둥
-        Start.Add(v0); End.Add(v4); Color.Add(LineColor);
-        Start.Add(v1); End.Add(v5); Color.Add(LineColor);
-        Start.Add(v2); End.Add(v6); Color.Add(LineColor);
-        Start.Add(v3); End.Add(v7); Color.Add(LineColor);
-    }
-}
-
 FBVHierachy::FBVHierachy(const FBound& InBounds, int InDepth, int InMaxDepth, int InMaxObjects)
     : Depth(InDepth)
     , MaxDepth(InMaxDepth)
@@ -139,6 +93,75 @@ void FBVHierachy::Insert(AActor* InActor, const FBound& ActorBounds)
 
 void FBVHierachy::BulkInsert(const TArray<std::pair<AActor*, FBound>>& ActorsAndBounds)
 {
+    // Smart path: if batch is large relative to current tree, rebuild for balance
+    const int N = TotalActorCount();
+    const int M = (int)ActorsAndBounds.size();
+
+    // Heuristics (tunable):
+    const int MinRebuildN = 2000;     // small trees rebuild cheaply
+    const float RelRatio = 0.30f;     // if batch >= 30% of current size
+    const int AbsMThreshold = 1500;   // absolute batch threshold
+
+    const bool shouldRebuild =
+        (N == 0) ||
+        (N <= MinRebuildN) ||
+        (M >= (int)(RelRatio * N)) ||
+        (M >= AbsMThreshold);
+
+    if (shouldRebuild)
+    {
+        // Build a combined list: existing cached bounds (prefer incoming overrides)
+        TSet<AActor*> incoming;
+        incoming.reserve(ActorsAndBounds.size());
+        for (const auto& it : ActorsAndBounds)
+        {
+            incoming.insert(it.first);
+        }
+
+        TArray<std::pair<AActor*, FBound>> Combined;
+        Combined.reserve((size_t)N + ActorsAndBounds.size());
+
+        // Add existing ones that are NOT overridden by incoming batch
+        for (const auto& kv : ActorLastBounds)
+        {
+            if (incoming.find(kv.first) == incoming.end())
+            {
+                Combined.push_back({ kv.first, kv.second });
+            }
+        }
+        // Append incoming (new values take precedence)
+        for (const auto& it : ActorsAndBounds)
+        {
+            Combined.push_back(it);
+        }
+
+        // Build a new balanced tree, then adopt its contents into this node
+        FBVHierachy* NewRoot = FBVHierachy::Build(Combined, MaxDepth, MaxObjects);
+
+        // Drop current subtree first to avoid leaks
+        Clear();
+
+        // Adopt fields from NewRoot (safe because this is a member function, we can access privates)
+        Depth = NewRoot->Depth;
+        MaxDepth = NewRoot->MaxDepth;
+        MaxObjects = NewRoot->MaxObjects;
+        Bounds = NewRoot->Bounds;
+        Actors = std::move(NewRoot->Actors);
+        Left = NewRoot->Left;
+        Right = NewRoot->Right;
+        ActorLastBounds = std::move(NewRoot->ActorLastBounds);
+
+        // Null out NewRoot so its destructor doesn't delete our adopted children
+        NewRoot->Left = nullptr;
+        NewRoot->Right = nullptr;
+        NewRoot->Actors = TArray<AActor*>();
+        NewRoot->ActorLastBounds = TMap<AActor*, FBound>();
+        delete NewRoot;
+
+        return;
+    }
+
+    // Otherwise, do incremental online inserts
     for (const auto& kv : ActorsAndBounds)
     {
         Insert(kv.first, kv.second);
@@ -158,13 +181,13 @@ bool FBVHierachy::Remove(AActor* InActor, const FBound& ActorBounds)
     const bool isLeaf = (Left == nullptr && Right == nullptr);
     if (isLeaf)
     {
-        if (RemoveActorOnce(Actors, InActor))
-        {
-            ActorLastBounds.Remove(InActor);
-            Refit();
-            return true;
-        }
-        return false;
+        auto it = std::find(Actors.begin(), Actors.end(), InActor);
+        if (it == Actors.end()) return false;
+
+        Actors.erase(it);
+        ActorLastBounds.Remove(InActor);
+        Refit();
+        return true;
     }
 
     // 2) 내부 노드: 교차하는 자식으로 위임
@@ -235,7 +258,38 @@ void FBVHierachy::DebugDraw(URenderer* Renderer) const
     TArray<FVector> Start;
     TArray<FVector> End;
     TArray<FVector4> Color;
-    BuildBoxLines(Bounds, Start, End, Color, LineColor);
+
+    const FVector Min = Bounds.Min;
+    const FVector Max = Bounds.Max;
+
+    const FVector v0(Min.X, Min.Y, Min.Z);
+    const FVector v1(Max.X, Min.Y, Min.Z);
+    const FVector v2(Max.X, Max.Y, Min.Z);
+    const FVector v3(Min.X, Max.Y, Min.Z);
+    const FVector v4(Min.X, Min.Y, Max.Z);
+    const FVector v5(Max.X, Min.Y, Max.Z);
+    const FVector v6(Max.X, Max.Y, Max.Z);
+    const FVector v7(Min.X, Max.Y, Max.Z);
+
+    // 아래쪽 면
+    Start.Add(v0); End.Add(v1); Color.Add(LineColor);
+    Start.Add(v1); End.Add(v2); Color.Add(LineColor);
+    Start.Add(v2); End.Add(v3); Color.Add(LineColor);
+    Start.Add(v3); End.Add(v0); Color.Add(LineColor);
+
+    // 위쪽 면
+    Start.Add(v4); End.Add(v5); Color.Add(LineColor);
+    Start.Add(v5); End.Add(v6); Color.Add(LineColor);
+    Start.Add(v6); End.Add(v7); Color.Add(LineColor);
+    Start.Add(v7); End.Add(v4); Color.Add(LineColor);
+
+    // 기둥
+    Start.Add(v0); End.Add(v4); Color.Add(LineColor);
+    Start.Add(v1); End.Add(v5); Color.Add(LineColor);
+    Start.Add(v2); End.Add(v6); Color.Add(LineColor);
+    Start.Add(v3); End.Add(v7); Color.Add(LineColor);
+
+
     Renderer->AddLines(Start, End, Color);
 
     if (Left) Left->DebugDraw(Renderer);

@@ -258,7 +258,7 @@ void UPrimitiveSpawnWidget::RenderWidget()
                 Oct->DebugDump();
             }
         }
-        if (FBVHierachy* BVH = World->GetBVH())
+        if (FBVHierachy* BVH = UWorldPartitionManager::GetInstance()->GetBVH())
         {
             ImGui::Text("BVH Nodes: %d", BVH->TotalNodeCount());
             ImGui::Text("BVH Actors: %d", BVH->TotalActorCount());
