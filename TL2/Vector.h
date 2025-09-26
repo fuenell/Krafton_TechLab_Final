@@ -302,22 +302,6 @@ struct alignas(16) FVector4
 
     FVector4(const __m128& InSimd) : SimdData(InSimd) {}
 
-    // Explicit copy constructor to ensure correct SIMD register handling
-    FVector4(const FVector4& Other)
-    {
-        this->SimdData = Other.SimdData;
-    }
-
-    // Explicit copy assignment operator
-    FVector4& operator=(const FVector4& Other)
-    {
-        if (this != &Other)
-        {
-            this->SimdData = Other.SimdData;
-        }
-        return *this;
-    }
-
     FVector4 ComponentMin(const FVector4& B) const
     {
         return FVector4(_mm_min_ps(this->SimdData, B.SimdData));
@@ -756,10 +740,10 @@ inline FVector4 operator*(const FVector4& V, const FMatrix& M)
     __m128 vW = _mm_shuffle_ps(V.SimdData, V.SimdData, _MM_SHUFFLE(3, 3, 3, 3));
 
     // Multiply each component with the corresponding matrix row
-    __m128 mRow0 = _mm_load_ps(&M.M[0][0]);
-    __m128 mRow1 = _mm_load_ps(&M.M[1][0]);
-    __m128 mRow2 = _mm_load_ps(&M.M[2][0]);
-    __m128 mRow3 = _mm_load_ps(&M.M[3][0]);
+    __m128 mRow0 = _mm_loadu_ps(&M.M[0][0]);
+    __m128 mRow1 = _mm_loadu_ps(&M.M[1][0]);
+    __m128 mRow2 = _mm_loadu_ps(&M.M[2][0]);
+    __m128 mRow3 = _mm_loadu_ps(&M.M[3][0]);
 
     __m128 result = _mm_mul_ps(vX, mRow0);
     result = _mm_add_ps(result, _mm_mul_ps(vY, mRow1));
