@@ -140,3 +140,82 @@ void FOctree::Split()
         Children[i] = new FOctree(ChildBounds, Depth + 1, MaxDepth, MaxObjects);
     }
 }
+
+int FOctree::TotalNodeCount() const
+{
+    // 자신 노드 
+    int Count = 1; 
+    if (Children[0])
+    {
+        for (int i = 0; i < 8; ++i)
+        {
+            if (Children[i]) Count += Children[i]->TotalNodeCount();
+        }
+    }
+    return Count;
+}
+
+int FOctree::TotalActorCount() const
+{
+    int Count = Actors.Num();
+    if (Children[0])
+    {
+        for (int i = 0; i < 8; ++i)
+        {
+            if (Children[i]) Count += Children[i]->TotalActorCount();
+        }
+    }
+    return Count;
+}
+
+int FOctree::MaxOccupiedDepth() const
+{
+    int MaxD = Depth;
+    if (Children[0])
+    {
+        for (int i = 0; i < 8; ++i)
+        {
+            if (Children[i])
+            {
+                int ChildDepth = Children[i]->MaxOccupiedDepth();
+                MaxD = (ChildDepth > MaxD) ? ChildDepth : MaxD;
+            }
+        }
+    }
+    return MaxD;
+}
+void FOctree::DebugDump() const
+{
+    UE_LOG("===== OCTREE DUMP BEGIN =====\r\n");
+    // iterative DFS to access private members safely inside class method
+    struct StackItem { const FOctree* Node; int D; };
+    TArray<StackItem> stack;
+    stack.push_back({ this, Depth });
+    while (!stack.empty())
+    {
+        StackItem it = stack.back();
+        stack.pop_back();
+
+        const FOctree* N = it.Node;
+        char buf[256];
+        std::snprintf(buf, sizeof(buf),
+            "[Octree] depth=%d, actors=%zu, bounds=[(%.1f,%.1f,%.1f)-(%.1f,%.1f,%.1f)]\r\n",
+            it.D,
+            N->Actors.size(),
+            N->Bounds.Min.X, N->Bounds.Min.Y, N->Bounds.Min.Z,
+            N->Bounds.Max.X, N->Bounds.Max.Y, N->Bounds.Max.Z);
+        UE_LOG(buf);
+
+        if (N->Children[0])
+        {
+            for (int i = 7; i >= 0; --i)
+            {
+                if (N->Children[i])
+                {
+                    stack.push_back({ N->Children[i], it.D + 1 });
+                }
+            }
+        }
+    }
+    UE_LOG("===== OCTREE DUMP END =====\r\n");
+}

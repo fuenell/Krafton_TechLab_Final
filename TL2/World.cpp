@@ -497,6 +497,7 @@ void UWorld::OnActorDestroyed(AActor* Actor)
 
 void UWorld::UpdateActorInOctree(AActor* Actor, const FBound& OldBounds, const FBound& NewBounds)
 {
+
     if (!Actor) return;
     if (!SceneOctree) return;
     SceneOctree->Update(Actor, OldBounds, NewBounds);
