@@ -7,6 +7,7 @@
 #include "Octree.h"
 #include "BVHierachy.h"
 #include "StaticMeshActor.h"
+#include "Frustum.h"
 
 
 namespace 
@@ -71,6 +72,7 @@ void UWorldPartitionManager::BulkRegister(const TArray<AActor*>& Actors)
 		{
 			ActorsAndBounds.push_back({ Actor, Actor->GetBounds() });
 		}
+		DirtySet.erase(Actor);
 	}
 
 	// Octree: 기존 대량 삽입
@@ -127,7 +129,8 @@ void UWorldPartitionManager::Update(float DeltaTime, uint32 InBugetCount)
 
 void UWorldPartitionManager::RayQuery(FRay InRay, OUT TArray<AActor*>& Actors)
 {
-    SceneOctree->QueryRay(InRay, Actors);
+    //SceneOctree->QueryRay(InRay, Actors);
+	//BVH->QueryRay(InRay, Actors);
 }
 
 void UWorldPartitionManager::RayQueryOrdered(FRay InRay, OUT TArray<std::pair<AActor*, float>>& Candidates)
@@ -138,8 +141,12 @@ void UWorldPartitionManager::RayQueryOrdered(FRay InRay, OUT TArray<std::pair<AA
     }
 }
 
-void UWorldPartitionManager::Query(FBound InBound, OUT TArray<AActor*>& Actors)
+void UWorldPartitionManager::FrustumQuery(Frustum InFrustum)
 {
+	if(BVH)
+	{
+		BVH->QueryFrustum(InFrustum);
+	}
 }
 
 void UWorldPartitionManager::ClearSceneOctree()

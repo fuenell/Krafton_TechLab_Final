@@ -189,6 +189,37 @@ bool IsAABBVisible(const Frustum& Frustum, const FBound& Bound)
            Intersects(Frustum.FarFace, Center, Extents);
 }
 
+bool IsAABBIntersects(const Frustum& F, const FBound& B)
+{
+    // 부분 교차(Intersect)만 true. 완전 내부/완전 외부는 false.
+    const FVector Center3 = (B.Min + B.Max) * 0.5f;
+    const FVector Extents3 = (B.Max - B.Min) * 0.5f;
+    const FVector4 Center = MakePoint4(Center3);
+    const FVector4 Extents = MakeDir4(Extents3);
+
+    const Plane planes[6] = { F.LeftFace, F.RightFace, F.TopFace, F.BottomFace, F.NearFace, F.FarFace };
+
+    bool fullyInside = true;
+    for (int i = 0; i < 6; ++i)
+    {
+        const Plane& P = planes[i];
+        const float Distance = Dot3(P.Normal, Center) - P.Distance;
+        const float Radius = std::abs(P.Normal.X) * Extents.X + std::abs(P.Normal.Y) * Extents.Y + std::abs(P.Normal.Z) * Extents.Z;
+
+        if (Distance + Radius < 0.0f)
+        {
+            // 완전 외부 → 교차 아님
+            return false;
+        }
+        if (Distance - Radius < 0.0f)
+        {
+            // 이 평면 기준으로는 완전 내부가 아님 → 교차 가능성
+            fullyInside = false;
+        }
+    }
+    // 모든 평면 기준으로 완전 내부면 false, 일부 평면에서만 내부가 아니면 true
+    return !fullyInside;
+}
 
 
 // 추후에 절두체를 VP 행렬에서 바로 추출하는 방법도 필요하다면 아래를 참고.

@@ -27,6 +27,7 @@ struct Frustum
 
 Frustum CreateFrustumFromCamera(const UCameraComponent& Camera, float OverrideAspect = -1.0f);
 bool IsAABBVisible(const Frustum& Frustum, const FBound& Bound);
+bool IsAABBIntersects(const Frustum& Frustum, const FBound& Bound);
 
 // AVX-optimized culling for 8 AABBs
 // Processes 8 AABBs against the frustum.

@@ -337,16 +337,18 @@ void UWorld::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 
 	FVector rgb(1.0f, 1.0f, 1.0f);
 
-
-	// ============ Culling Logic Dispatch ========= //
-	//TArray<AActor*> CulledActors = PartitionManager.Query(Frustum Data); 
-
-
 	// === Begin Line Batch for all actors ===
 	Renderer->BeginLineBatch();
 
 	// === Draw Actors with Show Flag checks ===
 	Renderer->SetViewModeType(ViewModeIndex);
+
+
+	// ============ Culling Logic Dispatch ========= //
+	for (AActor* Actor : Actors)
+		Actor->SetCulled(true);
+	UWorldPartitionManager::GetInstance()->FrustumQuery(ViewFrustum);
+
 
 	// 일반 액터들 렌더링
 	if (IsShowFlagEnabled(EEngineShowFlags::SF_Primitives))
@@ -355,25 +357,25 @@ void UWorld::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 		{
 			if (!Actor) continue;
 			if (Actor->GetActorHiddenInGame()) continue;
+			if (Actor->GetCulled()) continue;
 
 			if (Cast<AStaticMeshActor>(Actor) && !IsShowFlagEnabled(EEngineShowFlags::SF_StaticMeshes))
 				continue;
 
-			if (CamComp)
-			{
-				if (AStaticMeshActor* MeshActor = Cast<AStaticMeshActor>(Actor))
-				{
-					if (UAABoundingBoxComponent* Box = Cast<UAABoundingBoxComponent>(MeshActor->CollisionComponent))
-					{
-						const FBound Bound = Box->GetWorldBound();
-						if (!IsAABBVisible(ViewFrustum, Bound))
-						{
-							continue;
-						}
-					}
-				}
-
-			}
+			//if (CamComp)
+			//{
+			//	if (AStaticMeshActor* MeshActor = Cast<AStaticMeshActor>(Actor))
+			//	{
+			//		if (UAABoundingBoxComponent* Box = Cast<UAABoundingBoxComponent>(MeshActor->CollisionComponent))
+			//		{
+			//			const FBound Bound = Box->GetWorldBound();
+			//			if (!IsAABBVisible(ViewFrustum, Bound))
+			//			{
+			//				continue;
+			//			}
+			//		}
+			//	}
+			//}
 			bool bIsSelected = SelectionManager.IsActorSelected(Actor);
 			/*if (bIsSelected)
 				Renderer->OMSetDepthStencilState(EComparisonFunc::Always);*/ // 이렇게 하면, 같은 메시에 속한 정점끼리도 뒤에 있는게 앞에 그려지는 경우가 발생해, 이상하게 렌더링 됨.
@@ -872,13 +874,6 @@ void UWorld::LoadScene(const FString& SceneName)
 		//UWorldPartitionManager::GetInstance()->BulkRegister();
 		// 벌크 삽입을 위해 목록에 추가
 		SpawnedActors.push_back(StaticMeshActor);
-		//UWorldPartitionManager::GetInstance()->Register(StaticMeshActor);
-		//FVector extent = StaticMeshActor->GetBounds().GetExtent();
-		//float length = sqrtf(extent.X * extent.X +
-		//	extent.Y * extent.Y +
-		//	extent.Z * extent.Z);
-		//UE_LOG("APPLE_EXTENT : %f ", length);
-		//UWorldPartitionManager::GetInstance()->GetSceneOctree()->Insert(StaticMeshActor, StaticMeshActor->GetBounds());
 	}
 	
 	// 모든 액터를 한 번에 벌크 등록 하여 성능 최적화

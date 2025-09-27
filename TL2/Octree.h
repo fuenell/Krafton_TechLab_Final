@@ -59,6 +59,7 @@ private:
 	FOctree* Children[8]; // 8분할 
 
     TMap<AActor*, FBound> ActorLastBounds;
+    TArray<AActor*> ActorArray;
     
     // 메모리 풀링을 위한 정적 스택
     static TArray<FOctree*> NodePool;

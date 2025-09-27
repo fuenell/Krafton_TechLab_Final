@@ -3,6 +3,7 @@
 #include "AABoundingBoxComponent.h" // FBound helpers
 #include "Vector.h"
 #include <algorithm>
+#include "Frustum.h"
 #include <cfloat>
 
 FBVHierachy::FBVHierachy(const FBound& InBounds, int InDepth, int InMaxDepth, int InMaxObjects)
@@ -25,6 +26,7 @@ void FBVHierachy::Clear()
     // 액터/맵 비우기
     Actors = TArray<AActor*>();
     ActorLastBounds = TMap<AActor*, FBound>();
+    ActorArray = TArray<AActor*>();
 
     // 자식 반환
     if (Left) { delete Left; Left = nullptr; }
@@ -43,6 +45,7 @@ void FBVHierachy::Insert(AActor* InActor, const FBound& ActorBounds)
     if (isLeaf)
     {
         Actors.Add(InActor);
+        ActorArray.Add(InActor);
 
         if (static_cast<uint32>(Actors.size()) > MaxObjects && Depth < MaxDepth)
         {
@@ -63,7 +66,10 @@ void FBVHierachy::Insert(AActor* InActor, const FBound& ActorBounds)
         Left = new FBVHierachy(ActorBounds, Depth + 1, MaxDepth, MaxObjects);
         Left->Actors.Add(InActor);
         Left->ActorLastBounds.Add(InActor, ActorBounds);
+        Left->ActorArray.Add(InActor);
         Left->Refit();
+        // 부모의 ActorArray도 업데이트
+        ActorArray.Add(InActor);
         Refit();
         return;
     }
@@ -72,7 +78,10 @@ void FBVHierachy::Insert(AActor* InActor, const FBound& ActorBounds)
         Right = new FBVHierachy(ActorBounds, Depth + 1, MaxDepth, MaxObjects);
         Right->Actors.Add(InActor);
         Right->ActorLastBounds.Add(InActor, ActorBounds);
+        Right->ActorArray.Add(InActor);
         Right->Refit();
+        // 부모의 ActorArray도 업데이트
+        ActorArray.Add(InActor);
         Refit();
         return;
     }
@@ -106,6 +115,8 @@ void FBVHierachy::Insert(AActor* InActor, const FBound& ActorBounds)
     else
         Right->Insert(InActor, ActorBounds);
 
+    // 부모의 ActorArray도 업데이트
+    ActorArray.Add(InActor);
     Refit();
 }
 
@@ -167,12 +178,14 @@ void FBVHierachy::BulkInsert(const TArray<std::pair<AActor*, FBound>>& ActorsAnd
         Left = NewRoot->Left;
         Right = NewRoot->Right;
         ActorLastBounds = std::move(NewRoot->ActorLastBounds);
+        ActorArray = std::move(NewRoot->ActorArray);
 
         //껍데기 포인터 반환
         NewRoot->Left = nullptr;
         NewRoot->Right = nullptr;
         NewRoot->Actors = TArray<AActor*>();
         NewRoot->ActorLastBounds = TMap<AActor*, FBound>();
+        NewRoot->ActorArray = TArray<AActor*>();
         delete NewRoot;
 
         return;
@@ -202,6 +215,10 @@ bool FBVHierachy::Remove(AActor* InActor, const FBound& ActorBounds)
         if (it == Actors.end()) return false;
 
         Actors.erase(it);
+        // ActorArray에서도 제거
+        auto arrayIt = std::find(ActorArray.begin(), ActorArray.end(), InActor);
+        if (arrayIt != ActorArray.end()) ActorArray.erase(arrayIt);
+        
         ActorLastBounds.Remove(InActor);
         Refit();
         return true;
@@ -221,6 +238,11 @@ bool FBVHierachy::Remove(AActor* InActor, const FBound& ActorBounds)
         bool rightEmpty = (!Right) || (Right->Left == nullptr && Right->Right == nullptr && Right->Actors.empty());
         if (Left && leftEmpty) { delete Left; Left = nullptr; }
         if (Right && rightEmpty) { delete Right; Right = nullptr; }
+        
+        // ActorArray에서도 제거
+        auto arrayIt = std::find(ActorArray.begin(), ActorArray.end(), InActor);
+        if (arrayIt != ActorArray.end()) ActorArray.erase(arrayIt);
+        
         Refit();
         ActorLastBounds.Remove(InActor);
     }
@@ -256,12 +278,74 @@ void FBVHierachy::Update(AActor* InActor)
     }
 }
 
-void FBVHierachy::Query(FRay InRay, OUT TArray<AActor*>& Actors)
+void FBVHierachy::QueryRay(const FRay& InRay, OUT TArray<AActor*>& Actors)
 {
+    //교차 X시 종료
+    if (!Bounds.IntersectsRay(InRay))
+        return;
+
+    const bool isLeaf = (Left == nullptr && Right == nullptr);
+    if (isLeaf)
+    {
+        // 리프 노드: 현재 노드의 액터에 대해 교차 검증 및 액터 추가
+        for (AActor* Actor : this->Actors)
+        {
+            if (!Actor) continue;
+            const FBound* Cached = ActorLastBounds.Find(Actor);
+            FBound Box = Cached ? *Cached : Actor->GetBounds();
+            if (Box.IntersectsRay(InRay))
+            {
+                Actors.Add(Actor);
+            }
+        }
+    }
+    else
+    {
+        // 내부 노드: 자식들에 대해서만 재귀적 호출
+        if (Left) Left->QueryRay(InRay, Actors);
+        if (Right) Right->QueryRay(InRay, Actors);
+    }
 }
 
-void FBVHierachy::Query(FBound InBound, OUT TArray<AActor*>& Actors)
+void FBVHierachy::QueryFrustum(const Frustum& InFrustum)
 {
+    //프러스텀 외부에 존재 시 종료
+    if (!IsAABBVisible(InFrustum, Bounds))
+        return;
+
+    //프러스텀 내부에 존재 시 (부분 교차가 아니라 완전 내부면)
+    if (!IsAABBIntersects(InFrustum, Bounds))
+    {
+        for (auto& actor : ActorArray)
+        {
+            actor->SetCulled(false);
+        }
+        return;
+    }
+
+    //프러스텀과 교차 시
+    const bool isLeaf = (Left == nullptr && Right == nullptr);
+    
+    if (isLeaf)
+    {
+        // 리프 노드: 현재 노드의 액터에 대해 개별 검증
+        for (AActor* Actor : this->Actors)
+        {
+            if (!Actor) continue;
+            const FBound* Cached = ActorLastBounds.Find(Actor);
+            FBound Box = Cached ? *Cached : Actor->GetBounds();
+            if (IsAABBVisible(InFrustum, Box))
+            {
+                Actor->SetCulled(false);
+            }
+        }
+    }
+    else
+    {
+        // 내부 노드: 자식들에 대해서만 재귀 호출
+        if (Left) Left->QueryFrustum(InFrustum);
+        if (Right) Right->QueryFrustum(InFrustum);
+    }
 }
 
 void FBVHierachy::DebugDraw(URenderer* Renderer) const
@@ -314,19 +398,18 @@ void FBVHierachy::DebugDraw(URenderer* Renderer) const
 
 int FBVHierachy::TotalNodeCount() const
 {
-    int count = 1; // self
-    if (Left) count += Left->TotalNodeCount();
-    if (Right) count += Right->TotalNodeCount();
-    return count;
+    int Count = 1; // self
+    if (Left) Count += Left->TotalNodeCount();
+    if (Right) Count += Right->TotalNodeCount();
+    return Count;
 }
 
 int FBVHierachy::TotalActorCount() const
 {
-    int count = 0;
-    for (auto* a : Actors) { (void)a; ++count; }
-    if (Left) count += Left->TotalActorCount();
-    if (Right) count += Right->TotalActorCount();
-    return count;
+    int Count = Actors.Num();
+    if (Left) Count += Left->TotalActorCount();
+    if (Right) Count += Right->TotalActorCount();
+    return Count;
 }
 
 int FBVHierachy::MaxOccupiedDepth() const
@@ -453,16 +536,28 @@ void FBVHierachy::Split()
     for (auto* a : leftActors)
     {
         const FBound* pb = ActorLastBounds.Find(a);
-        if (pb) { Left->Actors.Add(a); Left->ActorLastBounds.Add(a, *pb); }
+        if (pb) 
+        { 
+            Left->Actors.Add(a); 
+            Left->ActorLastBounds.Add(a, *pb);
+            Left->ActorArray.Add(a);
+        }
     }
     for (auto* a : rightActors)
     {
         const FBound* pb = ActorLastBounds.Find(a);
-        if (pb) { Right->Actors.Add(a); Right->ActorLastBounds.Add(a, *pb); }
+        if (pb) 
+        { 
+            Right->Actors.Add(a); 
+            Right->ActorLastBounds.Add(a, *pb);
+            Right->ActorArray.Add(a);
+        }
     }
 
-    // 부모의 액터 비움
+    // 부모의 액터 비움 (내부 노드가 되므로)
     Actors = TArray<AActor*>();
+    // ActorArray는 전체 액터들을 유지 (자식 노드들의 합집)
+    ActorArray;
 
     // 자식 경계 재적합 후, 부모도 갱신
     Left->Refit();
@@ -575,6 +670,7 @@ FBVHierachy* FBVHierachy::BuildRecursive(TArray<FBuildItem>& Items, int Depth, i
         {
             node->Actors.Add(it.Actor);
             node->ActorLastBounds.Add(it.Actor, it.Box);
+            node->ActorArray.Add(it.Actor);
         }
         node->Refit();
         return node;
@@ -637,6 +733,27 @@ FBVHierachy* FBVHierachy::BuildRecursive(TArray<FBuildItem>& Items, int Depth, i
 
     node->Left = BuildRecursive(LeftItems, Depth + 1, InMaxDepth, InMaxObjects);
     node->Right = BuildRecursive(RightItems, Depth + 1, InMaxDepth, InMaxObjects);
+
+    // 자식들의 캐시(ActorLastBounds)를 부모로 누적해 루트까지 올라가도록 함
+    node->ActorLastBounds = TMap<AActor*, FBound>();
+    node->ActorArray = TArray<AActor*>();
+    if (node->Left)
+    {
+        for (const auto& kv : node->Left->ActorLastBounds)
+        {
+            node->ActorLastBounds.Add(kv.first, kv.second);
+        }
+        node->ActorArray.Append(node->Left->ActorArray);
+    }
+    if (node->Right)
+    {
+        for (const auto& kv : node->Right->ActorLastBounds)
+        {
+            node->ActorLastBounds.Add(kv.first, kv.second);
+        }
+        node->ActorArray.Append(node->Right->ActorArray);
+    }
+
     node->Refit();
     return node;
 }

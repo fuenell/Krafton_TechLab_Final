@@ -2,6 +2,8 @@
 
 #include <vector>
 
+struct Frustum;
+
 class FBVHierachy
 {
 public:
@@ -24,8 +26,8 @@ public:
     void Remove(AActor* InActor);
     void Update(AActor* InActor);
 
-    void Query(FRay InRay, OUT TArray<AActor*>& Actors);
-    void Query(FBound InBound, OUT TArray<AActor*>& Actors);
+    void QueryRay(const FRay& InRay, OUT TArray<AActor*>& Actors);
+    void QueryFrustum(const Frustum& InFrustum);
 
     // Debug draw
     void DebugDraw(URenderer* Renderer) const;
@@ -65,7 +67,11 @@ private:
     FBVHierachy* Left;
     FBVHierachy* Right;
 
+    // 서브트리 내 모든 액터를 빠르게 덤프하기 위한 리스트 (중복 없음)
+    TArray<AActor*> SubtreeActors;
+    TSet<AActor*>    SubtreeSet;
+
     // 액터의 마지막 바운드 캐시 (루트 호출 기준으로 갱신)
     TMap<AActor*, FBound> ActorLastBounds;
-
+    TArray<AActor*> ActorArray;
 };
