@@ -25,6 +25,8 @@ void FBVHierachy::Clear()
 {
     // 액터/맵 비우기
     Actors = TArray<AActor*>();
+    SubtreeActors = TArray<AActor*>();
+    SubtreeSet = TSet<AActor*>();
     ActorLastBounds = TMap<AActor*, FBound>();
 
     // 자식 반환
@@ -39,11 +41,19 @@ void FBVHierachy::Insert(AActor* InActor, const FBound& ActorBounds)
     // 캐시 갱신
     ActorLastBounds.Add(InActor, ActorBounds);
 
+    // 서브트리 리스트에 중복 없이 추가 (set으로 체크)
+    if (SubtreeSet.find(InActor) == SubtreeSet.end())
+    {
+        SubtreeSet.insert(InActor);
+        SubtreeActors.Add(InActor);
+    }
+
     ////// 리프 노드일 경우 //////
     const bool isLeaf = (Left == nullptr && Right == nullptr);
     if (isLeaf)
     {
-        Actors.Add(InActor);
+        if (std::find(Actors.begin(), Actors.end(), InActor) == Actors.end())
+            Actors.Add(InActor);
 
         if (static_cast<uint32>(Actors.size()) > MaxObjects && Depth < MaxDepth)
         {
@@ -204,6 +214,10 @@ bool FBVHierachy::Remove(AActor* InActor, const FBound& ActorBounds)
 
         Actors.erase(it);
         ActorLastBounds.Remove(InActor);
+        // 현재 노드의 서브트리 리스트에서도 제거
+        SubtreeSet.erase(InActor);
+        auto it2 = std::find(SubtreeActors.begin(), SubtreeActors.end(), InActor);
+        if (it2 != SubtreeActors.end()) SubtreeActors.erase(it2);
         Refit();
         return true;
     }
@@ -222,6 +236,10 @@ bool FBVHierachy::Remove(AActor* InActor, const FBound& ActorBounds)
         bool rightEmpty = (!Right) || (Right->Left == nullptr && Right->Right == nullptr && Right->Actors.empty());
         if (Left && leftEmpty) { delete Left; Left = nullptr; }
         if (Right && rightEmpty) { delete Right; Right = nullptr; }
+        // 현재 노드의 서브트리 리스트에서도 제거
+        SubtreeSet.erase(InActor);
+        auto it2 = std::find(SubtreeActors.begin(), SubtreeActors.end(), InActor);
+        if (it2 != SubtreeActors.end()) SubtreeActors.erase(it2);
         Refit();
         ActorLastBounds.Remove(InActor);
     }
@@ -289,11 +307,11 @@ void FBVHierachy::QueryFrustum(Frustum InFrustum, OUT TArray<AActor*>& Actors)
     //프러스텀 내부에 존재 시 (부분 교차가 아니라 완전 내부면)
     if (!IsAABBIntersects(InFrustum, Bounds))
     {
-        // 완전 내부: 현재 노드의 캐시(ActorLastBounds)에 들어있는 모든 액터를 그대로 추가
-        for (const auto& kv : ActorLastBounds)
+        // 완전 내부: 서브트리 액터 리스트를 통째로 추가
+        if (!SubtreeActors.empty())
         {
-            AActor* A = kv.first;
-            if (A) Actors.Add(A);
+            Actors.reserve(Actors.size() + SubtreeActors.size());
+            for (AActor* A : SubtreeActors) { if (A) Actors.Add(A); }
         }
         return;
     }
@@ -626,6 +644,9 @@ FBVHierachy* FBVHierachy::BuildRecursive(TArray<FBuildItem>& Items, int Depth, i
         {
             node->Actors.Add(it.Actor);
             node->ActorLastBounds.Add(it.Actor, it.Box);
+            // 리프의 서브트리 리스트는 자신의 Actors와 동일
+            node->SubtreeActors.Add(it.Actor);
+            node->SubtreeSet.insert(it.Actor);
         }
         node->Refit();
         return node;
@@ -703,6 +724,32 @@ FBVHierachy* FBVHierachy::BuildRecursive(TArray<FBuildItem>& Items, int Depth, i
         for (const auto& kv : node->Right->ActorLastBounds)
         {
             node->ActorLastBounds.Add(kv.first, kv.second);
+        }
+    }
+
+    // 부모의 서브트리 리스트 = 좌/우 자식의 서브트리 합집합 (set으로 중복 방지)
+    node->SubtreeActors = TArray<AActor*>();
+    node->SubtreeSet = TSet<AActor*>();
+    if (node->Left)
+    {
+        for (AActor* a : node->Left->SubtreeActors)
+        {
+            if (node->SubtreeSet.find(a) == node->SubtreeSet.end())
+            {
+                node->SubtreeSet.insert(a);
+                node->SubtreeActors.Add(a);
+            }
+        }
+    }
+    if (node->Right)
+    {
+        for (AActor* a : node->Right->SubtreeActors)
+        {
+            if (node->SubtreeSet.find(a) == node->SubtreeSet.end())
+            {
+                node->SubtreeSet.insert(a);
+                node->SubtreeActors.Add(a);
+            }
         }
     }
 
