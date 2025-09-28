@@ -2,7 +2,6 @@
 #include "GizmoActor.h"
 #include "Object.h"
 #include "GridActor.h"
-#include "Occlusion.h"
 #include "BVHierachy.h"
 #include "Frustum.h"
 #include "Enums.h"

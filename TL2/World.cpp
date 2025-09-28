@@ -19,7 +19,6 @@
 #include "Octree.h"
 #include "BVHierachy.h"
 #include "Frustum.h"
-#include "Occlusion.h"
 
 extern float CLIENTWIDTH;
 extern float CLIENTHEIGHT;
