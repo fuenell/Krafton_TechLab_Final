@@ -28,13 +28,9 @@ private:
 
 	FVector ComputeTriCenter(uint32 TriangleID, const TArray<FNormalVertex>& Vertices, const TArray<uint32>& Indices) const;
 
-	FBound ComputeBounds(uint32 Start, uint32 Count,
-		const TArray<FNormalVertex>& Vertices,
-		const TArray<uint32>& Indices) const;
+	FBound ComputeBounds(uint32 Start, uint32 Count, const TArray<FNormalVertex>& Vertices, const TArray<uint32>& Indices) const;
 
-	int BuildRecursive(uint32 Start, uint32 Count,
-		const TArray<FNormalVertex>& Vertices,
-		const TArray<uint32>& Indices);
+	int BuildRecursive(uint32 Start, uint32 Count, const TArray<FNormalVertex>& Vertices, const TArray<uint32>& Indices);
 
 private:
 

@@ -51,7 +51,6 @@ private:
 	UWorldPartitionManager(const UWorldPartitionManager&) = delete;
 	UWorldPartitionManager& operator=(const UWorldPartitionManager&) = delete;
 
-
 	//재시작시 필요 
 	void ClearSceneOctree();
 	void ClearBVHierachy();
