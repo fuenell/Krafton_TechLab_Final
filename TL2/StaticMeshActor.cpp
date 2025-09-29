@@ -8,6 +8,7 @@ AStaticMeshActor::AStaticMeshActor()
     Name = "Static Mesh Actor";
     StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>("StaticMeshComponent");
     StaticMeshComponent->SetupAttachment(RootComponent);
+    //StaticMeshComponent->SetOwnedActor(this);
 }
 
 void AStaticMeshActor::Tick(float DeltaTime)

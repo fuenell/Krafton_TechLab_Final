@@ -15,9 +15,13 @@ AGizmoActor::AGizmoActor()
 	Name = "Gizmo Actor";
 
 	//======= Arrow Component 생성 =======
-	ArrowX = NewObject<UGizmoArrowComponent>();
+	/*ArrowX = NewObject<UGizmoArrowComponent>();
 	ArrowY = NewObject<UGizmoArrowComponent>();
-	ArrowZ = NewObject<UGizmoArrowComponent>();
+	ArrowZ = NewObject<UGizmoArrowComponent>();*/
+
+	ArrowX = CreateDefaultSubobject<UGizmoArrowComponent>("GizmoArrowComponent");
+	ArrowY = CreateDefaultSubobject<UGizmoArrowComponent>("GizmoArrowComponent");
+	ArrowZ = CreateDefaultSubobject<UGizmoArrowComponent>("GizmoArrowComponent");
 
 	ArrowX->SetDirection(FVector(1.0f, 0.0f, 0.0f));//빨 
 	ArrowY->SetDirection(FVector(0.0f, 1.0f, 0.0f));//초

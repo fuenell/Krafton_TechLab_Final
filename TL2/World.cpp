@@ -379,34 +379,56 @@ void UWorld::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 			RHIDevice->GetDeviceContext()->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 			RHIDevice->PSSetDefaultSampler(0);
 
-			for (const FGroupInfo& GroupInfo : StaticMesh->GetMeshGroupInfo())
+			if (StaticMesh->HasMaterial())
 			{
-				if (StaticMesh->GetUsingComponents().empty())
+				for (const FGroupInfo& GroupInfo : StaticMesh->GetMeshGroupInfo())
 				{
-					continue;
-				}
-				UMaterial* const Material = UResourceManager::GetInstance().Get<UMaterial>(GroupInfo.InitialMaterialName);
-				const FObjMaterialInfo& MaterialInfo = Material->GetMaterialInfo();
-				bool bHasTexture = !(MaterialInfo.DiffuseTextureFileName.empty());
-				if (bHasTexture)
-				{
-					FWideString WTextureFileName(MaterialInfo.DiffuseTextureFileName.begin(), MaterialInfo.DiffuseTextureFileName.end()); // 단순 ascii라고 가정
-					FTextureData* TextureData = UResourceManager::GetInstance().CreateOrGetTextureData(WTextureFileName);
-					RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &(TextureData->TextureSRV));
-				}
-				RHIDevice->UpdatePixelConstantBuffers(MaterialInfo, true, bHasTexture); // PSSet도 해줌
-
-				for (UStaticMeshComponent* Component : StaticMesh->GetUsingComponents())
-				{
-					if (Component->GetCulled() == false)
+					if (StaticMesh->GetUsingComponents().empty())
 					{
-						Renderer->UpdateConstantBuffer(Component->GetWorldMatrix(), ViewMatrix, ProjectionMatrix);
-						Renderer->PrepareShader(Component->GetMaterial()->GetShader());
-						RHIDevice->GetDeviceContext()->DrawIndexed(GroupInfo.IndexCount, GroupInfo.StartIndex, 0);
+						continue;
+					}
+					UMaterial* const Material = UResourceManager::GetInstance().Get<UMaterial>(GroupInfo.InitialMaterialName);
+					const FObjMaterialInfo& MaterialInfo = Material->GetMaterialInfo();
+					bool bHasTexture = !(MaterialInfo.DiffuseTextureFileName.empty());
+					if (bHasTexture)
+					{
+						FWideString WTextureFileName(MaterialInfo.DiffuseTextureFileName.begin(), MaterialInfo.DiffuseTextureFileName.end()); // 단순 ascii라고 가정
+						FTextureData* TextureData = UResourceManager::GetInstance().CreateOrGetTextureData(WTextureFileName);
+						RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &(TextureData->TextureSRV));
+					}
+					RHIDevice->UpdatePixelConstantBuffers(MaterialInfo, true, bHasTexture); // PSSet도 해줌
+
+					for (UStaticMeshComponent* Component : StaticMesh->GetUsingComponents())
+					{
+						if (Component->GetCulled() == false)
+						{
+							Renderer->UpdateConstantBuffer(Component->GetWorldMatrix(), ViewMatrix, ProjectionMatrix);
+							Renderer->PrepareShader(Component->GetMaterial()->GetShader());
+							RHIDevice->GetDeviceContext()->DrawIndexed(GroupInfo.IndexCount, GroupInfo.StartIndex, 0);
+						}
 					}
 				}
-				
 			}
+			else
+			{
+				
+				for (UStaticMeshComponent* Component : StaticMesh->GetUsingComponents())
+				{
+					if (!Component->GetCulled() && !Cast<AGizmoActor>(Component->GetOwner()))
+					{
+						FObjMaterialInfo ObjMaterialInfo;
+						RHIDevice->UpdatePixelConstantBuffers(ObjMaterialInfo, false, false); // PSSet도 해줌
+
+						Renderer->UpdateConstantBuffer(Component->GetWorldMatrix(), ViewMatrix, ProjectionMatrix);
+						Renderer->PrepareShader(Component->GetMaterial()->GetShader());
+						RHIDevice->GetDeviceContext()->DrawIndexed(IndexCount, 0, 0);
+					}
+				}
+				//FObjMaterialInfo ObjMaterialInfo;
+				//RHIDevice->UpdatePixelConstantBuffers(ObjMaterialInfo, false, false); // PSSet도 해줌
+				//RHIDevice->GetDeviceContext()->DrawIndexed(IndexCount, 0, 0);
+			}
+			
 		}
 	}
 

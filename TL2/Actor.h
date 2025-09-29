@@ -64,6 +64,10 @@ public:
     void SetCulled(bool InCulled) 
     { 
         bIsCulled = InCulled;
+        if (Components.empty())
+        {
+            return;
+        }
         for (USceneComponent* Component : Components)
         {
             if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Component))
