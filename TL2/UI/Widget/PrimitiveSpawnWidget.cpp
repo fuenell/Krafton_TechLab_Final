@@ -21,20 +21,20 @@
 
 // ANSI 문자열을 UTF-8로 변환하는 유틸리티 함수
 // TODO (동민, 한글) - 혹시나 프로젝트 설정의 /utf-8 옵션을 끈다면 이 설정이 무의미해집니다.
-std::string ToUtf8(const std::string& ansi)
+FString ToUtf8(const FString& Ansi)
 {
-    if (ansi.empty()) return {};
+    if (Ansi.empty()) return {};
 
-    // ANSI -> wide
-    int wideLen = MultiByteToWideChar(CP_ACP, 0, ansi.c_str(), -1, nullptr, 0);
-    std::wstring wide(static_cast<size_t>(wideLen - 1), L'\0');
-    MultiByteToWideChar(CP_ACP, 0, ansi.c_str(), -1, wide.data(), wideLen);
+    // ANSI -> Wide
+    int WideLen = MultiByteToWideChar(CP_ACP, 0, Ansi.c_str(), -1, nullptr, 0);
+    FWideString Wide(static_cast<size_t>(WideLen - 1), L'\0');
+    MultiByteToWideChar(CP_ACP, 0, Ansi.c_str(), -1, Wide.data(), WideLen);
 
-    // wide -> UTF-8
-    int utf8Len = WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, nullptr, 0, nullptr, nullptr);
-    std::string utf8(static_cast<size_t>(utf8Len - 1), '\0');
-    WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, utf8.data(), utf8Len, nullptr, nullptr);
-    return utf8;
+    // Wide -> UTF-8
+    int Utf8Len = WideCharToMultiByte(CP_UTF8, 0, Wide.c_str(), -1, nullptr, 0, nullptr, nullptr);
+    FString Utf8(static_cast<size_t>(Utf8Len - 1), '\0');
+    WideCharToMultiByte(CP_UTF8, 0, Wide.c_str(), -1, Utf8.data(), Utf8Len, nullptr, nullptr);
+    return Utf8;
 }
 // std 함수들 정의
 using std::max;
@@ -196,8 +196,8 @@ void UPrimitiveSpawnWidget::RenderWidget()
             {
 				// TODO (동민, 한글) - UTF-8 설정이 안되어 있다면 주석으로 되돌리세요.
                 // ImGui::BulletText("%s", Path.c_str());
-                std::string utf8 = ToUtf8(Path);
-                ImGui::BulletText("%s", utf8.c_str());
+                FString Utf8 = ToUtf8(Path);
+                ImGui::BulletText("%s", Utf8.c_str());
             }
             ImGui::TreePop();
         }
