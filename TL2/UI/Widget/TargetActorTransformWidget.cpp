@@ -448,9 +448,10 @@ void UTargetActorTransformWidget::RenderWidget()
 		USceneComponent* ComponentPendingRemoval = nullptr;
 		USceneComponent* RootComponent = SelectedActor->GetRootComponent();
 		USceneComponent* PreviousSelectedComponent = SelectedComponent;   // ← 추가
+		USceneComponent* EditingComponent = GetEditingComponent();
 		const bool bActorSelected = (SelectedActor != nullptr && SelectedComponent == nullptr);
 
-		// 1) 컴포넌트 트리 박스 크기 관련
+		// 컴포넌트 트리 박스 크기 관련
 		static float PaneHeight = 120.0f;        // 초기값
 		const float SplitterThickness = 6.0f;    // 드래그 핸들 두께
 		const float MinTop = 1.0f;             // 위 박스 최소 높이
@@ -659,13 +660,11 @@ void UTargetActorTransformWidget::RenderWidget()
 			}
 
 			// 5) 값이 변한 프레임에 처리
-			if (Edited && SelectedActor)
+			if (Edited && (SelectedActor || EditingComponent))
 			{
 				if (Dragging)
 				{
-					// ── 드래그: "증분 누적" ──
 					FVector DeltaEuler = EditRotation - PrevEditRotationUI;
-
 					auto Wrap = [](float a)->float { while (a > 180.f) a -= 360.f; while (a < -180.f) a += 360.f; return a; };
 					DeltaEuler.X = Wrap(DeltaEuler.X);
 					DeltaEuler.Y = Wrap(DeltaEuler.Y);
@@ -674,23 +673,36 @@ void UTargetActorTransformWidget::RenderWidget()
 					const FQuat Qx = MakeQuatFromAxisAngle(FVector(1, 0, 0), DegreeToRadian(DeltaEuler.X));
 					const FQuat Qy = MakeQuatFromAxisAngle(FVector(0, 1, 0), DegreeToRadian(DeltaEuler.Y));
 					const FQuat Qz = MakeQuatFromAxisAngle(FVector(0, 0, 1), DegreeToRadian(DeltaEuler.Z));
-					const FQuat DeltaQuat = Qz * Qy * Qx; // ZYX
+					const FQuat DeltaQuat = (Qz * Qy * Qx).GetNormalized();
 
-					FQuat Cur = SelectedActor->GetActorRotation();
-					SelectedActor->SetActorRotation(DeltaQuat * Cur);
+					if (EditingComponent)
+					{
+						FQuat Cur = EditingComponent->GetRelativeRotation();
+						EditingComponent->SetRelativeRotation((DeltaQuat * Cur).GetNormalized());
+						if (SelectedActor) SelectedActor->MarkPartitionDirty();
+					}
+					else if (SelectedActor)
+					{
+						FQuat Cur = SelectedActor->GetActorRotation();
+						SelectedActor->SetActorRotation(DeltaQuat * Cur);
+					}
 
-					// 다음 증분 기준 업데이트
 					PrevEditRotationUI = EditRotation;
-					bRotationChanged = false; // PostProcess에서 중복 적용 방지
+					bRotationChanged = false; // PostProcess에서 다시 적용하지 않도록
 				}
 				else
 				{
-					// ── 키보드 입력: "절대 적용" ──
-					// (편집 중간에도 즉시 절대값을 적용해 반영)
-					const FQuat NewQ = QuatFromEulerZYX_Deg(EditRotation);
-					SelectedActor->SetActorRotation(NewQ);
+					const FQuat NewQ = QuatFromEulerZYX_Deg(EditRotation).GetNormalized();
+					if (EditingComponent)
+					{
+						EditingComponent->SetRelativeRotation(NewQ);
+						if (SelectedActor) SelectedActor->MarkPartitionDirty();
+					}
+					else if (SelectedActor)
+					{
+						SelectedActor->SetActorRotation(NewQ);
+					}
 
-					// 표시값을 결과에 스냅(짝함수라 값 유지됨)
 					EditRotation = EulerZYX_DegFromQuat(NewQ);
 					PrevEditRotationUI = EditRotation;
 					bRotationChanged = false;
@@ -700,12 +712,18 @@ void UTargetActorTransformWidget::RenderWidget()
 			// 6) 편집 종료 시(포커스 빠짐) 최종 스냅 & 상태 리셋
 			if (Deactivated)
 			{
-				if (SelectedActor)
+				if (EditingComponent)
+				{
+					EditRotation = EulerZYX_DegFromQuat(EditingComponent->GetRelativeRotation());
+					PrevEditRotationUI = EditRotation;
+				}
+				else if (SelectedActor)
 				{
 					EditRotation = EulerZYX_DegFromQuat(SelectedActor->GetActorRotation());
 					PrevEditRotationUI = EditRotation;
 				}
 				bRotationEditing = false;
+				bRotationChanged = false;
 			}
 		}
 
