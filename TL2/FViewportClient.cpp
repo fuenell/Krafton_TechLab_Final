@@ -8,6 +8,8 @@
 #include "SelectionManager.h"
 #include"GizmoActor.h"
 #include "RenderManager.h"
+#include "RenderSettings.h"
+#include <EditorEngine.h>
 FVector FViewportClient::CameraAddPosition{};
 
 FViewportClient::FViewportClient()
@@ -15,7 +17,6 @@ FViewportClient::FViewportClient()
     ViewportType = EViewportType::Perspective;
     // 직교 뷰별 기본 카메라 설정
     Camera = NewObject<ACameraActor>();
-    ViewPortCamera = Camera;
     SetupCameraMode();
 }
 
@@ -49,7 +50,7 @@ void FViewportClient::Draw(FViewport* Viewport)
         PerspectiveCameraFov = Camera->GetCameraComponent()->GetFOV();
           if (World)
           {
-              World->SetViewModeIndex(ViewModeIndex);
+              World->GetRenderSettings().SetViewModeIndex(ViewModeIndex);
               RENDER.Render(World, Viewport);
           }
         break;
@@ -61,12 +62,11 @@ void FViewportClient::Draw(FViewport* Viewport)
     case EViewportType::Orthographic_Bottom:
     case EViewportType::Orthographic_Right:
     {
-        Camera = ViewPortCamera;
         Camera->GetCameraComponent()->SetProjectionMode(ECameraProjectionMode::Orthographic);
         SetupCameraMode();
         if (World)
         {
-            World->SetViewModeIndex(ViewModeIndex);
+            World->GetRenderSettings().SetViewModeIndex(ViewModeIndex);
             RENDER.Render(World, Viewport);
         }
         break;
@@ -76,7 +76,6 @@ void FViewportClient::Draw(FViewport* Viewport)
 
 void FViewportClient::SetupCameraMode()
 {
-    Camera = ViewPortCamera;
     switch (ViewportType)
     {
     case EViewportType::Perspective:
@@ -172,8 +171,6 @@ void FViewportClient::MouseButtonDown(FViewport* Viewport, int32 X, int32 Y, int
     if (!Viewport || !World) // Only handle left mouse button
         return;
 
-
-
     // GetInstance viewport size
     FVector2D ViewportSize(static_cast<float>(Viewport->GetSizeX()), static_cast<float>(Viewport->GetSizeY()));
     FVector2D ViewportOffset(static_cast<float>(Viewport->GetStartX()), static_cast<float>(Viewport->GetStartY()));
@@ -190,6 +187,7 @@ void FViewportClient::MouseButtonDown(FViewport* Viewport, int32 X, int32 Y, int
         if (World->GetGizmoActor()->GetbIsHovering()) {
             return;
         }
+        Camera->SetWorld(World);
         PickedActor = CPickingSystem::PerformViewportPicking(AllActors, Camera, ViewportMousePos, ViewportSize, ViewportOffset, PickingAspectRatio,  Viewport);
 
 

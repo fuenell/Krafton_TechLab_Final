@@ -34,8 +34,8 @@ public:
     void SwitchPanel(SWindow* SwitchPanel);
 
     // 렌더/업데이트/입력 전달
-    void OnRender();
-    void OnUpdate(float deltaSecond);
+    void Render();
+    void Update(float deltaSecond);
     void ProcessInput();
 
     void OnMouseMove(FVector2D MousePos);

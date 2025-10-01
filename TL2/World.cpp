@@ -25,21 +25,14 @@
 #include "StaticMeshComponent.h"
 #include "Frustum.h"
 
-extern float CLIENTWIDTH;
-extern float CLIENTHEIGHT;
-
-UWorld& UWorld::GetInstance()
-{
-	static UWorld* Instance = nullptr;
-	if (Instance == nullptr)
-	{
-		Instance = NewObject<UWorld>();
-	}
-	return *Instance;
-}
-
 UWorld::UWorld()
+	: Partition(new UWorldPartitionManager())
 {
+	FObjManager::Preload();
+	CreateNewScene();
+
+	InitializeGrid();
+	InitializeGizmo();
 }
 
 UWorld::~UWorld()
@@ -49,22 +42,14 @@ UWorld::~UWorld()
 		ObjectFactory::DeleteObject(Actor);
 	}
 	Actors.clear();
+	for (AActor* Actor : EditorActors)
+	{
+		ObjectFactory::DeleteObject(Actor);
+	}
+	EditorActors.clear();
 
-	// Grid 정리 
-	ObjectFactory::DeleteObject(GridActor);
 	GridActor = nullptr;
-
-	// ObjManager 정리
-	FObjManager::Clear();
-}
-
-void UWorld::Initialize()
-{
-	FObjManager::Preload();
-	CreateNewScene();
-
-	InitializeGrid();
-	InitializeGizmo();
+	GizmoActor = nullptr;
 }
 
 void UWorld::InitializeGrid()
@@ -83,30 +68,22 @@ void UWorld::InitializeGizmo()
 	GizmoActor->SetActorTransform(FTransform(FVector{ 0, 0, 0 }, FQuat::MakeFromEuler(FVector{ 0, -90, 0 }),
 		FVector{ 1, 1, 1 }));
 
-	UI.SetGizmoActor(GizmoActor);
+	EditorActors.push_back(GizmoActor);
 }
 
 void UWorld::Tick(float DeltaSeconds)
 {
-	PARTITION.Update(DeltaSeconds, /*budget*/256);
+	Partition->Update(DeltaSeconds, /*budget*/256);
 
 	//순서 바꾸면 안댐
 	for (AActor* Actor : Actors)
 	{
 		if (Actor) Actor->Tick(DeltaSeconds);
 	}
-	for (AActor* EngineActor : EditorActors)
+	for (AActor* EditorActor : EditorActors)
 	{
-		if (EngineActor) EngineActor->Tick(DeltaSeconds);
+		if (EditorActor) EditorActor->Tick(DeltaSeconds);
 	}
-	GizmoActor->Tick(DeltaSeconds);
-
-	UI.Update(DeltaSeconds);
-}
-
-float UWorld::GetTimeSeconds() const
-{
-	return 0.0f;
 }
 
 FString UWorld::GenerateUniqueActorName(const FString& ActorType)
@@ -162,7 +139,7 @@ void UWorld::OnActorSpawned(AActor* Actor)
 {
 	if (Actor)
 	{
-		PARTITION.Register(Actor);
+		Partition->Register(Actor);
 	}
 }
 
@@ -170,7 +147,7 @@ void UWorld::OnActorDestroyed(AActor* Actor)
 {
 	if (Actor)
 	{
-		PARTITION.Unregister(Actor);
+		Partition->Unregister(Actor);
 	}
 }
 
@@ -213,7 +190,7 @@ void UWorld::CreateNewScene()
 	// 이름 카운터 초기화: 씬을 새로 시작할 때 각 BaseName 별 suffix를 0부터 다시 시작
 	ObjectTypeCounts.clear();
 
-	PARTITION.Clear();
+	Partition->Clear();
 }
 
 void UWorld::LoadScene(const FString& SceneName)
@@ -359,7 +336,7 @@ void UWorld::LoadScene(const FString& SceneName)
 	if (!SpawnedActors.empty())
 	{
 		UE_LOG("LoadScene: Using bulk registration for %zu actors\r\n", SpawnedActors.size());
-		PARTITION.BulkRegister(SpawnedActors);
+		Partition->BulkRegister(SpawnedActors);
 	}
 
 	// 3) 최종 보정: 전역 카운터는 절대 하향 금지 + 현재 사용된 최대값 이후로 설정
@@ -432,19 +409,3 @@ void UWorld::SaveScene(const FString& SceneName)
     FSceneLoader::Save(Primitives, CamPtr, SceneName);
 }
 
-void UWorld::SetCameraActor(ACameraActor* InCameraActor)
-{
-	MainCameraActor = InCameraActor;
-	UI.SetCamera(MainCameraActor);
-}
-
-AGizmoActor* UWorld::GetGizmoActor()
-{
-	return GizmoActor;
-}
-
-
-void UWorld::SetStaticMeshs()
-{
-	StaticMeshs = RESOURCE.GetAll<UStaticMesh>();
-}

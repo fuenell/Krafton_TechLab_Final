@@ -24,6 +24,7 @@
 #include "StaticMesh.h"
 #include "Material.h"
 #include "Texture.h"
+#include "RenderSettings.h"
 #include <EditorEngine.h>
 
 URenderManager::URenderManager()
@@ -55,7 +56,6 @@ void URenderManager::Render(UWorld* InWorld, FViewport* Viewport)
 	//엔진 접근 수정
 	if (!Renderer)
 	{
-		extern UEditorEngine GEngine;
 		Renderer = GEngine.GetRenderer();
 	}
 
@@ -67,7 +67,7 @@ void URenderManager::Render(UWorld* InWorld, FViewport* Viewport)
 
 	//기즈모 카메라 설정
 	World->GetGizmoActor()->SetCameraActor(Camera);
-    if (World) World->SetViewModeIndex(Client->GetViewModeIndex());
+	World->GetRenderSettings().SetViewModeIndex(Client->GetViewModeIndex());
     RenderViewports(Camera, Viewport);
 }
 
@@ -81,6 +81,9 @@ void URenderManager::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 	// 뷰포트의 실제 크기로 aspect ratio 계산
 	float ViewportAspectRatio = static_cast<float>(Viewport->GetSizeX()) / static_cast<float>(Viewport->GetSizeY());
 	if (Viewport->GetSizeY() == 0) ViewportAspectRatio = 1.0f; // 0으로 나누기 방지
+
+	// Provide per-viewport size to renderer (used by overlay/gizmo scaling)
+	Renderer->SetCurrentViewportSize(Viewport->GetSizeX(), Viewport->GetSizeY());
 
 	FMatrix ViewMatrix = Camera->GetViewMatrix();
 	FMatrix ProjectionMatrix = Camera->GetProjectionMatrix(ViewportAspectRatio, Viewport);
@@ -99,12 +102,13 @@ void URenderManager::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 	Renderer->BeginLineBatch();
 
 	// === Draw Actors with Show Flag checks ===
-	Renderer->SetViewModeType(World->GetViewModeIndex());
+	Renderer->SetViewModeType(World->GetRenderSettings().GetViewModeIndex());
 
 	// ============ Culling Logic Dispatch ========= //
 	for (AActor* Actor : World->GetActors())
 		Actor->SetCulled(true);
-	PARTITION.FrustumQuery(ViewFrustum);
+	if (World->GetPartitionManager())
+		World->GetPartitionManager()->FrustumQuery(ViewFrustum);
 
 	Renderer->UpdateHighLightConstantBuffer(false, rgb, 0, 0, 0, 0);
 
@@ -135,7 +139,7 @@ void URenderManager::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 	// ----------------------------------------------------------------
 
 	// 일반 액터들 렌더링
-	if (World->IsShowFlagEnabled(EEngineShowFlags::SF_Primitives))
+	if (World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_Primitives))
 	{
 		for (AActor* Actor : World->GetActors())
 		{
@@ -153,7 +157,7 @@ void URenderManager::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 				}
 			}
 
-			if (Cast<AStaticMeshActor>(Actor) && !World->IsShowFlagEnabled(EEngineShowFlags::SF_StaticMeshes))
+			if (Cast<AStaticMeshActor>(Actor) && !World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_StaticMeshes))
 			{
 				continue;
 			}
@@ -178,7 +182,7 @@ void URenderManager::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 					// Actor가 textCmp도 가지고 있고, bounding box도 가지고 있고,
 					// TODO: StaticMeshComp이면 분기해서, 어떤 sorting 자료구조에 넣고 나중에 렌더링 ㄱ?
 					// StatcMeshCmp면 이것의 dirtyflag를 보고, dirtyflag가 true면 tree탐색(이미 바꼇는데 그거 기반으로 어떻게 탐색해?)으로 state tree의 해당 cmp를 다른 곳으로 옮기기
-					Renderer->SetViewModeType(World->GetViewModeIndex());
+					Renderer->SetViewModeType(World->GetRenderSettings().GetViewModeIndex());
 					Primitive->Render(Renderer, ViewMatrix, ProjectionMatrix);
 					Renderer->OMSetDepthStencilState(EComparisonFunc::LessEqual);
 
@@ -188,9 +192,9 @@ void URenderManager::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 		}
 
 		// TODO: StaticCmp를 State tree 이용해서 렌더(showFlag 확인 필요)
-		if (World->IsShowFlagEnabled(EEngineShowFlags::SF_StaticMeshes))
+		if (World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_StaticMeshes))
 		{
-			for (UStaticMesh* StaticMesh : World->GetStaticMeshs())
+			for (UStaticMesh* StaticMesh : RESOURCE.GetStaticMeshs())
 			{
 				UINT stride = 0;
 				stride = sizeof(FVertexDynamic);
@@ -279,61 +283,18 @@ void URenderManager::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 							RHIDevice->GetDeviceContext()->DrawIndexed(IndexCount, 0, 0);
 						}
 					}
-					//FObjMaterialInfo ObjMaterialInfo;
-					//RHIDevice->UpdatePixelConstantBuffers(ObjMaterialInfo, false, false); // PSSet도 해줌
-					//RHIDevice->GetDeviceContext()->DrawIndexed(IndexCount, 0, 0);
 				}
 
 			}
 		}
 
-	}
-	// 엔진 액터들 (그리드 등)
-	for (AActor* EngineActor : World->GetEditorActors())
-	{
-		if (!EngineActor)
-		{
-			continue;
-		}
-		if (EngineActor->GetActorHiddenInGame())
-		{
-			continue;
-		}
-
-		if (Cast<AGridActor>(EngineActor) && !World->IsShowFlagEnabled(EEngineShowFlags::SF_Grid))
-		{
-			continue;
-		}
-
-		for (USceneComponent* Component : EngineActor->GetComponents())
-		{
-			if (!Component)
-			{
-				continue;
-			}
-			if (UActorComponent* ActorComp = Cast<UActorComponent>(Component))
-			{
-				if (!ActorComp->IsActive())
-				{
-					continue;
-				}
-			}
-
-			if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Component))
-			{
-				Renderer->SetViewModeType(World->GetViewModeIndex());
-				Primitive->Render(Renderer, ViewMatrix, ProjectionMatrix);
-				Renderer->OMSetDepthStencilState(EComparisonFunc::LessEqual);
-			}
-		}
-		Renderer->OMSetBlendState(false);
 	}
 
 	for (AActor* SelectedActor : SELECTION.GetSelectedActors())
 	{
 		if (!SelectedActor) continue;
 		if (SelectedActor->GetActorHiddenInGame()) continue;
-		if (Cast<AStaticMeshActor>(SelectedActor) && !World->IsShowFlagEnabled(EEngineShowFlags::SF_StaticMeshes))
+		if (Cast<AStaticMeshActor>(SelectedActor) && !World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_StaticMeshes))
 			continue;
 
 		for (USceneComponent* Component : SelectedActor->GetComponents())
@@ -342,8 +303,8 @@ void URenderManager::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 			if (UActorComponent* ActorComp = Cast<UActorComponent>(Component))
 				if (!ActorComp->IsActive()) continue;
 
-			if (Cast<UTextRenderComponent>(Component) && !World->IsShowFlagEnabled(EEngineShowFlags::SF_BillboardText)) continue;
-			if (Cast<UAABoundingBoxComponent>(Component) && !World->IsShowFlagEnabled(EEngineShowFlags::SF_BoundingBoxes)) continue;
+			if (Cast<UTextRenderComponent>(Component) && !World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_BillboardText)) continue;
+			if (Cast<UAABoundingBoxComponent>(Component) && !World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_BoundingBoxes)) continue;
 
 			if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Component))
 			{
@@ -352,36 +313,57 @@ void URenderManager::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 				{
 					continue;
 				}
-				Renderer->SetViewModeType(World->GetViewModeIndex());
+				Renderer->SetViewModeType(World->GetRenderSettings().GetViewModeIndex());
 				Primitive->Render(Renderer, ViewMatrix, ProjectionMatrix);
 				Renderer->OMSetDepthStencilState(EComparisonFunc::LessEqual);
 			}
 		}
 	}
 
-	// Debug draw (exclusive: BVH first, else Octree)
-	if (World->IsShowFlagEnabled(EEngineShowFlags::SF_BVHDebug))
+	// 엔진 액터들 (그리드 등)
+	for (AActor* EngineActor : World->GetEditorActors())
 	{
-		if (FBVHierachy* BVH = PARTITION.GetBVH())
+		if (!EngineActor || EngineActor->GetActorHiddenInGame())
+			continue;
+
+		if (Cast<AGridActor>(EngineActor) && !World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_Grid))
+			continue;
+
+		for (USceneComponent* Component : EngineActor->GetComponents())
+		{
+			if (!Component || !Component->IsActive())
+				continue;
+			if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Component))
+			{
+				Renderer->SetViewModeType(World->GetRenderSettings().GetViewModeIndex());
+				Primitive->Render(Renderer, ViewMatrix, ProjectionMatrix);
+				Renderer->OMSetDepthStencilState(EComparisonFunc::LessEqual);
+			}
+		}
+		Renderer->OMSetBlendState(false);
+	}
+
+	// Debug draw (exclusive: BVH first, else Octree)
+	if (World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_BVHDebug) &&
+		World->GetPartitionManager())
+	{
+		if (FBVHierachy* BVH = World->GetPartitionManager()->GetBVH())
 		{
 			BVH->DebugDraw(Renderer);
 		}
 	}
-	else if (World->IsShowFlagEnabled(EEngineShowFlags::SF_OctreeDebug))
+	else if (World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_OctreeDebug) &&
+		World->GetPartitionManager())
 	{
-		if (FOctree* Octree = PARTITION.GetSceneOctree())
+		if (FOctree* Octree = World->GetPartitionManager()->GetSceneOctree())
 		{
 			Octree->DebugDraw(Renderer);
 		}
 	}
-
 	Renderer->EndLineBatch(FMatrix::Identity(), ViewMatrix, ProjectionMatrix);
 
-	//기즈모 렌더
-	World->GetGizmoActor()->Render(Camera, Viewport);
-
 	Renderer->UpdateHighLightConstantBuffer(false, rgb, 0, 0, 0, 0);
-	if (World->IsShowFlagEnabled(EEngineShowFlags::SF_Culling))
+	if (World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_Culling))
 	{
 		UE_LOG("Obj count: %d, Visible count: %d\r\n", objCount, visibleCount);
 	}

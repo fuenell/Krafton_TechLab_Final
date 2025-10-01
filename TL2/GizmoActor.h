@@ -19,7 +19,6 @@ public:
     AGizmoActor();
 
     virtual void Tick(float DeltaSeconds) override;
-    void Render( ACameraActor* Camera, FViewport* Viewport);
 protected:
     ~AGizmoActor() override;
 

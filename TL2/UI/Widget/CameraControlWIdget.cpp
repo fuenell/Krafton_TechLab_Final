@@ -9,6 +9,7 @@
 #include "GridActor.h"
 #include "GizmoActor.h"
 #include <algorithm>
+#include <EditorEngine.h>
 
 //// UE_LOG 대체 매크로
 //#define UE_LOG(fmt, ...)
@@ -38,23 +39,19 @@ void UCameraControlWidget::Initialize()
 		UIManager->RegisterCameraControlWidget(this);
 	}
 	// GizmoActor 참조 획득
-	GizmoActor = UIManager->GetGizmoActor();
-
-	// 초기 기즈모 스페이스 모드 설정
-	if (GizmoActor)
+	if (AGizmoActor* Gizmo = GEngine.GetDefaultWorld()->GetGizmoActor())
 	{
-		CurrentGizmoSpace = GizmoActor->GetSpace();
+		CurrentGizmoSpace = Gizmo->GetSpace();
 	}
 }
 
 void UCameraControlWidget::Update()
 {
-	// 필요시 카메라 상태 업데이트 로직 추가
-	
-		// GizmoActor 참조 업데이트
-	if (!GizmoActor && UIManager)
+	// GizmoActor 참조 업데이트
+	extern UEditorEngine GEngine;
+	if (AGizmoActor* Gizmo = GEngine.GetDefaultWorld()->GetGizmoActor())
 	{
-		GizmoActor = UIManager->GetGizmoActor();
+		GizmoActor = Gizmo;
 	}
 	// 월드 정보 업데이트 (옵션)
 	if (UIManager && UIManager->GetWorld())
@@ -66,10 +63,11 @@ void UCameraControlWidget::Update()
 
 ACameraActor* UCameraControlWidget::GetCurrentCamera() const
 {
-	if (!UIManager)
+	GEngine.GetDefaultWorld()->GetCameraActor();
+	if (!GEngine.GetDefaultWorld())
 		return nullptr;
 		
-	return UIManager->GetCamera();
+	return GEngine.GetDefaultWorld()->GetCameraActor();
 }
 
 void UCameraControlWidget::RenderWidget()
@@ -95,16 +93,16 @@ void UCameraControlWidget::RenderWidget()
 	ImGui::Spacing();
 
 	// 카메라 이동속도 표시 및 조절 (World와 동기화)
-	if (UIManager && UIManager->GetWorld())
+	if (GEngine.GetDefaultWorld() && GEngine.GetDefaultWorld()->GetCameraActor())
 	{
 		// World에서 현재 카메라 이동 속도 가져오기
-		float WorldMoveSpeed = UIManager->GetWorld()->GetCameraActor()->GetCameraSpeed();
+		float WorldMoveSpeed = GEngine.GetDefaultWorld()->GetCameraActor()->GetCameraSpeed();
 		
 		ImGui::Text("Move Speed: %.1f", WorldMoveSpeed);
 		if (ImGui::SliderFloat("##MoveSpeed", &WorldMoveSpeed, 1.0f, 20.0f, "%.1f"))
 		{
 			// World에 카메라 이동속도 설정
-			UIManager->GetWorld()->GetCameraActor()->SetCameraSpeed(WorldMoveSpeed);
+			GEngine.GetDefaultWorld()->GetCameraActor()->SetCameraSpeed(WorldMoveSpeed);
 			// 위젯의 로컬 값도 업데이트
 			CameraMoveSpeed = WorldMoveSpeed;
 		}
@@ -236,9 +234,9 @@ void UCameraControlWidget::SyncFromCamera()
 	}
 	
 	// World에서 카메라 이동 속도 동기화
-	if (UIManager && UIManager->GetWorld())
+	if (GEngine.GetDefaultWorld() && GEngine.GetDefaultWorld()->GetCameraActor())
 	{
-		CameraMoveSpeed = UIManager->GetWorld()->GetCameraActor()->GetCameraSpeed();
+		CameraMoveSpeed = GEngine.GetDefaultWorld()->GetCameraActor()->GetCameraSpeed();
 		UE_LOG("CameraControl: Synced camera move speed from world - Speed=%.1f", CameraMoveSpeed);
 	}
 }

@@ -1,5 +1,8 @@
 ﻿#pragma once
 
+//CUR ENGINE MODE
+#define _EDITOR
+
 // Linker
 #pragma comment(lib, "user32")
 #pragma comment(lib, "d3d11")
@@ -71,9 +74,20 @@
 #define UI UUIManager::GetInstance()
 #define INPUT UInputManager::GetInstance()
 #define SELECTION USelectionManager::GetInstance()
-//@TODO Partition Manager 싱글톤 배제 (월드 별 소유)
-#define PARTITION UWorldPartitionManager::GetInstance()
 #define RENDER URenderManager::GetInstance()
 #define SLATE USlateManager::GetInstance()
+//@TODO Partition Manager 싱글톤 배제 (월드 별 소유)
+//#define PARTITION UWorldPartitionManager::GetInstance()
 
 extern TMap<FString, FString> EditorINI;
+
+//Editor
+#include "EditorEngine.h"
+
+#ifdef _EDITOR
+extern UEditorEngine GEngine;
+#endif
+
+#ifdef _GAME
+extern UGameEngine GEngine;
+#endif

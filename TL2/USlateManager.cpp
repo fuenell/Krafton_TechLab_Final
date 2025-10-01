@@ -8,6 +8,7 @@
 #include "SControlPanel.h"
 #include "SViewportWindow.h"
 #include "FViewportClient.h"
+#include "UI/UIManager.h"
 
 USlateManager& USlateManager::GetInstance()
 {
@@ -149,7 +150,7 @@ void USlateManager::Initialize(ID3D11Device* InDevice, UWorld* InWorld, const FR
         Rect.GetWidth(), Rect.GetHeight(),
         World, Device, EViewportType::Orthographic_Top);
 
-    InWorld->SetCameraActor(MainViewport->GetViewportClient()->GetCamera());
+    World->SetCameraActor(MainViewport->GetViewportClient()->GetCamera());
 
     // 뷰포트들을 2x2로 연결
     LeftTop->SideLT = Viewports[0];
@@ -188,7 +189,7 @@ void USlateManager::SwitchPanel(SWindow* SwitchPanel)
     }
 }
 
-void USlateManager::OnRender()
+void USlateManager::Render()
 {
     // 메뉴바 렌더링 (항상 최상단에)
     MenuBar->RenderWidget();
@@ -198,7 +199,7 @@ void USlateManager::OnRender()
     }
 }
 
-void USlateManager::OnUpdate(float DeltaSeconds)
+void USlateManager::Update(float DeltaSeconds)
 {
     ProcessInput();
     if (RootSplitter) 

@@ -345,6 +345,10 @@ AActor* CPickingSystem::PerformViewportPicking(const TArray<AActor*>& Actors,
 	float ViewportAspectRatio, FViewport* Viewport)
 {
 	if (!Camera) return nullptr;
+	UWorld* CurrentWorld = Camera->GetWorld();
+	if (!CurrentWorld) return nullptr;
+	UWorldPartitionManager* Partition = CurrentWorld->GetPartitionManager();
+	if (!Partition) return nullptr;
 
 	// 뷰포트별 레이 생성 - 커스텀 aspect ratio 사용
 	const FMatrix View = Camera->GetViewMatrix();
@@ -368,7 +372,7 @@ AActor* CPickingSystem::PerformViewportPicking(const TArray<AActor*>& Actors,
 
 	// 베스트 퍼스트 탐색으로 가장 가까운 것을 직접 구한다
 	AActor* PickedActor = nullptr;
-	PARTITION.RayQueryClosest(ray, PickedActor, PickedT);
+	Partition->RayQueryClosest(ray, PickedActor, PickedT);
 	LastPickTime = PickCounter.Finish();
 	TotalPickTime += LastPickTime;
 	double Milliseconds = ((double)LastPickTime * FPlatformTime::GetSecondsPerCycle()) * 1000.0f;

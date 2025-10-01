@@ -18,15 +18,7 @@ public:
 	DECLARE_CLASS(UWorldPartitionManager, UObject)
 
 	UWorldPartitionManager();
-	static UWorldPartitionManager& GetInstance()
-	{
-		static UWorldPartitionManager* Instance = nullptr;
-		if (!Instance)
-		{
-			Instance = NewObject<UWorldPartitionManager>();
-		}
-		return *Instance;
-	}
+	~UWorldPartitionManager();
 
 	void Clear();
 	// Actor-based API (preferred)
@@ -48,7 +40,6 @@ public:
 	FBVHierachy* GetBVH() const { return BVH; }
 
 private:
-	~UWorldPartitionManager();
 
 	// 싱글톤 
 	UWorldPartitionManager(const UWorldPartitionManager&) = delete;

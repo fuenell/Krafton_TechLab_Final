@@ -53,7 +53,6 @@ protected:
     EViewportType ViewportType = EViewportType::Perspective;
     UWorld* World = nullptr;
     ACameraActor* Camera = nullptr;
-    ACameraActor* ViewPortCamera = nullptr;
     int32 MouseLastX{};
     int32 MouseLastY{};
     bool bIsMouseButtonDown = false;

@@ -1,11 +1,10 @@
 ﻿#include "pch.h"
 #include "EditorEngine.h"
 #include "USlateManager.h"
+#include <ObjManager.h>
 
 float UEditorEngine::ClientWidth = 1024.0f;
 float UEditorEngine::ClientHeight = 1024.0f;
-
-UEditorEngine GEngine;
 
 static void LoadIniFile()
 {
@@ -45,6 +44,8 @@ UEditorEngine::UEditorEngine()
 
 UEditorEngine::~UEditorEngine()
 {
+    // ObjManager 정리
+    FObjManager::Clear();
 }
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -161,8 +162,7 @@ bool UEditorEngine::Startup(HINSTANCE hInstance)
 
     ///////////////////////////////////
     //@TODO 월드 수정 필
-    World = &UWorld::GetInstance();
-    World->Initialize();
+    World = NewObject<UWorld>();
     ///////////////////////////////////
 
 
@@ -184,7 +184,8 @@ void UEditorEngine::Tick(float DeltaSeconds)
 
     World->Tick(DeltaSeconds);
 
-    SLATE.OnUpdate(DeltaSeconds);
+    SLATE.Update(DeltaSeconds);
+    UI.Update(DeltaSeconds);
     INPUT.Update();
 }
 
@@ -193,7 +194,7 @@ void UEditorEngine::Render()
     Renderer->BeginFrame();
 
     UI.Render();
-    SLATE.OnRender();
+    SLATE.Render();
     UI.EndFrame();
 
     Renderer->EndFrame();

@@ -2,7 +2,8 @@
 #include "SceneManagerWidget.h"
 #include "../UIManager.h"
 #include "../../ImGui/imgui.h"
-#include "../../World.h"
+#include "World.h"
+#include "../../RenderSettings.h"
 #include "../../CameraActor.h"
 #include "../../CameraComponent.h"
 #include "../../Actor.h"
@@ -11,6 +12,7 @@
 #include "GizmoActor.h"
 #include <algorithm>
 #include <string>
+#include <EditorEngine.h>
 
 //// UE_LOG 대체 매크로
 //#define UE_LOG(fmt, ...)
@@ -284,9 +286,9 @@ void USceneManagerWidget::RenderActorNode(FActorTreeNode* Node, int32 Depth)
     }
     if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered())
     {
-        if (UIManager && UIManager->GetCamera())
+        if (GEngine.GetDefaultWorld() && GEngine.GetDefaultWorld()->GetCameraActor())
         {
-            ACameraActor* Cam = UIManager->GetCamera();
+            ACameraActor* Cam = GEngine.GetDefaultWorld()->GetCameraActor();
             FVector Center = Actor->GetActorLocation();
             float kDist = 8.0f;
             FVector Dir = Cam->GetForward();
@@ -372,10 +374,9 @@ void USceneManagerWidget::HandleActorSelection(AActor* Actor)
     {
         UIManager->SetPickedActor(Actor);
         
-        // If there's a gizmo actor, position it at the selected actor
-        if (UIManager->GetGizmoActor() && Actor)
+        if (AGizmoActor* Gizmo = GEngine.GetDefaultWorld()->GetGizmoActor())
         {
-            UIManager->GetGizmoActor()->SetActorLocation(Actor->GetActorLocation());
+            Gizmo->SetActorLocation(Actor->GetActorLocation());
         }
     }
     
@@ -518,7 +519,7 @@ void USceneManagerWidget::RenderToolbar()
     if (World)
     {
         // Convert enum value to UI index (subtract 1 because enum starts with None=0)
-        EViewModeIndex CurrentEnum = World->GetViewModeIndex();
+EViewModeIndex CurrentEnum = World->GetRenderSettings().GetViewModeIndex();
         int CurrentViewMode = 0; // Default to Lit
         
         switch (CurrentEnum)
@@ -553,7 +554,7 @@ void USceneManagerWidget::RenderToolbar()
                 NewEnum = EViewModeIndex::VMI_Wireframe;
                 break;
             }
-            World->SetViewModeIndex(NewEnum);
+World->GetRenderSettings().SetViewModeIndex(NewEnum);
         }
     }
     else

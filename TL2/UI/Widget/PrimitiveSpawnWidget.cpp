@@ -266,12 +266,12 @@ void UPrimitiveSpawnWidget::RenderWidget()
 
     // 월드 상태 정보
     UWorld* World = GetCurrentWorld();
-    if (World)
+    if (World && World->GetPartitionManager())
     {
         ImGui::Text("World Status: Connected");
         ImGui::Text("Current Actors: %zu", World->GetActors().size());
 
-        if (FOctree* Oct = PARTITION.GetSceneOctree())
+        if (FOctree* Oct = World->GetPartitionManager()->GetSceneOctree())
         {
             ImGui::Text("Octree Nodes: %d", Oct->TotalNodeCount());
             ImGui::Text("Octree Actors: %d", Oct->TotalActorCount());
@@ -281,7 +281,7 @@ void UPrimitiveSpawnWidget::RenderWidget()
                 Oct->DebugDump();
             }
         }
-        if (FBVHierachy* BVH = PARTITION.GetBVH())
+        if (FBVHierachy* BVH = World->GetPartitionManager()->GetBVH())
         {
             ImGui::Text("BVH Nodes: %d", BVH->TotalNodeCount());
             ImGui::Text("BVH Actors: %d", BVH->TotalActorCount());

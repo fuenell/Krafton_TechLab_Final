@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "Object.h"
 #include "Enums.h"
+#include "RenderSettings.h"
 
 // Forward Declarations
 class UResourceManager;
@@ -32,11 +33,9 @@ public:
     DECLARE_CLASS(UWorld, UObject)
     UWorld();
     ~UWorld() override;
-    static UWorld& GetInstance();
 
 public:
     /** 초기화 */
-    void Initialize();
     void InitializeGrid();
     void InitializeGizmo();
 
@@ -55,36 +54,27 @@ public:
     void CreateNewScene();
     void LoadScene(const FString& SceneName);
     void SaveScene(const FString& SceneName);
-    void SetCameraActor(ACameraActor* InCameraActor);
+
     ACameraActor* GetCameraActor() { return MainCameraActor; }
-
-    EViewModeIndex GetViewModeIndex() { return ViewModeIndex; }
-    void SetViewModeIndex(EViewModeIndex InViewModeIndex) { ViewModeIndex = InViewModeIndex; }
-
-    /** === Show Flag 시스템 === */
-    EEngineShowFlags GetShowFlags() const { return ShowFlags; }
-    void SetShowFlags(EEngineShowFlags InShowFlags) { ShowFlags = InShowFlags; }
-    void EnableShowFlag(EEngineShowFlags Flag) { ShowFlags |= Flag; }
-    void DisableShowFlag(EEngineShowFlags Flag) { ShowFlags &= ~Flag; }
-    void ToggleShowFlag(EEngineShowFlags Flag) { ShowFlags = HasShowFlag(ShowFlags, Flag) ? (ShowFlags & ~Flag) : (ShowFlags | Flag); }
-    bool IsShowFlagEnabled(EEngineShowFlags Flag) const { return HasShowFlag(ShowFlags, Flag); }
+    void SetCameraActor(ACameraActor* InCamera) { MainCameraActor = InCamera; }
 
     /** Generate unique name for actor based on type */
     FString GenerateUniqueActorName(const FString& ActorType);
 
     /** === 타임 / 틱 === */
     virtual void Tick(float DeltaSeconds);
-    float GetTimeSeconds() const;
 
     /** === 필요한 엑터 게터 === */
     const TArray<AActor*>& GetActors() { return Actors; }
     const TArray<AActor*>& GetEditorActors() { return EditorActors; }
-    AGizmoActor* GetGizmoActor();
+    AGizmoActor* GetGizmoActor() { return GizmoActor; }
     AGridActor* GetGridActor() { return GridActor; }
+    UWorldPartitionManager* GetPartitionManager() { return Partition.get(); }
 
-    void SetStaticMeshs();
-    const TArray<UStaticMesh*>& GetStaticMeshs() { return StaticMeshs; }
-    
+    // Per-world render settings
+    URenderSettings& GetRenderSettings() { return RenderSettings; }
+    const URenderSettings& GetRenderSettings() const { return RenderSettings; }
+        
     /** === 레벨 / 월드 구성 === */
     // TArray<ULevel*> Levels;
 private:
@@ -96,18 +86,15 @@ private:
 
     /** === 액터 관리 === */
     TArray<AActor*> Actors;
-    TArray<FPrimitiveData> Primitives;
-
-    /** A dedicated array for static mesh actors to optimize culling. */
-    TArray<UStaticMesh*> StaticMeshs;
 
     // Object naming system
     TMap<FString, int32> ObjectTypeCounts;
 
-    /** === Show Flag 시스템 === */
-    EEngineShowFlags ShowFlags = EEngineShowFlags::SF_DefaultEnabled;
+    // Per-world render settings
+    URenderSettings RenderSettings;
 
-    EViewModeIndex ViewModeIndex = EViewModeIndex::VMI_Unlit;
+    //partition
+    std::unique_ptr<UWorldPartitionManager> Partition = nullptr;
 };
 
 template<class T>
