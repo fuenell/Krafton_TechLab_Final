@@ -18,6 +18,40 @@ using namespace std;
 //// UE_LOG 대체 매크로
 //#define UE_LOG(fmt, ...)
 
+// ★ 고정 오더: ZYX (Yaw-Pitch-Roll) — 기즈모의 Delta 곱(Z * Y * X)과 동일
+static inline FQuat QuatFromEulerZYX_Deg(const FVector& Deg)
+{
+	const float Rx = DegreeToRadian(Deg.X); // Roll (X)
+	const float Ry = DegreeToRadian(Deg.Y); // Pitch (Y)
+	const float Rz = DegreeToRadian(Deg.Z); // Yaw (Z)
+
+	const FQuat Qx = MakeQuatFromAxisAngle(FVector(1, 0, 0), Rx);
+	const FQuat Qy = MakeQuatFromAxisAngle(FVector(0, 1, 0), Ry);
+	const FQuat Qz = MakeQuatFromAxisAngle(FVector(0, 0, 1), Rz);
+	return Qz * Qy * Qx; // ZYX
+}
+
+static inline FVector EulerZYX_DegFromQuat(const FQuat& Q)
+{
+	// 표준 ZYX(roll=x, pitch=y, yaw=z) 복원식
+	// 참고: roll(X), pitch(Y), yaw(Z)
+	const float w = Q.W, x = Q.X, y = Q.Y, z = Q.Z;
+
+	const float sinr_cosp = 2.0f * (w * x + y * z);
+	const float cosr_cosp = 1.0f - 2.0f * (x * x + y * y);
+	float roll = std::atan2(sinr_cosp, cosr_cosp);
+
+	float sinp = 2.0f * (w * y - z * x);
+	float pitch;
+	if (std::fabs(sinp) >= 1.0f) pitch = std::copysign(HALF_PI, sinp);
+	else                          pitch = std::asin(sinp);
+
+	const float siny_cosp = 2.0f * (w * z + x * y);
+	const float cosy_cosp = 1.0f - 2.0f * (y * y + z * z);
+	float yaw = std::atan2(siny_cosp, cosy_cosp);
+
+	return FVector(RadianToDegree(roll), RadianToDegree(pitch), RadianToDegree(yaw));
+}
 
 namespace
 {
@@ -234,6 +268,15 @@ void UTargetActorTransformWidget::Update()
 			try
 			{
 				CachedActorName = SelectedActor->GetName().ToString();
+
+				// ★ 선택 변경 시 한 번만 초기화
+				const FVector S = SelectedActor->GetActorScale();
+				bUniformScale = (fabs(S.X - S.Y) < 0.01f && fabs(S.Y - S.Z) < 0.01f);
+
+				// 스냅샷
+				UpdateTransformFromActor();
+				PrevEditRotationUI = EditRotation; // ★ 회전 UI 기준값 초기화
+				bRotationEditing = false;          // ★ 편집 상태 초기화
 			}
 			catch (...)
 			{
@@ -243,7 +286,7 @@ void UTargetActorTransformWidget::Update()
 		}
 		else
 		{
-			CachedActorName = "";
+			CachedActorName.clear();
 		}
 	}
 
@@ -251,7 +294,13 @@ void UTargetActorTransformWidget::Update()
 	{
 		// 액터가 선택되어 있으면 항상 트랜스폼 정보를 업데이트하여
 		// 기즈모 조작을 실시간으로 UI에 반영합니다.
-		UpdateTransformFromActor();
+		// 회전 필드 편집 중이면 그 프레임은 엔진→UI 역동기화(회전)를 막는다.
+		if (!bRotationEditing)
+		{
+			UpdateTransformFromActor();
+			// 회전을 제외하고 위치/스케일도 여기서 갱신하고 싶다면,
+			// UpdateTransformFromActor()에서 회전만 건너뛰는 오버로드를 따로 만들어도 OK.
+		}
 	}
 }
 
@@ -497,12 +546,89 @@ void UTargetActorTransformWidget::RenderWidget()
 			bPositionChanged = true;
 		}
 		
-		// Rotation 편집 (Euler angles)
-		if (ImGui::DragFloat3("Rotation", &EditRotation.X, 0.5f))
+		// ───────── Rotation: DragFloat3 하나로 "드래그=증분", "입력=절대" 처리 ─────────
 		{
-			bRotationChanged = true;
+			// 1) 컨트롤 그리기 전에 이전값 스냅
+			const FVector Before = EditRotation;
+
+			// 2) DragFloat3 호출
+			//    (키보드 입력도 허용되는 컨트롤이므로 라벨에 ZYX 오더 명시 권장)
+			bool ChangedThisFrame = ImGui::DragFloat3("Rotation", &EditRotation.X, 0.5f);
+			// 3) 컨트롤 상태 읽기
+			ImGuiIO& IO = ImGui::GetIO();
+			const bool Activated = ImGui::IsItemActivated();              // 이번 프레임에 포커스/활성 시작
+			const bool Active = ImGui::IsItemActive();                 // 현재 편집 중
+			const bool Edited = ImGui::IsItemEdited();                 // 이번 프레임에 값이 변함
+			const bool Deactivated = ImGui::IsItemDeactivatedAfterEdit();   // 편집 종료(값 변함 포함)
+
+			// "드래그 중" 판정: 마우스 좌클릭이 눌린 상태에서 활성이고, 실제 드래그가 발생
+			const bool MouseHeld = ImGui::IsMouseDown(ImGuiMouseButton_Left);
+			const bool MouseDrag = ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0.0f) ||
+				(std::fabs(IO.MouseDelta.x) + std::fabs(IO.MouseDelta.y) > 0.0f);
+			const bool Dragging = Active && MouseHeld && MouseDrag;
+
+			// 4) 편집 세션 시작 시(이번 프레임 Activate) 기준값 스냅
+			//    - 절대 적용용으로 쓸 시작 회전과 UI 기준값 저장
+			static FQuat StartQuatOnEdit;
+			if (Activated)
+			{
+				StartQuatOnEdit = SelectedActor ? SelectedActor->GetActorRotation() : FQuat();
+				PrevEditRotationUI = EditRotation;
+				bRotationEditing = true;   // Update() 역동기화 방지
+			}
+
+			// 5) 값이 변한 프레임에 처리
+			if (Edited && SelectedActor)
+			{
+				if (Dragging)
+				{
+					// ── 드래그: "증분 누적" ──
+					FVector DeltaEuler = EditRotation - PrevEditRotationUI;
+
+					auto Wrap = [](float a)->float { while (a > 180.f) a -= 360.f; while (a < -180.f) a += 360.f; return a; };
+					DeltaEuler.X = Wrap(DeltaEuler.X);
+					DeltaEuler.Y = Wrap(DeltaEuler.Y);
+					DeltaEuler.Z = Wrap(DeltaEuler.Z);
+
+					const FQuat Qx = MakeQuatFromAxisAngle(FVector(1, 0, 0), DegreeToRadian(DeltaEuler.X));
+					const FQuat Qy = MakeQuatFromAxisAngle(FVector(0, 1, 0), DegreeToRadian(DeltaEuler.Y));
+					const FQuat Qz = MakeQuatFromAxisAngle(FVector(0, 0, 1), DegreeToRadian(DeltaEuler.Z));
+					const FQuat DeltaQuat = Qz * Qy * Qx; // ZYX
+
+					FQuat Cur = SelectedActor->GetActorRotation();
+					SelectedActor->SetActorRotation(DeltaQuat * Cur);
+
+					// 다음 증분 기준 업데이트
+					PrevEditRotationUI = EditRotation;
+					bRotationChanged = false; // PostProcess에서 중복 적용 방지
+				}
+				else
+				{
+					// ── 키보드 입력: "절대 적용" ──
+					// (편집 중간에도 즉시 절대값을 적용해 반영)
+					const FQuat NewQ = QuatFromEulerZYX_Deg(EditRotation);
+					SelectedActor->SetActorRotation(NewQ);
+
+					// 표시값을 결과에 스냅(짝함수라 값 유지됨)
+					EditRotation = EulerZYX_DegFromQuat(NewQ);
+					PrevEditRotationUI = EditRotation;
+					bRotationChanged = false;
+				}
+			}
+
+			// 6) 편집 종료 시(포커스 빠짐) 최종 스냅 & 상태 리셋
+			if (Deactivated)
+			{
+				if (SelectedActor)
+				{
+					EditRotation = EulerZYX_DegFromQuat(SelectedActor->GetActorRotation());
+					PrevEditRotationUI = EditRotation;
+				}
+				bRotationEditing = false;
+			}
 		}
-		
+
+
 		// Scale 편집
 		ImGui::Checkbox("Uniform Scale", &bUniformScale);
 		
@@ -526,17 +652,18 @@ void UTargetActorTransformWidget::RenderWidget()
 		ImGui::Spacing();
 		
 		// 실시간 적용 버튼
-		if (ImGui::Button("Apply Transform"))
-		{
-			ApplyTransformToActor();
-		}
-		
-		ImGui::SameLine();
-		if (ImGui::Button("Reset Transform"))
-		{
-			UpdateTransformFromActor();
-			ResetChangeFlags();
-		}
+		// TODO (동민) : 아마 이 부분은 나중에 삭제될 것 같습니다. 기즈모 조작이 실시간으로 반영되기 때문에.
+		//if (ImGui::Button("Apply Transform"))
+		//{
+		//	ApplyTransformToActor();
+		//}
+		//
+		//ImGui::SameLine();
+		//if (ImGui::Button("Reset Transform"))
+		//{
+		//	UpdateTransformFromActor();
+		//	ResetChangeFlags();
+		//}
 		
 		ImGui::Spacing();
 		ImGui::Separator();
@@ -607,7 +734,6 @@ void UTargetActorTransformWidget::RenderWidget()
 
 						ImGui::SetNextItemWidth(240);
 						ImGui::Combo("StaticMesh", &SelectedMeshIdx, Items.data(), static_cast<int>(Items.size()));
-						ImGui::SameLine();
 						if (ImGui::Button("Apply Mesh"))
 						{
 							if (SelectedMeshIdx >= 0 && SelectedMeshIdx < static_cast<int>(Paths.size()))
@@ -723,12 +849,10 @@ void UTargetActorTransformWidget::UpdateTransformFromActor()
 		
 	// 액터의 현재 트랜스폼을 UI 변수로 복사
 	EditLocation = SelectedActor->GetActorLocation();
-	EditRotation = SelectedActor->GetActorRotation().ToEuler();
+	//EditRotation = SelectedActor->GetActorRotation().ToEuler();
+	// ★ 표시는 ZYX 기준으로
+	EditRotation = EulerZYX_DegFromQuat(SelectedActor->GetActorRotation());
 	EditScale = SelectedActor->GetActorScale();
-	
-	// 균등 스케일 여부 판단
-	bUniformScale = (abs(EditScale.X - EditScale.Y) < 0.01f && 
-	                abs(EditScale.Y - EditScale.Z) < 0.01f);
 	
 	ResetChangeFlags();
 }
