@@ -710,6 +710,15 @@ void D3D11RHI::ReleaseDeviceAndSwapChain()
         DeviceContext = nullptr;
     }
 
+#if defined(_DEBUG)
+    ID3D11Debug* pDebug = nullptr;
+    if (SUCCEEDED(Device->QueryInterface(__uuidof(ID3D11Debug), (void**)&pDebug)))
+    {
+        pDebug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
+        pDebug->Release();
+    }
+#endif
+
     if (Device)
     {
         Device->Release();

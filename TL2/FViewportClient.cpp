@@ -193,7 +193,7 @@ void FViewportClient::MouseButtonDown(FViewport* Viewport, int32 X, int32 Y, int
 
         if (PickedActor)
         {
-            USelectionManager::GetInstance().SelectActor(PickedActor);
+            if (World) World->GetSelectionManager()->SelectActor(PickedActor);
             UUIManager::GetInstance().SetPickedActor(PickedActor);
             if (World->GetGizmoActor())
             {
@@ -205,7 +205,7 @@ void FViewportClient::MouseButtonDown(FViewport* Viewport, int32 X, int32 Y, int
         {
             UUIManager::GetInstance().ResetPickedActor();
             // Clear selection if nothing was picked
-            USelectionManager::GetInstance().ClearSelection();
+            if (World) World->GetSelectionManager()->ClearSelection();
         }
     }
     else if (Button==1){//우클릭시 

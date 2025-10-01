@@ -29,6 +29,7 @@
 UWorld::UWorld()
 	: Partition(new UWorldPartitionManager())
 {
+	SelectionMgr = std::make_unique<USelectionManager>();
 	Level = std::make_unique<ULevel>();
 	FObjManager::Preload();
 	CreateLevel();
@@ -115,7 +116,7 @@ bool UWorld::DestroyActor(AActor* Actor)
 	Actor->MarkPendingDestroy();
 
 	// 선택/UI 해제
-	SELECTION.DeselectActor(Actor);
+	if (SelectionMgr) SelectionMgr->DeselectActor(Actor);
 	if (UI.GetPickedActor() == Actor)
 		UI.ResetPickedActor();
 
@@ -140,7 +141,7 @@ bool UWorld::DestroyActor(AActor* Actor)
 		ObjectFactory::DeleteObject(Actor);
 
 		// 삭제된 액터 정리
-		SELECTION.CleanupInvalidActors();
+		if (SelectionMgr) SelectionMgr->CleanupInvalidActors();
 
 		return true; // 성공적으로 삭제
 	}
@@ -190,7 +191,7 @@ inline FString RemoveObjExtension(const FString& FileName)
 
 void UWorld::CreateLevel()
 {
-	SELECTION.ClearSelection();
+	if (SelectionMgr) SelectionMgr->ClearSelection();
 	UI.ResetPickedActor();
 	 
 	SetLevel(ULevelService::CreateNewLevel());
@@ -201,7 +202,7 @@ void UWorld::CreateLevel()
 void UWorld::SetLevel(std::unique_ptr<ULevel> InLevel)
 {
     // Make UI/selection safe before destroying previous actors
-    SELECTION.ClearSelection();
+    if (SelectionMgr) SelectionMgr->ClearSelection();
     UI.ResetPickedActor();
 
     // Cleanup current
@@ -230,7 +231,7 @@ void UWorld::SetLevel(std::unique_ptr<ULevel> InLevel)
     }
 
     // Clean any dangling selection references just in case
-    SELECTION.CleanupInvalidActors();
+    if (SelectionMgr) SelectionMgr->CleanupInvalidActors();
 }
 
 void UWorld::AddActorToLevel(AActor* Actor)
