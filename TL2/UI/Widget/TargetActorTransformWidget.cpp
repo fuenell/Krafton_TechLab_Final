@@ -76,44 +76,6 @@ namespace
 			}();
 		return Options;
 	}
-	// 초기에 들어간 컴포넌트들은 지우지 못하도록
-	bool IsProtectedSceneComponent(const AActor& Actor, const USceneComponent* Component)
-	{
-		if (!Component)
-		{
-			return false;
-		}
-
-		if (Component == Actor.GetRootComponent())
-		{
-			return true;
-		}
-
-		if (Component == Actor.CollisionComponent)
-		{
-			return true;
-		}
-
-		if (Component == Actor.TextComp)
-		{
-			return true;
-		}
-
-		if (const AStaticMeshActor* StaticMeshActor = Cast<AStaticMeshActor>(&Actor))
-		{
-			if (Component == StaticMeshActor->GetStaticMeshComponent())
-			{
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	bool CanRemoveSceneComponent(const AActor& Actor, const USceneComponent* Component)
-	{
-		return !IsProtectedSceneComponent(Actor, Component);
-	}
 
 	bool TryAttachComponentToActor(AActor& Actor, UClass* ComponentClass)
 	{
@@ -226,7 +188,7 @@ namespace
 
 		if (ImGui::BeginPopupContextItem("ComponentContext"))
 		{
-			const bool bCanRemove = CanRemoveSceneComponent(Actor, Component);
+			const bool bCanRemove = !Component->IsNative();
 			if (ImGui::MenuItem("삭제", "Delete", false, bCanRemove))
 			{
 				ComponentPendingRemoval = Component;
@@ -318,7 +280,7 @@ USceneComponent* UTargetActorTransformWidget::GetEditingComponent() const
 		return nullptr;
 
 	// 기본 보호 컴포넌트(텍스트, AABB, 초기 스태틱 메쉬 등)는 항상 액터 트랜스폼과 함께 움직인다.
-	if (IsProtectedSceneComponent(*SelectedActor, SelectedComponent))
+	if (SelectedComponent->IsNative())
 		return nullptr;
 
 	return SelectedComponent;
@@ -534,7 +496,7 @@ void UTargetActorTransformWidget::RenderWidget()
 				if (ImGui::BeginPopupContextItem("ComponentContext"))
 				{
 					// 루트 컴포넌트가 아닌 경우에만 제거 가능
-					const bool bCanRemove = CanRemoveSceneComponent(*SelectedActor, Component);
+					const bool bCanRemove = !Component->IsNative();
 					if (ImGui::MenuItem("삭제", "Delete", false, bCanRemove))
 					{
 						ComponentPendingRemoval = Component;
@@ -567,7 +529,7 @@ void UTargetActorTransformWidget::RenderWidget()
 				// 액터 Row가 선택된 상태 → 액터 삭제
 				ActorPendingRemoval = SelectedActor;
 			}
-			else if (SelectedComponent && CanRemoveSceneComponent(*SelectedActor, SelectedComponent))
+			else if (SelectedComponent && !SelectedComponent->IsNative())
 			{
 				// 컴포넌트 선택 상태(루트 아님) → 해당 컴포넌트 삭제
 				ComponentPendingRemoval = SelectedComponent;
@@ -580,7 +542,7 @@ void UTargetActorTransformWidget::RenderWidget()
 
 		if (ComponentPendingRemoval && SelectedActor)
 		{
-			if (CanRemoveSceneComponent(*SelectedActor, ComponentPendingRemoval))
+			if (!ComponentPendingRemoval->IsNative())
 			{
 				SelectedActor->RemoveOwnedComponent(ComponentPendingRemoval);
 				if (SelectedComponent == ComponentPendingRemoval)

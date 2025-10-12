@@ -50,6 +50,7 @@ public:
     {
         T* Comp = ObjectFactory::NewObject<T>();
         Comp->SetOwner(this);
+        Comp->SetNative(true);
         // Comp->SetName(SubobjectName);  //나중에 추가 구현
         AddOwnedComponent(Comp); // 새 모델로 합류
         return Comp;
