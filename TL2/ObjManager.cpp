@@ -41,46 +41,96 @@ static FString FindMtlFilePath(const FString& InObjPath)
 }
 
 /**
- * 캐시된 .bin 파일이 재생성되어야 하는지 확인합니다.
- * @param InObjPath - 원본 .obj 파일 경로
- * @param InBinPath - 캐시된 FStaticMesh의 .bin 파일 경로
- * @param InMatBinPath - 캐시된 Material 정보의 .bin 파일 경로
- * @return 캐시를 재생성해야 하면 true, 그렇지 않으면 false
+ * @brief .obj 파일을 빠르게 스캔하여 참조된 모든 .mtl 파일의 전체 경로 목록을 반환합니다.
+ * 이 함수는 전체 3D 데이터를 파싱하지 않고 'mtllib' 지시어만 효율적으로 찾습니다.
+ * @param ObjPath 원본 .obj 파일의 경로입니다.
+ * @param OutMtlFilePaths[out] 발견된 .mtl 파일들의 전체 경로가 저장될 배열입니다.
+ * @return 스캔에 성공하면 true, 파일 열기에 실패하면 false를 반환합니다.
  */
-static bool ShouldRegenerateCache(const FString& InObjPath, const FString& InBinPath, const FString& InMatBinPath)
+bool GetMtlDependencies(const FString& ObjPath, TArray<FString>& OutMtlFilePaths)
 {
-	std::error_code ec;
+	std::ifstream InFile(ObjPath);
+	if (!InFile.is_open())
+	{
+		UE_LOG("Failed to open .obj file for dependency scan: %s", ObjPath.c_str());
+		return false;
+	}
 
-	// 1. 캐시 파일(.bin, Mat.bin)이 하나라도 존재하지 않으면 재생성해야 합니다.
-	if (!fs::exists(InBinPath, ec) || !fs::exists(InMatBinPath, ec))
+	fs::path BaseDir = fs::path(ObjPath).parent_path();
+	std::string Line;
+
+	while (std::getline(InFile, Line))
+	{
+		// 라인 앞뒤의 공백을 제거하여 안정성을 높입니다.
+		Line.erase(0, Line.find_first_not_of(" \t\r\n"));
+		Line.erase(Line.find_last_not_of(" \t\r\n") + 1);
+
+		if (Line.rfind("mtllib ", 0) == 0) // "mtllib "으로 시작하는지 확인
+		{
+			// "mtllib " 다음의 모든 문자열을 경로로 추출합니다.
+			std::string MtlFileName = Line.substr(7);
+			if (!MtlFileName.empty())
+			{
+				fs::path FullPath = fs::weakly_canonical(BaseDir / MtlFileName);
+				FString PathStr = FullPath.string();
+				std::replace(PathStr.begin(), PathStr.end(), '\\', '/');
+				OutMtlFilePaths.AddUnique(PathStr);
+			}
+		}
+	}
+	return true;
+}
+
+/**
+ * @brief 캐시 파일이 원본(.obj) 및 모든 의존성(.mtl) 파일보다 최신인지 검사합니다.
+ * @param ObjPath 원본 .obj 파일의 경로입니다.
+ * @param BinPath 메쉬 데이터 캐시(.obj.bin) 파일의 경로입니다.
+ * @param MatBinPath 머티리얼 데이터 캐시(.mtl.bin) 파일의 경로입니다.
+ * @return 캐시를 다시 생성해야 하면 true, 캐시가 유효하면 false를 반환합니다.
+ */
+bool ShouldRegenerateCache(const FString& ObjPath, const FString& BinPath, const FString& MatBinPath)
+{
+	// 캐시 파일 중 하나라도 존재하지 않으면 무조건 재생성해야 합니다.
+	if (!fs::exists(BinPath) || !fs::exists(MatBinPath))
 	{
 		return true;
 	}
 
-	// 2. 캐시 파일의 최종 수정 시간을 가져옵니다. 오류 발생 시 재생성합니다.
-	auto BinLastWriteTime = fs::last_write_time(InBinPath, ec);
-	if (ec) return true;
-
-	// 3. 원본 .obj 파일의 최종 수정 시간을 가져와 캐시와 비교합니다.
-	//    .obj 파일이 더 최신이면 재생성해야 합니다.
-	auto ObjLastWriteTime = fs::last_write_time(InObjPath, ec);
-	if (ec || ObjLastWriteTime > BinLastWriteTime)
+	try
 	{
-		return true;
-	}
+		auto BinTimestamp = fs::last_write_time(BinPath);
 
-	// 4. .mtl 파일의 최종 수정 시간을 가져와 캐시와 비교합니다.
-	FString MtlPath = FindMtlFilePath(InObjPath);
-	if (!MtlPath.empty() && fs::exists(MtlPath, ec))
-	{
-		auto MtlLastWriteTime = fs::last_write_time(MtlPath, ec);
-		if (ec || MtlLastWriteTime > BinLastWriteTime)
+		// 1. 원본 .obj 파일의 수정 시간을 캐시 파일과 비교합니다.
+		if (fs::last_write_time(ObjPath) > BinTimestamp)
 		{
 			return true;
 		}
+
+		// 2. .obj 파일을 빠르게 스캔하여 의존하는 .mtl 파일 목록을 가져옵니다.
+		TArray<FString> MtlDependencies;
+		if (!GetMtlDependencies(ObjPath, MtlDependencies))
+		{
+			return true; // .obj 파일을 읽을 수 없으면 안전을 위해 캐시를 재생성합니다.
+		}
+
+		// 3. 각 .mtl 파일의 수정 시간을 캐시 파일과 비교합니다.
+		for (const FString& MtlPath : MtlDependencies)
+		{
+			// .mtl 파일이 존재하지 않거나 캐시보다 최신 버전이면 재생성합니다.
+			if (!fs::exists(MtlPath) || fs::last_write_time(MtlPath) > BinTimestamp)
+			{
+				return true;
+			}
+		}
+	}
+	catch (const fs::filesystem_error& e)
+	{
+		// 파일 시스템 오류(예: 접근 권한 없음) 발생 시 안전하게 캐시를 재생성합니다.
+		UE_LOG("Filesystem error during cache validation: %s. Forcing regeneration.", e.what());
+		return true;
 	}
 
-	// 위 모든 조건에 해당하지 않으면, 유효한 최신 캐시가 존재합니다.
+	// 모든 검사를 통과하면 캐시는 유효합니다.
 	return false;
 }
 
