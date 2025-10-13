@@ -91,6 +91,8 @@ public:
 				std::stringstream wss(line.substr(3));
 				float u, v;
 				wss >> u >> v;
+				// obj의 vt는 좌하단이 (0,0) -> DirectX UV는 좌상단이 (0,0) (상하 반전으로 컨버팅)
+				v = 1.0f - v;
 				OutObjInfo->TexCoords.push_back(FVector2D(u, v));
 				bHasTexcoord = true;
 			}
