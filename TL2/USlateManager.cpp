@@ -228,6 +228,10 @@ void USlateManager::ProcessInput()
         }
     }
     OnMouseMove(MousePosition);
+
+    // 단축키로 기즈모 모드 변경
+    if (World->GetGizmoActor())
+        World->GetGizmoActor()->ProcessGizmoModeSwitch();
 }
 
 void USlateManager::OnMouseMove(FVector2D MousePos)

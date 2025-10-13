@@ -17,6 +17,8 @@ AGizmoActor::AGizmoActor()
 {
 	Name = "Gizmo Actor";
 
+	const float GizmoTotalSize = 1.5f;
+
 	//======= Arrow Component 생성 =======
 	/*ArrowX = NewObject<UGizmoArrowComponent>();
 	ArrowY = NewObject<UGizmoArrowComponent>();
@@ -38,9 +40,9 @@ AGizmoActor::AGizmoActor()
 	ArrowY->SetupAttachment(RootComponent);
 	ArrowZ->SetupAttachment(RootComponent);
 
-	ArrowX->SetDefaultScale({ 1, 1, 3 });
-	ArrowY->SetDefaultScale({ 1, 1, 3 });
-	ArrowZ->SetDefaultScale({ 1, 1, 3 });
+	ArrowX->SetDefaultScale({ 1.0f * GizmoTotalSize, 1.0f * GizmoTotalSize, 3.0f * GizmoTotalSize });
+	ArrowY->SetDefaultScale({ 1.0f * GizmoTotalSize, 1.0f * GizmoTotalSize, 3.0f * GizmoTotalSize });
+	ArrowZ->SetDefaultScale({ 1.0f * GizmoTotalSize, 1.0f * GizmoTotalSize, 3.0f * GizmoTotalSize });
 
 	if (ArrowX) ArrowX->SetRelativeRotation(FQuat::MakeFromEuler(FVector(0, 0, 0)));
 	if (ArrowY) ArrowY->SetRelativeRotation(FQuat::MakeFromEuler(FVector(0, 0, 90)));
@@ -71,9 +73,9 @@ AGizmoActor::AGizmoActor()
 	RotateY->SetupAttachment(RootComponent);
 	RotateZ->SetupAttachment(RootComponent);
 
-	RotateX->SetDefaultScale({ 0.02f, 0.02f, 0.02f });
-	RotateY->SetDefaultScale({ 0.02f, 0.02f, 0.02f });
-	RotateZ->SetDefaultScale({ 0.02f, 0.02f, 0.02f });
+	RotateX->SetDefaultScale({ 0.025f * GizmoTotalSize, 0.025f * GizmoTotalSize, 0.025f * GizmoTotalSize });
+	RotateY->SetDefaultScale({ 0.025f * GizmoTotalSize, 0.025f * GizmoTotalSize, 0.025f * GizmoTotalSize });
+	RotateZ->SetDefaultScale({ 0.025f * GizmoTotalSize, 0.025f * GizmoTotalSize, 0.025f * GizmoTotalSize });
 
 	AddOwnedComponent(RotateX);
 	AddOwnedComponent(RotateY);
@@ -103,9 +105,9 @@ AGizmoActor::AGizmoActor()
 	ScaleY->SetupAttachment(RootComponent);
 	ScaleZ->SetupAttachment(RootComponent);
 
-	ScaleX->SetDefaultScale({ 0.02f, 0.02f, 0.02f });
-	ScaleY->SetDefaultScale({ 0.02f, 0.02f, 0.02f });
-	ScaleZ->SetDefaultScale({ 0.02f, 0.02f, 0.02f });
+	ScaleX->SetDefaultScale({ 0.025f * GizmoTotalSize, 0.025f * GizmoTotalSize, 0.025f * GizmoTotalSize });
+	ScaleY->SetDefaultScale({ 0.025f * GizmoTotalSize, 0.025f * GizmoTotalSize, 0.025f * GizmoTotalSize });
+	ScaleZ->SetDefaultScale({ 0.025f * GizmoTotalSize, 0.025f * GizmoTotalSize, 0.025f * GizmoTotalSize });
 
 	if (ScaleX) ScaleX->SetRelativeRotation(FQuat::MakeFromEuler(FVector(0, 90, 0)));
 	if (ScaleY) ScaleY->SetRelativeRotation(FQuat::MakeFromEuler(FVector(-90, 0, 0)));
@@ -172,28 +174,11 @@ void AGizmoActor::SetSpaceWorldMatrix(EGizmoSpace NewSpace, AActor* PickedActor)
 {
 	SetSpace(NewSpace);
 
-	if (NewSpace == EGizmoSpace::World)
+	if (!PickedActor)
+		return;
+
+	if (NewSpace == EGizmoSpace::Local || CurrentMode == EGizmoMode::Scale)
 	{
-
-		// 월드 고정 → 기즈모 축은 항상 X/Y/Z
-		   // 월드 고정 → 기즈모 축은 항상 X/Y/Z
-		if (ArrowX) ArrowX->SetRelativeRotation(FQuat::MakeFromEuler(FVector(0, 0, 0)));
-		if (ArrowY) ArrowY->SetRelativeRotation(FQuat::MakeFromEuler(FVector(0, 0, 90)));
-		if (ArrowZ) ArrowZ->SetRelativeRotation(FQuat::MakeFromEuler(FVector(0, -90, 0)));
-
-		if (ScaleX) ScaleX->SetRelativeRotation(FQuat::MakeFromEuler(FVector(0, 90, 0)));
-		if (ScaleY) ScaleY->SetRelativeRotation(FQuat::MakeFromEuler(FVector(-90, 0, 0)));
-		if (ScaleZ) ScaleZ->SetRelativeRotation(FQuat::MakeFromEuler(FVector(0, 0, 0)));
-
-		if (RotateX) RotateX->SetRelativeRotation(FQuat::MakeFromEuler(FVector(0, 90, 0)));
-		if (RotateY) RotateY->SetRelativeRotation(FQuat::MakeFromEuler(FVector(90, 0, 0)));
-		if (RotateZ) RotateZ->SetRelativeRotation(FQuat::MakeFromEuler(FVector(0, 0, 0)));
-	}
-	else if (NewSpace == EGizmoSpace::Local)
-	{
-		if (!PickedActor)
-			return;
-
 		// 타겟 액터 회전 가져오기
 		FQuat TargetRot = PickedActor->GetActorRotation();
 
@@ -212,9 +197,23 @@ void AGizmoActor::SetSpaceWorldMatrix(EGizmoSpace NewSpace, AActor* PickedActor)
 		if (RotateY) RotateY->SetRelativeRotation(TargetRot * FQuat::MakeFromEuler(FVector(90, 0, 0)));
 		if (RotateZ) RotateZ->SetRelativeRotation(TargetRot * FQuat::MakeFromEuler(FVector(0, 0, 0)));
 	}
+	else if (NewSpace == EGizmoSpace::World)
+	{
+		// 월드 고정 → 기즈모 축은 항상 X/Y/Z
+		   // 월드 고정 → 기즈모 축은 항상 X/Y/Z
+		if (ArrowX) ArrowX->SetRelativeRotation(FQuat::MakeFromEuler(FVector(0, 0, 0)));
+		if (ArrowY) ArrowY->SetRelativeRotation(FQuat::MakeFromEuler(FVector(0, 0, 90)));
+		if (ArrowZ) ArrowZ->SetRelativeRotation(FQuat::MakeFromEuler(FVector(0, -90, 0)));
 
+		if (ScaleX) ScaleX->SetRelativeRotation(FQuat::MakeFromEuler(FVector(0, 90, 0)));
+		if (ScaleY) ScaleY->SetRelativeRotation(FQuat::MakeFromEuler(FVector(-90, 0, 0)));
+		if (ScaleZ) ScaleZ->SetRelativeRotation(FQuat::MakeFromEuler(FVector(0, 0, 0)));
+
+		if (RotateX) RotateX->SetRelativeRotation(FQuat::MakeFromEuler(FVector(0, 90, 0)));
+		if (RotateY) RotateY->SetRelativeRotation(FQuat::MakeFromEuler(FVector(90, 0, 0)));
+		if (RotateZ) RotateZ->SetRelativeRotation(FQuat::MakeFromEuler(FVector(0, 0, 0)));
+	}
 }
-
 
 void AGizmoActor::NextMode(EGizmoMode GizmoMode)
 {
@@ -301,16 +300,7 @@ void AGizmoActor::OnDrag(AActor* Target, uint32 GizmoAxis, float MouseDeltaX, fl
 	FVector GizmoPosition = GetActorLocation();
 
 	// ────────────── World / Local 축 선택 ──────────────
-	if (CurrentSpace == EGizmoSpace::World)
-	{
-		switch (GizmoAxis)
-		{
-		case 1: Axis = FVector(1, 0, 0); break;
-		case 2: Axis = FVector(0, 1, 0); break;
-		case 3: Axis = FVector(0, 0, 1); break;
-		}
-	}
-	else if (CurrentSpace == EGizmoSpace::Local)
+	if (CurrentSpace == EGizmoSpace::Local || CurrentMode == EGizmoMode::Scale)	// Scale 은 항상 로컬 축 기준
 	{
 		switch (GizmoAxis)
 		{
@@ -319,6 +309,16 @@ void AGizmoActor::OnDrag(AActor* Target, uint32 GizmoAxis, float MouseDeltaX, fl
 		case 3: Axis = Target->GetActorUp();      break; // Local Z
 		}
 	}
+	else if (CurrentSpace == EGizmoSpace::World)
+	{
+		switch (GizmoAxis)
+		{
+		case 1: Axis = FVector(1, 0, 0); break;
+		case 2: Axis = FVector(0, 1, 0); break;
+		case 3: Axis = FVector(0, 0, 1); break;
+		}
+	}
+
 
 	// ────────────── 모드별 처리 ──────────────
 	switch (CurrentMode)
@@ -357,26 +357,6 @@ void AGizmoActor::OnDrag(AActor* Target, uint32 GizmoAxis, float MouseDeltaX, fl
 	}
 	case EGizmoMode::Scale:
 	{
-		// Determine axis for screen projection
-		if (CurrentSpace == EGizmoSpace::World)
-		{
-			switch (GizmoAxis)
-			{
-			case 1: Axis = FVector(1, 0, 0); break;
-			case 2: Axis = FVector(0, 1, 0); break;
-			case 3: Axis = FVector(0, 0, 1); break;
-			}
-		}
-		else if (CurrentSpace == EGizmoSpace::Local)
-		{
-			switch (GizmoAxis)
-			{
-			case 1: Axis = Target->GetActorRight();   break; // Local X
-			case 2: Axis = Target->GetActorForward(); break; // Local Y
-			case 3: Axis = Target->GetActorUp();      break; // Local Z
-			}
-		}
-
 		FVector2D ScreenAxis = GetStableAxisDirection(Axis, Camera);
 		float px = (MouseDelta.X * ScreenAxis.X + MouseDelta.Y * ScreenAxis.Y);
 		float h = Viewport ? static_cast<float>(Viewport->GetSizeY()) : UInputManager::GetInstance().GetScreenSize().Y;
@@ -534,8 +514,6 @@ void AGizmoActor::ProcessGizmoInteraction(ACameraActor* Camera, FViewport* Viewp
 {
 	if (!TargetActor || !Camera) return;
 
-	ProcessGizmoModeSwitch();
-
 	// 기즈모 드래그
 	ProcessGizmoDragging(Camera, Viewport, MousePositionX, MousePositionY);
 
@@ -597,7 +575,7 @@ void AGizmoActor::ProcessGizmoModeSwitch()
 		EGizmoMode NewGizmoMode = static_cast<EGizmoMode>(GizmoModeIndex);
 		NextMode(NewGizmoMode);
 	}
-	// tab 키로 월드-로컬 모드 전환
+	// Tab 키로 월드-로컬 모드 전환
 	if (InputManager->IsKeyPressed(VK_TAB))
 	{
 		if (GetSpace() == EGizmoSpace::World)
