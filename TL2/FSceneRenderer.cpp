@@ -73,6 +73,8 @@ void FSceneRenderer::Render()
 	RenderEditorPrimitivesPass();	// 기즈모, 그리드 출력
 	RenderDebugPass();	// 빌보드나 선택한 물체의 경계 출력
 
+
+
 	// --- 렌더링 종료 ---
 	FinalizeFrame();
 }
