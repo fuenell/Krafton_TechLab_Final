@@ -212,7 +212,7 @@ void SViewportWindow::RenderToolbar()
 
 		if (ImGui::Button("Reset")) { /* TODO: 카메라 Reset */ }
 
-		const char* viewModes[] = { "Lit", "Unlit", "Wireframe" };
+		const char* viewModes[] = { "Lit", "Unlit", "Wireframe", "SceneDepth" };
 		int currentViewMode = static_cast<int>(ViewportClient->GetViewModeIndex()) - 1; // 0=Lit, 1=Unlit, 2=Wireframe -1이유 1부터 시작이여서 
 
 		ImGui::SameLine();
@@ -229,6 +229,7 @@ void SViewportWindow::RenderToolbar()
 			case 0: ViewportClient->SetViewModeIndex(EViewModeIndex::VMI_Lit); break;
 			case 1: ViewportClient->SetViewModeIndex(EViewModeIndex::VMI_Unlit); break;
 			case 2: ViewportClient->SetViewModeIndex(EViewModeIndex::VMI_Wireframe); break;
+			case 3: ViewportClient->SetViewModeIndex(EViewModeIndex::VMI_SceneDepth); break;
 			}
 		}
 		// 🔘 여기 ‘한 번 클릭’ 버튼 추가

@@ -166,6 +166,9 @@ void FSceneRenderer::RenderSceneDepthPath()
     UE_LOG("[RenderSceneDepthPath] AFTER OMSetRenderTargets(BackBuffer): Viewport(%.1f x %.1f)", 
         vpAfter.Width, vpAfter.Height);
 
+	Blit(RHI_SRV_Index::Scene, ERTVMode::PostProcessDestination);
+	RHIDevice->SwapPostProcessTextures();
+
     // 4. SceneDepth Post 프로세싱 처리
     RenderSceneDepthPostProcess();
 }
@@ -556,18 +559,8 @@ void FSceneRenderer::RenderPostProcessingPasses()
 
 void FSceneRenderer::RenderSceneDepthPostProcess()
 {
-	// ✅ 이 단계에서만 뷰포트 크기 설정!
-	D3D11_VIEWPORT vp = {};
-	vp.TopLeftX = static_cast<float>(Viewport->GetStartX());
-	vp.TopLeftY = static_cast<float>(Viewport->GetStartY());
-	vp.Width = static_cast<float>(Viewport->GetSizeX());
-	vp.Height = static_cast<float>(Viewport->GetSizeY());
-	vp.MinDepth = 0.0f;
-	vp.MaxDepth = 1.0f;
-	RHIDevice->GetDeviceContext()->RSSetViewports(1, &vp);
-
     // 렌더 타겟 설정 (Depth 없이 BackBuffer에만 그리기)
-    RHIDevice->OMSetRenderTargets(ERTVMode::BackBufferWithoutDepth);
+    RHIDevice->OMSetRenderTargets(ERTVMode::PostProcessDestination);
 
     // Depth State: Depth Test/Write 모두 OFF
     RHIDevice->OMSetDepthStencilState(EComparisonFunc::Always);
@@ -643,6 +636,8 @@ void FSceneRenderer::RenderSceneDepthPostProcess()
     // Unbind SRV (중요! 다음 프레임에서 Depth를 RTV로 사용할 수 있게)
     ID3D11ShaderResourceView* nullSRV = nullptr;
     RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &nullSRV);
+
+	RHIDevice->SwapPostProcessTextures();
 }
 
 void FSceneRenderer::RenderEditorPrimitivesPass()
@@ -704,8 +699,6 @@ void FSceneRenderer::RenderDebugPass()
 
 	// 수집된 라인을 출력하고 정리
 	OwnerRenderer->EndLineBatch(FMatrix::Identity(), ViewMatrix, ProjectionMatrix);
-
-	RHIDevice->SwapPostProcessTextures();
 }
 
 void FSceneRenderer::RenderOverayEditorPrimitivesPass()
