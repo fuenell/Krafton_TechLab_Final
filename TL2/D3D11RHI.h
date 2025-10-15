@@ -38,7 +38,7 @@ public:
 	template<typename TVertex>
 	static HRESULT CreateVertexBufferImpl(ID3D11Device* device, const FMeshData& mesh, ID3D11Buffer** outBuffer, D3D11_USAGE usage, UINT cpuAccessFlags);
 
-	template<typename TVeretex>
+	template<typename TVertex>
 	static HRESULT CreateVertexBuffer(ID3D11Device* device, const FMeshData& mesh, ID3D11Buffer** outBuffer);
 
 	template<typename TVertex>
@@ -63,14 +63,25 @@ public:
     void UpdateUVScrollConstantBuffers(const FVector2D& Speed, float TimeSec);
     void UpdateDecalBuffer(const FMatrix& DecalMatrix, const float InOpacity);
 
+	// D3D11RHI.h에 선언 추가
+	void UpdatePostProcessCB(float Near, float Far);
+	void UpdateInvViewProjCB(const FMatrix& InvView, const FMatrix& InvProj);
+	void UpdateFogCB(float FogDensity, float FogHeightFalloff, float StartDistance,
+		float FogCutoffDistance, const FVector4& FogInscatteringColor,
+		float FogMaxOpacity, float FogHeight);
+
 	void IASetPrimitiveTopology();
 	void RSSetState(ERasterizerMode ViewModeIndex);
 	void RSSetViewport();
-	void OMSetRenderTargets();
+	void OMSetRenderTargets(ERTVMode RTVMode);
 	void OMSetBlendState(bool bIsBlendMode);
 	void Present();
 	void PSSetDefaultSampler(UINT StartSlot);
 	void PSSetClampSampler(UINT StartSlot);
+
+	// RHI가 관리하는 Texture들을 SRV로 가져오기, SamplerState 가져오기
+	ID3D11ShaderResourceView* GetSRV(RHI_SRV_Index SRVIndex) const;
+	ID3D11SamplerState* GetSamplerState(RHI_Sampler_Index SamplerIndex) const;
 
 	// Overlay precedence helpers
 	void OMSetDepthStencilState_OverlayWriteStencil();
@@ -155,9 +166,13 @@ private:
 
 	ID3D11BlendState* BlendState{};
 
-	ID3D11Texture2D* FrameBuffer{};//
-	ID3D11RenderTargetView* RenderTargetView{};//
-	ID3D11DepthStencilView* DepthStencilView{};//
+	ID3D11Texture2D* FrameBuffer{};
+	ID3D11RenderTargetView* BackBufferRTV{};
+	ID3D11DepthStencilView* DepthStencilView{};
+
+	ID3D11Texture2D* SceneRenderTexture{};
+	ID3D11RenderTargetView* SceneRTV{};
+	ID3D11ShaderResourceView* SceneSRV{};
 
 	ID3D11Texture2D* DepthBuffer = nullptr;
 	ID3D11ShaderResourceView* DepthSRV = nullptr;
@@ -172,10 +187,16 @@ private:
     ID3D11Buffer* UVScrollCB{};
     ID3D11Buffer* DecalCB{};
 
+	// PostProcess용 상수 버퍼
+	ID3D11Buffer* PostProcessCB{};
+	ID3D11Buffer* InvViewProjCB{};
+	ID3D11Buffer* FogCB{};
+
 	ID3D11Buffer* ConstantBuffer{};
 
 	ID3D11SamplerState* DefaultSamplerState = nullptr;
-	ID3D11SamplerState* ClampSamplerState = nullptr;
+	ID3D11SamplerState* LinearClampSamplerState = nullptr;
+	ID3D11SamplerState* PointClampSamplerState = nullptr;
 
 	UShader* PreShader = nullptr; // Shaders, Inputlayout
 };

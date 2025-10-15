@@ -1,6 +1,6 @@
 Texture2D g_DepthTex : register(t0);
 
-SamplerState g_Sample : register(s0);
+SamplerState g_PointClampSample : register(s1);
 
 cbuffer PostProcessCB : register(b0)
 {
@@ -32,7 +32,7 @@ PS_INPUT mainVS(VS_INPUT input)
 
 float4 mainPS(PS_INPUT input) : SV_TARGET
 {
-    float depth = g_DepthTex.Sample(g_Sample, input.texCoord).r;
+    float depth = g_DepthTex.Sample(g_PointClampSample, input.texCoord).r;
 
     float zView = Near * Far / (Far - depth * (Far - Near));
     float NormalizedDepth = saturate((zView - Near) / (Far - Near));

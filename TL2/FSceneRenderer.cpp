@@ -58,7 +58,8 @@ void FSceneRenderer::Render()
 
 	if (EffectiveViewMode == EViewModeIndex::VMI_Lit)
 	{
-		RenderLitPath();
+		//RenderLitPath();
+		RenderSceneDepthPath(); // 임시: Lit 모드에서 SceneDepth 경로 테스트
 	}
 	else if (EffectiveViewMode == EViewModeIndex::VMI_Wireframe)
 	{
@@ -243,6 +244,8 @@ void FSceneRenderer::PerformFrustumCulling()
 
 void FSceneRenderer::RenderOpaquePass()
 {
+	RHIDevice->OMSetRenderTargets(ERTVMode::Scene);
+
 	RHIDevice->OMSetDepthStencilState(EComparisonFunc::LessEqual); // 깊이 쓰기 ON
 	RHIDevice->OMSetBlendState(false);
 
@@ -264,6 +267,8 @@ void FSceneRenderer::RenderOpaquePass()
 
 void FSceneRenderer::RenderDecalPass()
 {
+	RHIDevice->OMSetRenderTargets(ERTVMode::Scene);
+
 	if (Proxies.Decals.empty())
 		return;
 
@@ -395,23 +400,37 @@ void FSceneRenderer::RenderPostProcessingPasses()
 
 void FSceneRenderer::RenderSceneDepthPostProcess()
 {
-	// 이런식으로 코드 작성?
+	RHIDevice->OMSetRenderTargets(ERTVMode::BackBuffer);
 
-	//// 1. 최종 목적지를 화면(Back Buffer)으로 설정.
-	////    깊이 버퍼는 더 이상 쓰거나 테스트하지 않으므로 nullptr로 설정.
-	//RHI->SetRenderTarget(RHI->GetBackBufferRTV(), nullptr);
+	// 쉐이더 설정
+	UShader* SecneDepthShader = UResourceManager::GetInstance().Load<UShader>("SecneDepth.hlsl");
+	RHIDevice->PrepareShader(SecneDepthShader);
 
-	//// 2. 뎁스 시각화 전용 셰이더를 파이프라인에 바인딩.
-	//RHI->SetVertexShader("FullScreenQuad.vs");
-	//RHI->SetPixelShader("SceneDepthVisualizer.ps");
+	RHIDevice->GetDeviceContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	//// 3. Opaque Pass에서 생성된 깊이 버퍼를 셰이더가 읽을 수 있도록
-	////    ShaderResourceView(SRV)로 변환하여 바인딩.
-	////    (RHI에 깊이 버퍼의 SRV를 가져오는 함수가 필요합니다.)
-	//RHI->SetShaderResource(0, RHI->GetDepthBufferSRV());
+	// 메시 설정 (FullScreenQuad)
+	UStaticMesh* FullScreenQuadMesh = UResourceManager::GetInstance().Load<UStaticMesh>("Data/FullScreenQuad.obj");
+	ID3D11Buffer* VertexBuffer = FullScreenQuadMesh->GetVertexBuffer();
+	ID3D11Buffer* IndexBuffer = FullScreenQuadMesh->GetIndexBuffer();
+	uint32 VertexCount = FullScreenQuadMesh->GetVertexCount();
+	uint32 IndexCount = FullScreenQuadMesh->GetIndexCount();
+	UINT Offset = 0;
+	UINT Stride = sizeof(FBillboardVertex);
+	RHIDevice->GetDeviceContext()->IASetVertexBuffers(
+		0, 1, &VertexBuffer, &Stride, &Offset
+	);
+	RHIDevice->GetDeviceContext()->IASetIndexBuffer(
+		IndexBuffer, DXGI_FORMAT_R32_UINT, 0
+	);
 
-	//// 4. 화면 전체를 덮는 사각형을 그림.
-	//RHI->DrawFullScreenQuad();
+	// 텍스쳐 관련 설정
+	ID3D11ShaderResourceView* SRV = RHIDevice->GetSRV(RHI_SRV_Index::SceneDepth);
+	ID3D11SamplerState* SamplerState = RHIDevice->GetSamplerState(RHI_Sampler_Index::PointClamp);
+	RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &SRV);
+	RHIDevice->GetDeviceContext()->PSSetSamplers(1, 1, &SamplerState);
+
+	RHIDevice->UpdatePostProcessCB(ZNear, ZFar);
+	RHIDevice->GetDeviceContext()->DrawIndexed(IndexCount, 0, 0);
 }
 
 void FSceneRenderer::RenderEditorPrimitivesPass()

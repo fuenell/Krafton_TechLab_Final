@@ -1,7 +1,8 @@
 Texture2D g_DepthTex : register(t0);
 Texture2D g_PrePathResultTex : register(t1);
 
-SamplerState g_Sample : register(s0);
+SamplerState g_LinearClampSample : register(s0);
+SamplerState g_PointClampSample : register(s1);
 
 struct VS_INPUT
 {
@@ -33,9 +34,12 @@ cbuffer FogCB : register(b2)
     float FogHeightFalloff;
     float StartDistance;
     float FogCutoffDistance;
+    
+    float4 FogInscatteringColor;
+    
     float FogMaxOpacity;
     float FogHeight; // fog base height
-    float4 FogInscatteringColor;
+    
 }
 
 PS_INPUT mainVS(VS_INPUT input)
@@ -50,8 +54,8 @@ PS_INPUT mainVS(VS_INPUT input)
 
 float4 mainPS(PS_INPUT input) : SV_TARGET
 {
-    float4 color = g_PrePathResultTex.Sample(g_Sample, input.texCoord);
-    float depth = g_DepthTex.Sample(g_Sample, input.texCoord).r;
+    float4 color = g_PrePathResultTex.Sample(g_LinearClampSample, input.texCoord);
+    float depth = g_DepthTex.Sample(g_PointClampSample, input.texCoord).r;
 
     // -----------------------------
     // 1. Depth → Clip Space 복원

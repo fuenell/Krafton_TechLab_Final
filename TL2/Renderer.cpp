@@ -59,7 +59,7 @@ void URenderer::BeginFrame()
 
 	//OM
 	//RHIDevice->OMSetBlendState();
-	RHIDevice->OMSetRenderTargets();
+	RHIDevice->OMSetRenderTargets(ERTVMode::BackBuffer);
 
 	// 프레임별 데칼 통계를 추적하기 위해 초기화
 	FDecalStatManager::GetInstance().ResetFrameStats();
