@@ -437,14 +437,22 @@ void FSceneRenderer::RenderPostProcessingPasses()
 	vp.MaxDepth = 1.0f;
 	RHIDevice->GetDeviceContext()->RSSetViewports(1, &vp);
 
-	UHeightFogComponent* FogComponent = NewObject<UHeightFogComponent>();
-	/*if (0 < SceneGlobals.Fogs.Num())
+	UHeightFogComponent* FogComponent = nullptr;
+	if (0 < SceneGlobals.Fogs.Num())
 	{
 		if (SceneGlobals.Fogs[0])
 		{
-			UHeightFogComponent* FogComponent = SceneGlobals.Fogs[0];
+			FogComponent = SceneGlobals.Fogs[0];
 		}
-	}*/
+		else
+		{
+			return;
+		}
+	}
+	else
+	{
+		return;
+	}
 
 	// 렌더 타겟 설정 (Depth 없이 BackBuffer에만 그리기)
 	RHIDevice->OMSetRenderTargets(ERTVMode::BackBufferWithoutDepth);

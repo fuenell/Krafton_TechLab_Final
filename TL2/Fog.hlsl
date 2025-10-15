@@ -131,7 +131,11 @@ float4 mainPS(PS_INPUT input) : SV_TARGET
     
     /////////////////////////////////
     
-    float Distance = clamp(L - StartDistance, 0.0, FogCutoffDistance - StartDistance);
+    //float Distance = clamp(L - StartDistance, 0.0, FogCutoffDistance - StartDistance);
+    
+    float Distance = max(0.0, L - StartDistance);
+    if(Distance > (FogCutoffDistance - StartDistance))
+        Distance = 0.0;
     
     float oy = cameraWorldPos.z;
     float dy = rayDir.z;
