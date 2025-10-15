@@ -705,9 +705,10 @@ void FSceneRenderer::RenderDebugPass()
 
 void FSceneRenderer::RenderOverayEditorPrimitivesPass()
 {
-	RHIDevice->SwapPostProcessTextures();
-	RHIDevice->OMSetRenderTargets(ERTVMode::PostProcessDestination);
+	// 후처리된 최종 이미지 위에 원본 씬의 뎁스 버퍼를 사용하여 3D 오버레이를 렌더링합니다.
+	RHIDevice->OMSetRenderTargets(ERTVMode::PostProcessSourceWithDepth);
 
+	// 뎁스 버퍼를 Clear하고 LessEqual로 그리기 때문에 오버레이로 표시되는데 오버레이 끼리는 깊이 테스트가 가능함
 	RHIDevice->ClearDepthBuffer(1.0f, 0);
 
 	for (AActor* EngineActor : World->GetEditorActors())
@@ -720,8 +721,6 @@ void FSceneRenderer::RenderOverayEditorPrimitivesPass()
 			{
 				if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Component))
 				{
-					// 기즈모는 오버레이 Primitive라서 여기서 따로 처리
-					// NOTE: 추후 깔끔하게 World Editor Actors 와 World Overlay Actors 랑 비슷한 느낌으로 분리가 필요할듯
 					if (Cast<UGizmoArrowComponent>(Primitive) || Cast<UGizmoRotateComponent>(Primitive) || Cast<UGizmoScaleComponent>(Primitive))
 					{
 						RHIDevice->OMSetDepthStencilState(EComparisonFunc::LessEqual);
@@ -731,8 +730,6 @@ void FSceneRenderer::RenderOverayEditorPrimitivesPass()
 			}
 		}
 	}
-
-	RHIDevice->SwapPostProcessTextures();
 }
 
 void FSceneRenderer::ApplyScreenEffectsPass()

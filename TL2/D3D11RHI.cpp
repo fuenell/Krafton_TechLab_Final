@@ -617,6 +617,13 @@ void D3D11RHI::OMSetRenderTargets(ERTVMode RTVMode)
         // 이 함수는 항상 현재 '쓰기(Destination)' 역할의 RTV를 설정
         DeviceContext->OMSetRenderTargets(1, &PostProcessDestinationRTV, nullptr);
 		break;
+    case ERTVMode::PostProcessSourceWithDepth:
+        // [중요] 후처리 파이프라인의 최종 결과물(Source)을 새로운 캔버스(Canvas)로 삼아 렌더링합니다.
+        // 주 목적은 씬 렌더링과 모든 후처리가 끝난 2D 이미지 위에, 
+        // 3D 기즈모나 에디터 오버레이 같은 요소를 추가로 그리기 위함입니다.
+        // 렌더 타겟은 후처리 결과물이지만, 뎁스 버퍼는 원본 씬의 것을 재사용하여 올바른 깊이 판정이 가능하게 합니다.
+        DeviceContext->OMSetRenderTargets(1, &PostProcessSourceRTV, DepthStencilView);
+        break;
     default:
         break;
     }

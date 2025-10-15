@@ -344,6 +344,7 @@ enum class ERTVMode : uint32
 	BackBufferWithDepth,
 	BackBufferWithoutDepth,
     PostProcessDestination,
+    PostProcessSourceWithDepth,
 };
 
 // RHI가 사용하는 텍스쳐들의 SRV
