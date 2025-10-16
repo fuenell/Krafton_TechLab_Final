@@ -78,15 +78,28 @@ public:
 	void RSSetState(ERasterizerMode ViewModeIndex);
 	void RSSetViewport();
 
+	void OMSetBlendState(bool bIsBlendMode);
+	void PSSetDefaultSampler(UINT StartSlot);
+	void PSSetClampSampler(UINT StartSlot);
+
+
+	// 렌더 타겟 스왑
+	void SwapRenderTargets();
+
+	/** 현재 '쓰기' 대상으로 사용되는 렌더 타겟 뷰를 반환합니다. */
+	ID3D11RenderTargetView* GetCurrentTargetRTV() const;
+
+	/** 씬의 주 뎁스-스텐실 뷰를 반환합니다. */
+	ID3D11DepthStencilView* GetSceneDSV() const;
+
+	ID3D11ShaderResourceView* GetCurrentSourceSRV() const;
+
 	// RHI가 관리하는 Texture들을 SRV로 가져오기, SamplerState 가져오기
 	ID3D11ShaderResourceView* GetSRV(RHI_SRV_Index SRVIndex) const;
 	ID3D11SamplerState* GetSamplerState(RHI_Sampler_Index SamplerIndex) const;
 	void OMSetRenderTargets(ERTVMode RTVMode);
 	void SwapPostProcessTextures();
 
-	void OMSetBlendState(bool bIsBlendMode);
-	void PSSetDefaultSampler(UINT StartSlot);
-	void PSSetClampSampler(UINT StartSlot);
 
 	void DrawFullScreenQuad();
 	void Present();
@@ -131,7 +144,6 @@ public:
 	}
 
     // RTV Getters
-    ID3D11RenderTargetView* GetSceneRTV() const { return SceneRTV; }
     ID3D11RenderTargetView* GetBackBufferRTV() const { return BackBufferRTV; }
 
 private:
@@ -181,17 +193,15 @@ private:
 	ID3D11RenderTargetView* BackBufferRTV{};
 	ID3D11DepthStencilView* DepthStencilView{};
 
-	ID3D11Texture2D* SceneRenderTexture{};
-	ID3D11RenderTargetView* SceneRTV{};
-	ID3D11ShaderResourceView* SceneSRV{};
+	static const int NUM_SCENE_BUFFERS = 2;
+	// 씬 컬러 렌더링을 위한 핑퐁 버퍼 리소스
+	ID3D11Texture2D* SceneColorTextures[NUM_SCENE_BUFFERS];
+	ID3D11RenderTargetView* SceneColorRTVs[NUM_SCENE_BUFFERS];
+	ID3D11ShaderResourceView* SceneColorSRVs[NUM_SCENE_BUFFERS];
 
-	ID3D11Texture2D* PostProcessSourceTexture{};
-	ID3D11RenderTargetView* PostProcessSourceRTV{};
-	ID3D11ShaderResourceView* PostProcessSourceSRV{};
-
-	ID3D11Texture2D* PostProcessDestinationTexture{};
-	ID3D11RenderTargetView* PostProcessDestinationRTV{};
-	ID3D11ShaderResourceView* PostProcessDestinationSRV{};
+	// 현재 소스(읽기)와 타겟(쓰기)을 가리키는 인덱스
+	int32 SourceIndex = 0;
+	int32 TargetIndex = 1;
 
 	ID3D11Texture2D* DepthBuffer = nullptr;
 	ID3D11ShaderResourceView* DepthSRV = nullptr;

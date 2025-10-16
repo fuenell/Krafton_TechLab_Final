@@ -635,20 +635,36 @@ void D3D11RHI::RSSetViewport()
     DeviceContext->RSSetViewports(1, &ViewportInfo);
 }
 
+void D3D11RHI::SwapRenderTargets() // 이전의 SwapPostProcessTextures
+{
+    std::swap(SourceIndex, TargetIndex);
+}
+
+ID3D11RenderTargetView* D3D11RHI::GetCurrentTargetRTV() const
+{
+    return SceneColorRTVs[TargetIndex];
+}
+
+ID3D11DepthStencilView* D3D11RHI::GetSceneDSV() const
+{
+    return DepthStencilView;
+}
+
+ID3D11ShaderResourceView* D3D11RHI::GetCurrentSourceSRV() const
+{
+    return SceneColorSRVs[SourceIndex];
+}
+
 ID3D11ShaderResourceView* D3D11RHI::GetSRV(RHI_SRV_Index SRVIndex) const
 {
     ID3D11ShaderResourceView* TempSRV;
     switch (SRVIndex)
     {
-    case RHI_SRV_Index::Scene:
-        TempSRV = SceneSRV;
+    case RHI_SRV_Index::SceneColorSource:
+        TempSRV = GetCurrentSourceSRV();
         break;
     case RHI_SRV_Index::SceneDepth:
         TempSRV = DepthSRV;
-        break;
-    case RHI_SRV_Index::PostProcessSource:
-        // 이 함수는 항상 현재 '읽기(Source)' 역할의 SRV를 반환
-        TempSRV = PostProcessSourceSRV;
         break;
     default:
         TempSRV = nullptr;
@@ -662,37 +678,27 @@ void D3D11RHI::OMSetRenderTargets(ERTVMode RTVMode)
 {
     switch (RTVMode)
     {
-    case ERTVMode::Scene:
-        DeviceContext->OMSetRenderTargets(1, &SceneRTV, DepthStencilView);
+    case ERTVMode::BackBufferWithDepth:
+        DeviceContext->OMSetRenderTargets(1, &BackBufferRTV, DepthStencilView);
         break;
     case ERTVMode::BackBufferWithoutDepth:
         DeviceContext->OMSetRenderTargets(1, &BackBufferRTV, nullptr);
         break;
-	case ERTVMode::BackBufferWithDepth:
-        DeviceContext->OMSetRenderTargets(1, &BackBufferRTV, DepthStencilView);
-		break;
-	case ERTVMode::PostProcessDestination:
-        // 이 함수는 항상 현재 '쓰기(Destination)' 역할의 RTV를 설정
-        DeviceContext->OMSetRenderTargets(1, &PostProcessDestinationRTV, nullptr);
-		break;
-    case ERTVMode::PostProcessSourceWithDepth:
-        // [중요] 후처리 파이프라인의 최종 결과물(Source)을 새로운 캔버스(Canvas)로 삼아 렌더링합니다.
-        // 주 목적은 씬 렌더링과 모든 후처리가 끝난 2D 이미지 위에, 
-        // 3D 기즈모나 에디터 오버레이 같은 요소를 추가로 그리기 위함입니다.
-        // 렌더 타겟은 후처리 결과물이지만, 뎁스 버퍼는 원본 씬의 것을 재사용하여 올바른 깊이 판정이 가능하게 합니다.
-        DeviceContext->OMSetRenderTargets(1, &PostProcessSourceRTV, DepthStencilView);
+    case ERTVMode::SceneColorTarget:
+    {
+        ID3D11RenderTargetView* CurrentTargetRTV = GetCurrentTargetRTV();
+        DeviceContext->OMSetRenderTargets(1, &CurrentTargetRTV, DepthStencilView);
         break;
+    }
+    case ERTVMode::SceneColorTargetWithoutDepth:
+    {
+        ID3D11RenderTargetView* CurrentTargetRTV = GetCurrentTargetRTV();
+        DeviceContext->OMSetRenderTargets(1, &CurrentTargetRTV, nullptr);
+        break;
+    }
     default:
         break;
     }
-}
-
-void D3D11RHI::SwapPostProcessTextures()
-{
-    // 텍스처 자체와 관련 뷰(SRV, RTV)의 포인터를 모두 교체
-    std::swap(PostProcessSourceTexture, PostProcessDestinationTexture);
-    std::swap(PostProcessSourceSRV, PostProcessDestinationSRV);
-    std::swap(PostProcessSourceRTV, PostProcessDestinationRTV); // 참고: RTV/SRV 포인터도 두 개씩 관리해야 스왑이 가능
 }
 
 void D3D11RHI::OMSetBlendState(bool bIsBlendMode)
@@ -779,54 +785,27 @@ void D3D11RHI::CreateFrameBuffer()
 
     Device->CreateRenderTargetView(FrameBuffer, &framebufferRTVdesc, &BackBufferRTV);
 
-	// =====================================
-	// 장면 렌더링용 텍스처 생성 (SRV 지원)
-	// =====================================
-    D3D11_TEXTURE2D_DESC SceneTextureDesc = {};
-    SceneTextureDesc.Width = swapDesc.BufferDesc.Width;
-    SceneTextureDesc.Height = swapDesc.BufferDesc.Height;
-    SceneTextureDesc.MipLevels = 1;
-    SceneTextureDesc.ArraySize = 1;
-    SceneTextureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;  // 색상 포맷
-    SceneTextureDesc.SampleDesc.Count = 1;
-    SceneTextureDesc.Usage = D3D11_USAGE_DEFAULT;
-    SceneTextureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-    Device->CreateTexture2D(&SceneTextureDesc, nullptr, &SceneRenderTexture);
-
-    Device->CreateRenderTargetView(SceneRenderTexture, nullptr, &SceneRTV);
-    Device->CreateShaderResourceView(SceneRenderTexture, nullptr, &SceneSRV);
-
     // =====================================
-    // PostProcessSource 렌더링용 텍스처 생성 (SRV 지원)
+    // 핑퐁(ping-pong) 버퍼 텍스처 생성 (SRV 지원)
     // =====================================
 
-    D3D11_TEXTURE2D_DESC PostProcessSourceDesc = {};
-    PostProcessSourceDesc.Width = swapDesc.BufferDesc.Width;
-    PostProcessSourceDesc.Height = swapDesc.BufferDesc.Height;
-    PostProcessSourceDesc.MipLevels = 1;
-    PostProcessSourceDesc.ArraySize = 1;
-    PostProcessSourceDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;  // 색상 포맷
-    PostProcessSourceDesc.SampleDesc.Count = 1;
-    PostProcessSourceDesc.Usage = D3D11_USAGE_DEFAULT;
-    PostProcessSourceDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-    Device->CreateTexture2D(&PostProcessSourceDesc, nullptr, &PostProcessSourceTexture);
+    D3D11_TEXTURE2D_DESC SceneColorDesc = {};
+    SceneColorDesc.Width = swapDesc.BufferDesc.Width;
+    SceneColorDesc.Height = swapDesc.BufferDesc.Height;
+    SceneColorDesc.MipLevels = 1;
+    SceneColorDesc.ArraySize = 1;
+    SceneColorDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;  // 색상 포맷
+    SceneColorDesc.SampleDesc.Count = 1;
+    SceneColorDesc.Usage = D3D11_USAGE_DEFAULT;
+    SceneColorDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 
-    Device->CreateRenderTargetView(PostProcessSourceTexture, nullptr, &PostProcessSourceRTV);
-    Device->CreateShaderResourceView(PostProcessSourceTexture, nullptr, &PostProcessSourceSRV);
+    for (int i = 0; i < NUM_SCENE_BUFFERS; i++)
+    {
+        Device->CreateTexture2D(&SceneColorDesc, nullptr, &SceneColorTextures[i]);
 
-    D3D11_TEXTURE2D_DESC PostProcessDestinationDesc = {};
-    PostProcessDestinationDesc.Width = swapDesc.BufferDesc.Width;
-    PostProcessDestinationDesc.Height = swapDesc.BufferDesc.Height;
-    PostProcessDestinationDesc.MipLevels = 1;
-    PostProcessDestinationDesc.ArraySize = 1;
-    PostProcessDestinationDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;  // 색상 포맷
-    PostProcessDestinationDesc.SampleDesc.Count = 1;
-    PostProcessDestinationDesc.Usage = D3D11_USAGE_DEFAULT;
-    PostProcessDestinationDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-    Device->CreateTexture2D(&PostProcessDestinationDesc, nullptr, &PostProcessDestinationTexture);
-
-    Device->CreateRenderTargetView(PostProcessDestinationTexture, nullptr, &PostProcessDestinationRTV);
-    Device->CreateShaderResourceView(PostProcessDestinationTexture, nullptr, &PostProcessDestinationSRV);
+        Device->CreateRenderTargetView(SceneColorTextures[i], nullptr, &SceneColorRTVs[i]);
+        Device->CreateShaderResourceView(SceneColorTextures[i], nullptr, &SceneColorSRVs[i]);
+    }
 
     // =====================================
     // 깊이/스텐실 버퍼 생성 (SRV 지원)
@@ -1175,42 +1154,6 @@ void D3D11RHI::ReleaseFrameBuffer()
         DepthStencilView = nullptr;
     }
 
-    // Scene Views 해제
-    if (SceneRTV)
-    {
-        SceneRTV->Release();
-        SceneRTV = nullptr;
-    }
-    if (SceneSRV)
-    {
-        SceneSRV->Release();
-        SceneSRV = nullptr;
-    }
-
-    // PostProcessSource Views 해제
-    if (PostProcessSourceRTV)
-    {
-        PostProcessSourceRTV->Release();
-        PostProcessSourceRTV = nullptr;
-    }
-    if (PostProcessSourceSRV)
-    {
-        PostProcessSourceSRV->Release();
-        PostProcessSourceSRV = nullptr;
-    }
-
-    // PostProcessDestination Views 해제
-    if (PostProcessDestinationRTV)
-    {
-        PostProcessDestinationRTV->Release();
-        PostProcessDestinationRTV = nullptr;
-    }
-    if (PostProcessDestinationSRV)
-    {
-        PostProcessDestinationSRV->Release();
-        PostProcessDestinationSRV = nullptr;
-    }
-
     // Depth SRV 해제
     if (DepthSRV)
     {
@@ -1219,29 +1162,35 @@ void D3D11RHI::ReleaseFrameBuffer()
     }
 
     // 모든 View를 해제한 후 Texture 해제
-
-    if (SceneRenderTexture)
-    {
-        SceneRenderTexture->Release();
-        SceneRenderTexture = nullptr;
-    }
-
-    if (PostProcessSourceTexture)
-    {
-        PostProcessSourceTexture->Release();
-        PostProcessSourceTexture = nullptr;
-    }
-
-    if (PostProcessDestinationTexture)
-    {
-        PostProcessDestinationTexture->Release();
-        PostProcessDestinationTexture = nullptr;
-    }
-
     if (DepthBuffer)
     {
         DepthBuffer->Release();
         DepthBuffer = nullptr;
+    }
+
+    // 해제 순서 중요 (for문 내부 순서 변경하지 마세요)
+    for (int i = 0; i < NUM_SCENE_BUFFERS; i++)
+    {
+        // 1. RTV
+        if (SceneColorRTVs[i])
+        {
+            SceneColorRTVs[i]->Release();
+            SceneColorRTVs[i] = nullptr;
+        }
+
+        // 2. RSV
+        if (SceneColorSRVs[i])
+        {
+            SceneColorSRVs[i]->Release();
+            SceneColorSRVs[i] = nullptr;
+        }
+
+        // 3. Texture
+        if (SceneColorTextures[i])
+        {
+            SceneColorTextures[i]->Release();
+            SceneColorTextures[i] = nullptr;
+        }
     }
 }
 

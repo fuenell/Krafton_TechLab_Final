@@ -95,16 +95,12 @@ void FSceneRenderer::Render()
 
 void FSceneRenderer::RenderLitPath()
 {
-	RHIDevice->OMSetRenderTargets(ERTVMode::Scene);
+	RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTarget);
 
 	// Base Pass
 	RenderOpaquePass();
 	RenderDecalPass();
 	RenderFireBallPass();
-
-	// Scene To PostProcessDestination
-	Blit(RHI_SRV_Index::Scene, ERTVMode::PostProcessDestination);
-	RHIDevice->SwapPostProcessTextures();
 
 	// 후처리 체인 실행
 	RenderPostProcessingPasses();
@@ -115,7 +111,7 @@ void FSceneRenderer::RenderWireframePath()
 	// 상태 변경: Wireframe으로 레스터라이즈 모드 설정하도록 설정
 	RHIDevice->RSSetState(ERasterizerMode::Wireframe);
 
-	RHIDevice->OMSetRenderTargets(ERTVMode::Scene);
+	RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTarget);
 
 	RenderOpaquePass();
 
@@ -123,8 +119,6 @@ void FSceneRenderer::RenderWireframePath()
 	RHIDevice->RSSetState(ERasterizerMode::Solid);
 
 	// Wireframe은 Post 프로세싱 처리하지 않음
-	Blit(RHI_SRV_Index::Scene, ERTVMode::PostProcessDestination);
-	RHIDevice->SwapPostProcessTextures();
 }
 
 void FSceneRenderer::RenderSceneDepthPath()
@@ -137,7 +131,7 @@ void FSceneRenderer::RenderSceneDepthPath()
 		vpBefore.Width, vpBefore.Height, vpBefore.TopLeftX, vpBefore.TopLeftY);
 
 	// 1. Scene RTV와 Depth Buffer Clear
-	RHIDevice->OMSetRenderTargets(ERTVMode::Scene);
+	RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTarget);
 
 	// ✅ 디버그: SceneRTV 전환 후 viewport 확인
 	D3D11_VIEWPORT vpAfter;
@@ -146,7 +140,7 @@ void FSceneRenderer::RenderSceneDepthPath()
 		vpAfter.Width, vpAfter.Height, vpAfter.TopLeftX, vpAfter.TopLeftY);
 
 	float ClearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	RHIDevice->GetDeviceContext()->ClearRenderTargetView(RHIDevice->GetSceneRTV(), ClearColor);
+	RHIDevice->GetDeviceContext()->ClearRenderTargetView(RHIDevice->GetCurrentTargetRTV(), ClearColor);
 	RHIDevice->ClearDepthBuffer(1.0f, 0);
 
 	// 2. Base Pass - Scene에 메시 그리기
@@ -165,9 +159,6 @@ void FSceneRenderer::RenderSceneDepthPath()
 	RHIDevice->GetDeviceContext()->RSGetViewports(&numVP, &vpAfter);
 	UE_LOG("[RenderSceneDepthPath] AFTER OMSetRenderTargets(BackBuffer): Viewport(%.1f x %.1f)",
 		vpAfter.Width, vpAfter.Height);
-
-	Blit(RHI_SRV_Index::Scene, ERTVMode::PostProcessDestination);
-	RHIDevice->SwapPostProcessTextures();
 
 	// 4. SceneDepth Post 프로세싱 처리
 	RenderSceneDepthPostProcess();
@@ -207,7 +198,7 @@ void FSceneRenderer::PrepareView()
 
 	//RHIDevice->OnResize(Viewport->GetSizeX(), Viewport->GetSizeY());
 	float ClearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	RHIDevice->GetDeviceContext()->ClearRenderTargetView(RHIDevice->GetSceneRTV(), ClearColor);
+	RHIDevice->GetDeviceContext()->ClearRenderTargetView(RHIDevice->GetCurrentTargetRTV(), ClearColor);
 
 	RHIDevice->ClearDepthBuffer(1.0f, 0);                 // 깊이값 초기화
 }
@@ -436,9 +427,6 @@ void FSceneRenderer::RenderFireBallPass()
 
 void FSceneRenderer::RenderPostProcessingPasses()
 {
-	// 렌더 타겟 설정
-	RHIDevice->OMSetRenderTargets(ERTVMode::PostProcessDestination);
-
 	UHeightFogComponent* FogComponent = nullptr;
 	if (0 < SceneGlobals.Fogs.Num())
 	{
@@ -450,6 +438,11 @@ void FSceneRenderer::RenderPostProcessingPasses()
 		return;
 	}
 
+	// 이전 단계 결과를 소스롤 사용하기 위해서 Swap 호출
+	RHIDevice->SwapRenderTargets();
+	// 렌더 타겟 설정
+	RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTargetWithoutDepth);
+
 	// Depth State: Depth Test/Write 모두 OFF
 	RHIDevice->OMSetDepthStencilState(EComparisonFunc::Always);
 	RHIDevice->OMSetBlendState(false);
@@ -460,6 +453,7 @@ void FSceneRenderer::RenderPostProcessingPasses()
 	if (!FullScreenTriangleVS || !FullScreenTriangleVS->GetVertexShader() || !HeightFogPS || !HeightFogPS->GetPixelShader())
 	{
 		UE_LOG("HeightFog용 셰이더 없음!\n");
+		RHIDevice->SwapRenderTargets();	// 그리기 실패 시 다시 Swap을 호출해서 원래 상태로 만듦
 		return;
 	}
 
@@ -467,13 +461,14 @@ void FSceneRenderer::RenderPostProcessingPasses()
 
 	// 텍스쳐 관련 설정
 	ID3D11ShaderResourceView* DepthSRV = RHIDevice->GetSRV(RHI_SRV_Index::SceneDepth);
-	ID3D11ShaderResourceView* SceneSRV = RHIDevice->GetSRV(RHI_SRV_Index::PostProcessSource);
+	ID3D11ShaderResourceView* SceneSRV = RHIDevice->GetSRV(RHI_SRV_Index::SceneColorSource);
 	ID3D11SamplerState* PointClampSamplerState = RHIDevice->GetSamplerState(RHI_Sampler_Index::PointClamp);
 	ID3D11SamplerState* LinearClampSamplerState = RHIDevice->GetSamplerState(RHI_Sampler_Index::LinearClamp);
 
 	if (!DepthSRV || !SceneSRV || !PointClampSamplerState || !LinearClampSamplerState)
 	{
 		UE_LOG("Depth SRV / Scene SRV / PointClamp Sampler / LinearClamp Sampler is null!\n");
+		RHIDevice->SwapRenderTargets();	// 그리기 실패 시 다시 Swap을 호출해서 원래 상태로 만듦
 		return;
 	}
 
@@ -506,15 +501,15 @@ void FSceneRenderer::RenderPostProcessingPasses()
 	// Unbind SRV (중요! 다음 프레임에서 Depth를 RTV로 사용할 수 있게)
 	ID3D11ShaderResourceView* NullSRVs[2] = { nullptr, nullptr };
 	RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 2, NullSRVs);
-
-	// PostProcess 핑퐁 스왑
-	RHIDevice->SwapPostProcessTextures();
 }
 
 void FSceneRenderer::RenderSceneDepthPostProcess()
 {
+	// 이전 단계 결과를 소스롤 사용하기 위해서 Swap 호출
+	RHIDevice->SwapRenderTargets();
+
 	// 렌더 타겟 설정 (Depth 없이 BackBuffer에만 그리기)
-	RHIDevice->OMSetRenderTargets(ERTVMode::PostProcessDestination);
+	RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTargetWithoutDepth);
 
 	// Depth State: Depth Test/Write 모두 OFF
 	RHIDevice->OMSetDepthStencilState(EComparisonFunc::Always);
@@ -526,6 +521,7 @@ void FSceneRenderer::RenderSceneDepthPostProcess()
 	if (!FullScreenTriangleVS || !FullScreenTriangleVS->GetVertexShader() || !SceneDepthPS || !SceneDepthPS->GetPixelShader())
 	{
 		UE_LOG("HeightFog용 셰이더 없음!\n");
+		RHIDevice->SwapRenderTargets();	// 그리기 실패 시 다시 Swap을 호출해서 원래 상태로 만듦
 		return;
 	}
 	RHIDevice->PrepareShader(FullScreenTriangleVS, SceneDepthPS);
@@ -535,6 +531,7 @@ void FSceneRenderer::RenderSceneDepthPostProcess()
 	if (!DepthSRV)
 	{
 		UE_LOG("Depth SRV is null!\n");
+		RHIDevice->SwapRenderTargets();	// 그리기 실패 시 다시 Swap을 호출해서 원래 상태로 만듦
 		return;
 	}
 
@@ -542,6 +539,7 @@ void FSceneRenderer::RenderSceneDepthPostProcess()
 	if (!SamplerState)
 	{
 		UE_LOG("PointClamp Sampler is null!\n");
+		RHIDevice->SwapRenderTargets();	// 그리기 실패 시 다시 Swap을 호출해서 원래 상태로 만듦
 		return;
 	}
 
@@ -557,15 +555,13 @@ void FSceneRenderer::RenderSceneDepthPostProcess()
 	RHIDevice->DrawFullScreenQuad();
 
 	// Unbind SRV (중요! 다음 프레임에서 Depth를 RTV로 사용할 수 있게)
-	ID3D11ShaderResourceView* nullSRV = nullptr;
-	RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &nullSRV);
-
-	RHIDevice->SwapPostProcessTextures();
+	ID3D11ShaderResourceView* NullSRV = nullptr;
+	RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &NullSRV);
 }
 
 void FSceneRenderer::RenderEditorPrimitivesPass()
 {
-	RHIDevice->OMSetRenderTargets(ERTVMode::Scene);
+	RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTarget);
 
 	for (AActor* EngineActor : World->GetEditorActors())
 	{
@@ -596,7 +592,7 @@ void FSceneRenderer::RenderEditorPrimitivesPass()
 
 void FSceneRenderer::RenderDebugPass()
 {
-	RHIDevice->OMSetRenderTargets(ERTVMode::Scene);
+	RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTarget);
 
 	// 선택된 액터 경계 출력
 	for (AActor* SelectedActor : World->GetSelectionManager()->GetSelectedActors())
@@ -627,7 +623,7 @@ void FSceneRenderer::RenderDebugPass()
 void FSceneRenderer::RenderOverayEditorPrimitivesPass()
 {
 	// 후처리된 최종 이미지 위에 원본 씬의 뎁스 버퍼를 사용하여 3D 오버레이를 렌더링합니다.
-	RHIDevice->OMSetRenderTargets(ERTVMode::PostProcessSourceWithDepth);
+	RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTarget);
 
 	// 뎁스 버퍼를 Clear하고 LessEqual로 그리기 때문에 오버레이로 표시되는데 오버레이 끼리는 깊이 테스트가 가능함
 	RHIDevice->ClearDepthBuffer(1.0f, 0);
@@ -661,15 +657,19 @@ void FSceneRenderer::ApplyScreenEffectsPass()
 		return;
 	}
 
+	// 이전 단계 결과를 소스롤 사용하기 위해서 Swap 호출
+	RHIDevice->SwapRenderTargets();
+
 	// 렌더 타겟 설정
-	RHIDevice->OMSetRenderTargets(ERTVMode::PostProcessDestination);
+	RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTargetWithoutDepth);
 
 	// 텍스쳐 관련 설정
-	ID3D11ShaderResourceView* SourceSRV = RHIDevice->GetSRV(RHI_SRV_Index::PostProcessSource);
+	ID3D11ShaderResourceView* SourceSRV = RHIDevice->GetSRV(RHI_SRV_Index::SceneColorSource);
 	ID3D11SamplerState* SamplerState = RHIDevice->GetSamplerState(RHI_Sampler_Index::LinearClamp);
 	if (!SourceSRV || !SamplerState)
 	{
 		UE_LOG("PointClamp Sampler is null!\n");
+		RHIDevice->SwapRenderTargets();	// 그리기 실패 시 다시 Swap을 호출해서 원래 상태로 만듦
 		return;
 	}
 
@@ -682,6 +682,7 @@ void FSceneRenderer::ApplyScreenEffectsPass()
 	if (!FullScreenTriangleVS || !FullScreenTriangleVS->GetVertexShader() || !CopyTexturePS || !CopyTexturePS->GetPixelShader())
 	{
 		UE_LOG("FXAA 셰이더 없음!\n");
+		RHIDevice->SwapRenderTargets();	// 그리기 실패 시 다시 Swap을 호출해서 원래 상태로 만듦
 		return;
 	}
 
@@ -698,8 +699,9 @@ void FSceneRenderer::ApplyScreenEffectsPass()
 
 	RHIDevice->DrawFullScreenQuad();
 
-	// PostProcess 핑퐁 스왑
-	RHIDevice->SwapPostProcessTextures();
+	// Unbind SRV (중요! 다음 프레임에서 Depth를 RTV로 사용할 수 있게)
+	ID3D11ShaderResourceView* NullSRV = nullptr;
+	RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &NullSRV);
 }
 
 void FSceneRenderer::CompositeToBackBuffer()
@@ -714,7 +716,9 @@ void FSceneRenderer::CompositeToBackBuffer()
 	vp.MaxDepth = 1.0f;
 	RHIDevice->GetDeviceContext()->RSSetViewports(1, &vp);
 
-	Blit(RHI_SRV_Index::PostProcessSource, ERTVMode::BackBufferWithoutDepth);
+	// 최종 타겟 이미지를 백버퍼에 그리기 위해 Swap을 통해 소스로 이동시킴
+	RHIDevice->SwapRenderTargets();
+	Blit(RHI_SRV_Index::SceneColorSource, ERTVMode::BackBufferWithoutDepth);
 }
 
 // Source 텍스처를 Destination 텍스처로 렌더링(복사)하는 작업
@@ -747,6 +751,10 @@ void FSceneRenderer::Blit(RHI_SRV_Index InSource, ERTVMode InDestination)
 	RHIDevice->PrepareShader(FullScreenTriangleVS, CopyTexturePS);
 
 	RHIDevice->DrawFullScreenQuad();
+
+	// Unbind SRV (중요! 다음 프레임에서 Depth를 RTV로 사용할 수 있게)
+	ID3D11ShaderResourceView* NullSRV = nullptr;
+	RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &NullSRV);
 }
 
 void FSceneRenderer::FinalizeFrame()
