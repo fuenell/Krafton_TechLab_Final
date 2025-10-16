@@ -27,6 +27,8 @@ void UHeightFogComponent::RenderHeightFog(URenderer* Renderer)
 
 void UHeightFogComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
+	Super::Serialize(bInIsLoading, InOutHandle);
+
 	if (bInIsLoading)
 	{
 		// Load FogInscatteringColor
@@ -56,6 +58,13 @@ void UHeightFogComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 				HeightFogShader = UResourceManager::GetInstance().Load<UShader>(shaderPath.c_str());
 			}
 		}
+
+		// FogDensity, FogHeightFalloff, StartDistance, FogCutoffDistance, FogMaxOpacity도 로드
+		FJsonSerializer::ReadFloat(InOutHandle, "FogDensity", FogDensity, 0.2f);
+		FJsonSerializer::ReadFloat(InOutHandle, "FogHeightFalloff", FogHeightFalloff, 0.2f);
+		FJsonSerializer::ReadFloat(InOutHandle, "StartDistance", StartDistance, 0.0f);
+		FJsonSerializer::ReadFloat(InOutHandle, "FogCutoffDistance", FogCutoffDistance, 6000.0f);
+		FJsonSerializer::ReadFloat(InOutHandle, "FogMaxOpacity", FogMaxOpacity, 1.0f);
 	}
 	else
 	{
@@ -84,6 +93,14 @@ void UHeightFogComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		{
 			InOutHandle["HeightFogShader"] = "";
 		}
+
+		// FogDensity, FogHeightFalloff, StartDistance, FogCutoffDistance, FogMaxOpacity도 저장
+		InOutHandle["FogDensity"] = FogDensity;
+		InOutHandle["FogHeightFalloff"] = FogHeightFalloff;
+		InOutHandle["StartDistance"] = StartDistance;
+		InOutHandle["FogCutoffDistance"] = FogCutoffDistance;
+		InOutHandle["FogMaxOpacity"] = FogMaxOpacity;
+
 	}
 }
 
