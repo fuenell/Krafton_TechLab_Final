@@ -14,10 +14,26 @@ public:
 
 public:
 	// Cone Angles
-	void SetInnerConeAngle(float InAngle) { InnerConeAngle = InAngle; }
+	void SetInnerConeAngle(float InAngle)
+	{
+		InnerConeAngle = InAngle;
+		// InnerCone은 절대 OuterCone보다 클 수 없음
+		if (InnerConeAngle > OuterConeAngle)
+		{
+			OuterConeAngle = InnerConeAngle;
+		}
+	}
 	float GetInnerConeAngle() const { return InnerConeAngle; }
 
-	void SetOuterConeAngle(float InAngle) { OuterConeAngle = InAngle; }
+	void SetOuterConeAngle(float InAngle)
+	{
+		OuterConeAngle = InAngle;
+		// OuterCone이 InnerCone보다 작아지면 InnerCone도 함께 줄임
+		if (OuterConeAngle < InnerConeAngle)
+		{
+			InnerConeAngle = OuterConeAngle;
+		}
+	}
 	float GetOuterConeAngle() const { return OuterConeAngle; }
 
 	// 스포트라이트 방향 (Transform의 Forward 벡터 사용)
@@ -37,6 +53,9 @@ public:
 	virtual void UpdateLightData() override;
 	void OnRegister() override;
 
+	// Cone Angle Validation
+	void ValidateConeAngles();
+
 	// Debug Rendering
 	virtual void RenderDebugVolume(class URenderer* Renderer, const FMatrix& View, const FMatrix& Proj) const override;
 
@@ -48,4 +67,8 @@ public:
 protected:
 	float InnerConeAngle = 30.0f; // 내부 원뿔 각도
 	float OuterConeAngle = 45.0f; // 외부 원뿔 각도
+
+	// 이전 값 추적 (UI 변경 감지용)
+	float PreviousInnerConeAngle = 30.0f;
+	float PreviousOuterConeAngle = 45.0f;
 };

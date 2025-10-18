@@ -7,13 +7,45 @@ IMPLEMENT_CLASS(USpotLightComponent)
 BEGIN_PROPERTIES(USpotLightComponent)
 	MARK_AS_COMPONENT("스포트 라이트", "스포트 라이트 컴포넌트를 추가합니다.")
 	ADD_PROPERTY_RANGE(float, InnerConeAngle, "Light", 0.0f, 90.0f, true, "원뿔 내부 각도입니다. 이 각도 안에서는 빛이 최대 밝기로 표시됩니다.")
-	ADD_PROPERTY_RANGE(float, OuterConeAngle, "Light", 0.0f, 90.0f, true, "원뿔 외부 각도입니다. 이 각도 안에서는 빛이 보이지 않습니다.")
+	ADD_PROPERTY_RANGE(float, OuterConeAngle, "Light", 0.0f, 90.0f, true, "원뿔 외부 각도입니다. 이 각도 밖에서는 빛이 보이지 않습니다.")
 END_PROPERTIES()
 
 USpotLightComponent::USpotLightComponent()
 {
 	InnerConeAngle = 30.0f;
 	OuterConeAngle = 45.0f;
+}
+
+void USpotLightComponent::ValidateConeAngles()
+{
+	// OuterCone과 InnerCone의 일관성 유지
+	// 어느 값이 변경되었는지 추적하여 다른 값을 조정
+
+	// InnerCone이 변경됨
+	bool bInnerChanged = (InnerConeAngle != PreviousInnerConeAngle);
+	// OuterCone이 변경됨
+	bool bOuterChanged = (OuterConeAngle != PreviousOuterConeAngle);
+
+	if (bInnerChanged)
+	{
+		// InnerCone이 증가하여 OuterCone보다 커진 경우
+		if (InnerConeAngle > OuterConeAngle)
+		{
+			OuterConeAngle = InnerConeAngle;
+		}
+	}
+	else if (bOuterChanged)
+	{
+		// OuterCone이 감소하여 InnerCone보다 작아진 경우
+		if (OuterConeAngle < InnerConeAngle)
+		{
+			InnerConeAngle = OuterConeAngle;
+		}
+	}
+
+	// 이전 값 업데이트
+	PreviousInnerConeAngle = InnerConeAngle;
+	PreviousOuterConeAngle = OuterConeAngle;
 }
 
 USpotLightComponent::~USpotLightComponent()
@@ -77,6 +109,9 @@ void USpotLightComponent::UpdateLightData()
 {
 	Super::UpdateLightData();
 	// 스포트라이트 특화 업데이트 로직
+
+	// Cone 각도 유효성 검사 (UI에서 변경된 경우를 대비)
+	ValidateConeAngles();
 }
 
 void USpotLightComponent::OnRegister()
@@ -87,7 +122,10 @@ void USpotLightComponent::OnRegister()
 
 void USpotLightComponent::RenderDebugVolume(URenderer* Renderer, const FMatrix& View, const FMatrix& Proj) const
 {
-	// SpotLight의 원뿔 볼륨을 라인으로 렌더링
+	// Cone 각도 유효성 검사 (const 메서드이므로 const_cast 사용)
+	const_cast<USpotLightComponent*>(this)->ValidateConeAngles();
+
+	// Unreal Engine 스타일 SpotLight 볼륨 렌더링
 	const FVector4 InnerConeColor(1.0f, 1.0f, 0.0f, 1.0f); // 노란색 (InnerCone)
 	const FVector4 OuterConeColor(1.0f, 0.5f, 0.0f, 1.0f); // 주황색 (OuterCone)
 
@@ -99,79 +137,285 @@ void USpotLightComponent::RenderDebugVolume(URenderer* Renderer, const FMatrix& 
 	const FVector ApexWorld = GetWorldLocation();
 	const FVector LightDirection = GetDirection();
 
-	// 원뿔의 길이는 AttenuationRadius
-	const float ConeLength = GetAttenuationRadius();
+	// 볼록한 아크의 가장 먼 지점(LightDirection 방향)까지의 거리가 AttenuationRadius
+	const float AttenuationRadius = GetAttenuationRadius();
 
-	// 원뿔 밑면의 중심점
-	const FVector BaseCenterWorld = ApexWorld + LightDirection * ConeLength;
+	// 세그먼트 수
+	const int NumRays = 16;      // 방사형 라인 개수
+	const int NumArcSegments = 32; // 아크 세그먼트 개수
 
-	// 원뿔 밑면을 그리기 위한 세그먼트 수
-	const int NumBaseSegments = 32;
-
-	// --- OuterCone 그리기 ---
-	const float OuterAngleRad = DegreesToRadians(OuterConeAngle);
-	const float OuterBaseRadius = ConeLength * std::tan(OuterAngleRad);
-
-	// LightDirection에 수직인 두 벡터 구하기 (원뿔 밑면을 그리기 위한 basis)
+	// LightDirection에 수직인 두 벡터 구하기
 	FVector Up = FVector(0.0f, 0.0f, 1.0f);
 	if (std::abs(FVector::Dot(LightDirection, Up)) > 0.99f)
 	{
-		Up = FVector(0.0f, 1.0f, 0.0f); // LightDirection이 거의 Z축과 평행하면 Y축 사용
+		Up = FVector(0.0f, 1.0f, 0.0f);
 	}
 	FVector Right = FVector::Cross(LightDirection, Up).GetNormalized();
 	FVector ActualUp = FVector::Cross(Right, LightDirection).GetNormalized();
 
-	// OuterCone 밑면의 점들
-	TArray<FVector> OuterBasePoints;
-	OuterBasePoints.Reserve(NumBaseSegments);
-	for (int i = 0; i < NumBaseSegments; ++i)
-	{
-		const float Angle = (static_cast<float>(i) / NumBaseSegments) * TWO_PI;
-		const FVector Offset = Right * (OuterBaseRadius * std::cos(Angle)) +
-		                       ActualUp * (OuterBaseRadius * std::sin(Angle));
-		OuterBasePoints.Add(BaseCenterWorld + Offset);
-	}
+	// --- OuterCone 그리기 ---
+	const float OuterAngleRad = DegreesToRadians(OuterConeAngle);
 
-	// Apex에서 밑면으로 가는 라인들 (OuterCone)
-	for (int i = 0; i < NumBaseSegments; ++i)
+	// 방사형 라인 길이는 AttenuationRadius로 고정
+	const float OuterRayLength = AttenuationRadius;
+
+	// 아크의 가장 먼 지점(LightDirection 방향)이 AttenuationRadius가 되도록 ArcRadius 계산
+	// ArcRadius × cos(angle) = AttenuationRadius
+	// ArcRadius = AttenuationRadius / cos(angle)
+	const float OuterArcRadius = (OuterAngleRad < HALF_PI && std::cos(OuterAngleRad) > 0.0001f)
+		? AttenuationRadius / std::cos(OuterAngleRad)
+		: AttenuationRadius;
+
+	// 밑면 원을 위한 끝점들 저장
+	TArray<FVector> OuterEndPoints;
+	OuterEndPoints.Reserve(NumRays);
+
+	// 1. 방사형 라인 (Apex에서 원뿔 가장자리로) - 길이 고정
+	for (int i = 0; i < NumRays; ++i)
 	{
+		const float Angle = (static_cast<float>(i) / NumRays) * TWO_PI;
+		const FVector RadialDir = (Right * std::cos(Angle) + ActualUp * std::sin(Angle)).GetNormalized();
+
+		// 원뿔 방향으로 회전
+		const FVector RayDir = (LightDirection * std::cos(OuterAngleRad) + RadialDir * std::sin(OuterAngleRad)).GetNormalized();
+		const FVector RayEnd = ApexWorld + RayDir * OuterRayLength;
+
 		StartPoints.Add(ApexWorld);
-		EndPoints.Add(OuterBasePoints[i]);
+		EndPoints.Add(RayEnd);
+		Colors.Add(OuterConeColor);
+
+		OuterEndPoints.Add(RayEnd);
+	}
+
+	// 밑면 원 그리기 (방사형 라인의 끝점들을 연결)
+	for (int i = 0; i < NumRays; ++i)
+	{
+		StartPoints.Add(OuterEndPoints[i]);
+		EndPoints.Add(OuterEndPoints[(i + 1) % NumRays]);
 		Colors.Add(OuterConeColor);
 	}
 
-	// 밑면 원 그리기 (OuterCone)
-	for (int i = 0; i < NumBaseSegments; ++i)
+	// 2. 언리얼 엔진 스타일 아크 (5+1+5 정점 방식)
+	// ActualUp축 기준 아크
 	{
-		StartPoints.Add(OuterBasePoints[i]);
-		EndPoints.Add(OuterBasePoints[(i + 1) % NumBaseSegments]);
-		Colors.Add(OuterConeColor);
+		// 가운데 정점 (가장 볼록한 부분) - LightDirection 방향으로 AttenuationRadius 거리
+		const FVector CenterPoint = ApexWorld + LightDirection * AttenuationRadius;
+
+		// 양쪽 끝점 (방사형 라인의 끝점과 동일)
+		const FVector RayDirLeft = (LightDirection * std::cos(OuterAngleRad) + ActualUp * std::sin(OuterAngleRad)).GetNormalized();
+		const FVector RayDirRight = (LightDirection * std::cos(OuterAngleRad) - ActualUp * std::sin(OuterAngleRad)).GetNormalized();
+		const FVector LeftEndPoint = ApexWorld + RayDirLeft * OuterRayLength;
+		const FVector RightEndPoint = ApexWorld + RayDirRight * OuterRayLength;
+
+		// 11개 정점 생성 (왼쪽 5개 + 중앙 1개 + 오른쪽 5개)
+		TArray<FVector> ArcPoints;
+		const int NumArcPoints = 11;
+
+		for (int i = 0; i < NumArcPoints; ++i)
+		{
+			float t = static_cast<float>(i) / (NumArcPoints - 1); // 0.0 ~ 1.0
+
+			FVector Point;
+			if (t <= 0.5f)
+			{
+				// 왼쪽 끝점 -> 중앙 정점 (구면 보간)
+				float localT = t * 2.0f; // 0.0 ~ 1.0
+				FVector DirLeft = (LeftEndPoint - ApexWorld).GetNormalized();
+				FVector DirCenter = (CenterPoint - ApexWorld).GetNormalized();
+
+				// Slerp (구면 선형 보간)
+				float cosAngle = FVector::Dot(DirLeft, DirCenter);
+				float angle = std::acos(FMath::Clamp(cosAngle, -1.0f, 1.0f));
+
+				if (angle < 0.001f)
+				{
+					// 각도가 매우 작으면 선형 보간 사용
+					Point = FVector::Lerp(LeftEndPoint, CenterPoint, localT);
+				}
+				else
+				{
+					float sinAngle = std::sin(angle);
+					float ratio1 = std::sin((1.0f - localT) * angle) / sinAngle;
+					float ratio2 = std::sin(localT * angle) / sinAngle;
+					FVector Dir = (DirLeft * ratio1 + DirCenter * ratio2).GetNormalized();
+
+					// 거리도 보간
+					float distance = FMath::Lerp(OuterRayLength, AttenuationRadius, localT);
+					Point = ApexWorld + Dir * distance;
+				}
+			}
+			else
+			{
+				// 중앙 정점 -> 오른쪽 끝점 (구면 보간)
+				float localT = (t - 0.5f) * 2.0f; // 0.0 ~ 1.0
+				FVector DirCenter = (CenterPoint - ApexWorld).GetNormalized();
+				FVector DirRight = (RightEndPoint - ApexWorld).GetNormalized();
+
+				// Slerp (구면 선형 보간)
+				float cosAngle = FVector::Dot(DirCenter, DirRight);
+				float angle = std::acos(FMath::Clamp(cosAngle, -1.0f, 1.0f));
+
+				if (angle < 0.001f)
+				{
+					// 각도가 매우 작으면 선형 보간 사용
+					Point = FVector::Lerp(CenterPoint, RightEndPoint, localT);
+				}
+				else
+				{
+					float sinAngle = std::sin(angle);
+					float ratio1 = std::sin((1.0f - localT) * angle) / sinAngle;
+					float ratio2 = std::sin(localT * angle) / sinAngle;
+					FVector Dir = (DirCenter * ratio1 + DirRight * ratio2).GetNormalized();
+
+					// 거리도 보간
+					float distance = FMath::Lerp(AttenuationRadius, OuterRayLength, localT);
+					Point = ApexWorld + Dir * distance;
+				}
+			}
+
+			ArcPoints.Add(Point);
+		}
+
+		// 정점들을 선으로 연결
+		for (int i = 0; i < NumArcPoints - 1; ++i)
+		{
+			StartPoints.Add(ArcPoints[i]);
+			EndPoints.Add(ArcPoints[i + 1]);
+			Colors.Add(OuterConeColor);
+		}
+	}
+
+	// Right축 기준 아크
+	{
+		// 가운데 정점 (가장 볼록한 부분) - LightDirection 방향으로 AttenuationRadius 거리
+		const FVector CenterPoint = ApexWorld + LightDirection * AttenuationRadius;
+
+		// 양쪽 끝점 (방사형 라인의 끝점과 동일)
+		const FVector RayDirLeft = (LightDirection * std::cos(OuterAngleRad) + Right * std::sin(OuterAngleRad)).GetNormalized();
+		const FVector RayDirRight = (LightDirection * std::cos(OuterAngleRad) - Right * std::sin(OuterAngleRad)).GetNormalized();
+		const FVector LeftEndPoint = ApexWorld + RayDirLeft * OuterRayLength;
+		const FVector RightEndPoint = ApexWorld + RayDirRight * OuterRayLength;
+
+		// 11개 정점 생성 (왼쪽 5개 + 중앙 1개 + 오른쪽 5개)
+		TArray<FVector> ArcPoints;
+		const int NumArcPoints = 11;
+
+		for (int i = 0; i < NumArcPoints; ++i)
+		{
+			float t = static_cast<float>(i) / (NumArcPoints - 1); // 0.0 ~ 1.0
+
+			FVector Point;
+			if (t <= 0.5f)
+			{
+				// 왼쪽 끝점 -> 중앙 정점 (구면 보간)
+				float localT = t * 2.0f; // 0.0 ~ 1.0
+				FVector DirLeft = (LeftEndPoint - ApexWorld).GetNormalized();
+				FVector DirCenter = (CenterPoint - ApexWorld).GetNormalized();
+
+				// Slerp (구면 선형 보간)
+				float cosAngle = FVector::Dot(DirLeft, DirCenter);
+				float angle = std::acos(FMath::Clamp(cosAngle, -1.0f, 1.0f));
+
+				if (angle < 0.001f)
+				{
+					// 각도가 매우 작으면 선형 보간 사용
+					Point = FVector::Lerp(LeftEndPoint, CenterPoint, localT);
+				}
+				else
+				{
+					float sinAngle = std::sin(angle);
+					float ratio1 = std::sin((1.0f - localT) * angle) / sinAngle;
+					float ratio2 = std::sin(localT * angle) / sinAngle;
+					FVector Dir = (DirLeft * ratio1 + DirCenter * ratio2).GetNormalized();
+
+					// 거리도 보간
+					float distance = FMath::Lerp(OuterRayLength, AttenuationRadius, localT);
+					Point = ApexWorld + Dir * distance;
+				}
+			}
+			else
+			{
+				// 중앙 정점 -> 오른쪽 끝점 (구면 보간)
+				float localT = (t - 0.5f) * 2.0f; // 0.0 ~ 1.0
+				FVector DirCenter = (CenterPoint - ApexWorld).GetNormalized();
+				FVector DirRight = (RightEndPoint - ApexWorld).GetNormalized();
+
+				// Slerp (구면 선형 보간)
+				float cosAngle = FVector::Dot(DirCenter, DirRight);
+				float angle = std::acos(FMath::Clamp(cosAngle, -1.0f, 1.0f));
+
+				if (angle < 0.001f)
+				{
+					// 각도가 매우 작으면 선형 보간 사용
+					Point = FVector::Lerp(CenterPoint, RightEndPoint, localT);
+				}
+				else
+				{
+					float sinAngle = std::sin(angle);
+					float ratio1 = std::sin((1.0f - localT) * angle) / sinAngle;
+					float ratio2 = std::sin(localT * angle) / sinAngle;
+					FVector Dir = (DirCenter * ratio1 + DirRight * ratio2).GetNormalized();
+
+					// 거리도 보간
+					float distance = FMath::Lerp(AttenuationRadius, OuterRayLength, localT);
+					Point = ApexWorld + Dir * distance;
+				}
+			}
+
+			ArcPoints.Add(Point);
+		}
+
+		// 정점들을 선으로 연결
+		for (int i = 0; i < NumArcPoints - 1; ++i)
+		{
+			StartPoints.Add(ArcPoints[i]);
+			EndPoints.Add(ArcPoints[i + 1]);
+			Colors.Add(OuterConeColor);
+		}
 	}
 
 	// --- InnerCone 그리기 (선택적) ---
-	if (InnerConeAngle > 0.0f && InnerConeAngle < OuterConeAngle)
+	if (InnerConeAngle > 0.0f && InnerConeAngle <= OuterConeAngle)
 	{
 		const float InnerAngleRad = DegreesToRadians(InnerConeAngle);
-		const float InnerBaseRadius = ConeLength * std::tan(InnerAngleRad);
 
-		// InnerCone 밑면의 점들
-		TArray<FVector> InnerBasePoints;
-		InnerBasePoints.Reserve(NumBaseSegments);
-		for (int i = 0; i < NumBaseSegments; ++i)
+		// 방사형 라인 길이는 AttenuationRadius로 고정
+		const float InnerRayLength = AttenuationRadius;
+
+		// 아크의 가장 먼 지점이 AttenuationRadius가 되도록 ArcRadius 계산
+		const float InnerArcRadius = (InnerAngleRad < HALF_PI && std::cos(InnerAngleRad) > 0.0001f)
+			? AttenuationRadius / std::cos(InnerAngleRad)
+			: AttenuationRadius;
+
+		// 밑면 원을 위한 끝점들 저장
+		TArray<FVector> InnerEndPoints;
+		InnerEndPoints.Reserve(NumRays);
+
+		// 1. 방사형 라인 (Apex에서 원뿔 가장자리로) - 길이 고정
+		for (int i = 0; i < NumRays; ++i)
 		{
-			const float Angle = (static_cast<float>(i) / NumBaseSegments) * TWO_PI;
-			const FVector Offset = Right * (InnerBaseRadius * std::cos(Angle)) +
-			                       ActualUp * (InnerBaseRadius * std::sin(Angle));
-			InnerBasePoints.Add(BaseCenterWorld + Offset);
+			const float Angle = (static_cast<float>(i) / NumRays) * TWO_PI;
+			const FVector RadialDir = (Right * std::cos(Angle) + ActualUp * std::sin(Angle)).GetNormalized();
+
+			const FVector RayDir = (LightDirection * std::cos(InnerAngleRad) + RadialDir * std::sin(InnerAngleRad)).GetNormalized();
+			const FVector RayEnd = ApexWorld + RayDir * InnerRayLength;
+
+			StartPoints.Add(ApexWorld);
+			EndPoints.Add(RayEnd);
+			Colors.Add(InnerConeColor);
+
+			InnerEndPoints.Add(RayEnd);
 		}
 
-		// 밑면 원 그리기만 (InnerCone - Apex 라인은 생략하여 깔끔하게)
-		for (int i = 0; i < NumBaseSegments; ++i)
+		// 밑면 원 그리기 (방사형 라인의 끝점들을 연결)
+		for (int i = 0; i < NumRays; ++i)
 		{
-			StartPoints.Add(InnerBasePoints[i]);
-			EndPoints.Add(InnerBasePoints[(i + 1) % NumBaseSegments]);
+			StartPoints.Add(InnerEndPoints[i]);
+			EndPoints.Add(InnerEndPoints[(i + 1) % NumRays]);
 			Colors.Add(InnerConeColor);
 		}
+
+		// InnerCone은 아크를 그리지 않음
 	}
 
 	// 렌더러에 라인 데이터 전달
@@ -184,6 +428,12 @@ void USpotLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 
 	// 리플렉션 기반 자동 직렬화 (이 클래스의 프로퍼티만)
 	AutoSerialize(bInIsLoading, InOutHandle, USpotLightComponent::StaticClass());
+
+	// 로드 후 Cone 각도 유효성 검사
+	if (bInIsLoading)
+	{
+		ValidateConeAngles();
+	}
 }
 
 void USpotLightComponent::DuplicateSubObjects()
