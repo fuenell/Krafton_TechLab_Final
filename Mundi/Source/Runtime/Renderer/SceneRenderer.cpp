@@ -30,6 +30,10 @@
 #include "Gizmo/GizmoArrowComponent.h"
 #include "Gizmo/GizmoRotateComponent.h"
 #include "Gizmo/GizmoScaleComponent.h"
+#include "DirectionalLightComponent.h"
+#include "AmbientLightComponent.h"
+#include "PointLightComponent.h"
+#include "SpotLightComponent.h"
 #include "SwapGuard.h"
 
 FSceneRenderer::FSceneRenderer(UWorld* InWorld, ACameraActor* InCamera, FViewport* InViewport, URenderer* InOwnerRenderer)
@@ -64,9 +68,19 @@ void FSceneRenderer::Render()
 	RenderEditorPrimitivesPass();	// 그리드 출력
 	RenderDebugPass();	//  선택한 물체의 경계 출력
 
-	if (EffectiveViewMode == EViewModeIndex::VMI_Lit)
+	// ViewMode에 따라 렌더링 경로 결정
+	if (EffectiveViewMode == EViewModeIndex::VMI_Lit ||
+		EffectiveViewMode == EViewModeIndex::VMI_Lit_Gouraud ||
+		EffectiveViewMode == EViewModeIndex::VMI_Lit_Lambert ||
+		EffectiveViewMode == EViewModeIndex::VMI_Lit_Phong)
 	{
+		// 조명이 있는 모드는 LightBuffer 업데이트 필요
 		UpdateLightConstant();
+		RenderLitPath();
+	}
+	else if (EffectiveViewMode == EViewModeIndex::VMI_Unlit)
+	{
+		// Unlit 모드는 조명 없이 렌더링
 		RenderLitPath();
 	}
 	else if (EffectiveViewMode == EViewModeIndex::VMI_Wireframe)
@@ -97,7 +111,7 @@ void FSceneRenderer::Render()
 
 void FSceneRenderer::RenderLitPath()
 {
-	RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTarget);
+	RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTargetWithId);
 
 	// Base Pass
 	RenderOpaquePass();
@@ -110,6 +124,10 @@ void FSceneRenderer::RenderLitPath()
 
 void FSceneRenderer::RenderWireframePath()
 {
+	RHIDevice->OMSetRenderTargets(ERTVMode::SceneIdTarget);
+
+	RenderOpaquePass();
+
 	// 상태 변경: Wireframe으로 레스터라이즈 모드 설정하도록 설정
 	RHIDevice->RSSetState(ERasterizerMode::Wireframe);
 
@@ -177,6 +195,9 @@ bool FSceneRenderer::IsValid() const
 
 void FSceneRenderer::PrepareView()
 {
+	// 렌더링 시작 시 현재 카메라 설정
+	OwnerRenderer->SetCurrentCamera(Camera);
+
 	RHIDevice->RSSetViewport();
 
 	float ViewportAspectRatio = static_cast<float>(Viewport->GetSizeX()) / static_cast<float>(Viewport->GetSizeY());
@@ -197,12 +218,28 @@ void FSceneRenderer::PrepareView()
 
 	EffectiveViewMode = World->GetRenderSettings().GetViewModeIndex();
 
+	// 뷰포트 크기 설정
+	D3D11_VIEWPORT Vp = {};
+	Vp.TopLeftX = static_cast<float>(Viewport->GetStartX());
+	Vp.TopLeftY = static_cast<float>(Viewport->GetStartY());
+	Vp.Width = static_cast<float>(Viewport->GetSizeX());
+	Vp.Height = static_cast<float>(Viewport->GetSizeY());
+	Vp.MinDepth = 0.0f;
+	Vp.MaxDepth = 1.0f;
+	RHIDevice->GetDeviceContext()->RSSetViewports(1, &Vp);
 
-	//RHIDevice->OnResize(Viewport->GetSizeX(), Viewport->GetSizeY());
-	float ClearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	RHIDevice->GetDeviceContext()->ClearRenderTargetView(RHIDevice->GetCurrentTargetRTV(), ClearColor);
-
-	RHIDevice->ClearDepthBuffer(1.0f, 0);                 // 깊이값 초기화
+	FViewportConstants ViewConstData;
+	// 1. 뷰포트 정보 채우기
+	ViewConstData.ViewportRect.X = Vp.TopLeftX;
+	ViewConstData.ViewportRect.Y = Vp.TopLeftY;
+	ViewConstData.ViewportRect.Z = Vp.Width;
+	ViewConstData.ViewportRect.W = Vp.Height;
+	// 2. 전체 화면(렌더 타겟) 크기 정보 채우기
+	ViewConstData.ScreenSize.X = RHIDevice->GetViewportWidth();
+	ViewConstData.ScreenSize.Y = RHIDevice->GetViewportHeight();
+	ViewConstData.ScreenSize.Z = 1.0f / RHIDevice->GetViewportWidth();
+	ViewConstData.ScreenSize.W = 1.0f / RHIDevice->GetViewportHeight();
+	RHIDevice->SetAndUpdateConstantBuffer((FViewportConstants)ViewConstData);
 }
 
 void FSceneRenderer::GatherVisibleProxies()
@@ -274,7 +311,7 @@ void FSceneRenderer::GatherVisibleProxies()
 					SceneGlobals.Fogs.Add(FogComponent);
 				}
 
-				/*else if (UDirectionalLightComponent* LightComponent = Cast<UDirectionalLightComponent>(Component); LightComponent && bDrawLight)
+				else if (UDirectionalLightComponent* LightComponent = Cast<UDirectionalLightComponent>(Component); LightComponent && bDrawLight)
 				{
 					SceneGlobals.DirectionalLights.Add(LightComponent);
 				}
@@ -286,13 +323,15 @@ void FSceneRenderer::GatherVisibleProxies()
 
 				else if (UPointLightComponent* LightComponent = Cast<UPointLightComponent>(Component); LightComponent && bDrawLight)
 				{
-					SceneLocals.PointLights.Add(LightComponent);
+					if (USpotLightComponent* SpotLightComponent = Cast<USpotLightComponent>(LightComponent); SpotLightComponent)
+					{
+						SceneLocals.SpotLights.Add(SpotLightComponent);
+					}
+					else
+					{
+						SceneLocals.PointLights.Add(LightComponent);
+					}
 				}
-
-				else if (USpotLightComponent* LightComponent = Cast<USpotLightComponent>(Component); LightComponent && bDrawLight)
-				{
-					SceneLocals.SpotLights.Add(LightComponent);
-				}*/
  			}
 		}
 	}
@@ -303,63 +342,46 @@ void FSceneRenderer::UpdateLightConstant()
 	FLightBufferType LightBuffer{};
 
 	//테스트코드
-	//for (UAmbientLightComponent* LightComponent : SceneGlobals.AmbientLights)
+	for (UAmbientLightComponent* LightComponent : SceneGlobals.AmbientLights)
 	{
-		//LightBuffer.AmbientLight = FAmbientLightInfo(LightComponent->GetLightInfo());
-		LightBuffer.AmbientLight = FAmbientLightInfo(FLinearColor(0.3f, 1.0f, 0.2f), 0.3f);
-		//break;
+		LightBuffer.AmbientLight = FAmbientLightInfo(LightComponent->GetLightInfo());
+		
+		break;
 	}
 
-	//for (UDirectionalLightComponent* LightComponent : SceneGlobals.DirectionalLights)
+	for (UDirectionalLightComponent* LightComponent : SceneGlobals.DirectionalLights)
 	{
-		//LightBuffer.DirectionalLight = FDirectionalLightInfo(LightComponent->GetLightInfo());
-		/*LightBuffer.DirectionalLight = FDirectionalLightInfo(
-			FLinearColor(0.5f, 0.5f, 0.5f),
-			FVector(1.0f, 1.0f, 1.0f), 
-			3.0f
-			);*/
-		//break;
+		LightBuffer.DirectionalLight = FDirectionalLightInfo(LightComponent->GetLightInfo());
+		
+		break;
 	}
 
-	//for (UPointLightComponent* LightComponent : SceneLocals.PointLights)
-	for(int Index = 0 ; Index < 15; Index++)
+	for (UPointLightComponent* LightComponent : SceneLocals.PointLights)
 	{
 		if (LightBuffer.PointLightCount >= NUM_POINT_LIGHT_MAX)
 		{
 			UE_LOG("PointLight의 최대 개수는 %d개 입니다.", NUM_POINT_LIGHT_MAX);
 			break;
 		}
-		//LightBuffer.PointLights[LightBuffer.PointLightCount++] = FPointLightInfo(LightComponent->GetLightInfo());
-		LightBuffer.PointLights[LightBuffer.PointLightCount++] = FPointLightInfo(
-			FLinearColor(3.0f, 9.4f, 2.3f),
-			FVector(4.0f, 3.0f, 6.0f),
-			3.5f,
-			FVector(3.0f, 3.5f, 3.3f),
-			3.0f * LightBuffer.PointLightCount
-		);
+		LightBuffer.PointLights[LightBuffer.PointLightCount++] = FPointLightInfo(LightComponent->GetLightInfo());
+		
 
 	}
 
-	//for (USpotLightComponent* LightComponent : SceneLocals.SpotLights)
-	for(int Index = 0 ; Index < 32; Index++)
+	for (USpotLightComponent* LightComponent : SceneLocals.SpotLights)
 	{
 		if (LightBuffer.SpotLightCount >= NUM_SPOT_LIGHT_MAX)
 		{
 			UE_LOG("SpotLight의 최대 개수는 %d개 입니다.", NUM_SPOT_LIGHT_MAX);
 			break;
 		}
-		//LightBuffer.SpotLights[LightBuffer.SpotLightCount++] = FSpotLightInfo(LightComponent->GetLightInfo());
-		LightBuffer.SpotLights[LightBuffer.SpotLightCount++] = FSpotLightInfo(
-			FLinearColor(0.3f, 0.6f, 1.0f),
-			FVector(9.0f, 9.0f, 9.0f),
-			30.0f,
-			FVector(14.f, 3.f, 2.3f),
-			32.0f,
-			0.3f
-		);
+		LightBuffer.SpotLights[LightBuffer.SpotLightCount++] = FSpotLightInfo(LightComponent->GetLightInfo());
 	}
 
-	RHIDevice->UpdateConstantBuffer(LightBuffer);
+	// CRITICAL FIX: Use SetAndUpdateConstantBuffer instead of UpdateConstantBuffer
+	// UpdateConstantBuffer only updates the buffer data but doesn't bind it to slot b8
+	// SetAndUpdateConstantBuffer both updates the data AND binds it to VS/PS
+	RHIDevice->SetAndUpdateConstantBuffer(LightBuffer);
 }
 
 void FSceneRenderer::PerformFrustumCulling()
@@ -387,8 +409,38 @@ void FSceneRenderer::RenderOpaquePass()
 	RHIDevice->OMSetDepthStencilState(EComparisonFunc::LessEqual); // 깊이 쓰기 ON
 	RHIDevice->OMSetBlendState(false);
 
+	// ViewMode에 따라 조명 모델 결정
+	ELightingModel LightingModel = ELightingModel::None;
+
+	switch (EffectiveViewMode)
+	{
+	case EViewModeIndex::VMI_Lit:           // 기본 Lit (Phong)
+	case EViewModeIndex::VMI_Lit_Phong:     // 명시적 Phong
+		LightingModel = ELightingModel::Phong;
+		break;
+	case EViewModeIndex::VMI_Lit_Gouraud:   // Gouraud
+		LightingModel = ELightingModel::Gouraud;
+		break;
+	case EViewModeIndex::VMI_Lit_Lambert:   // Lambert
+		LightingModel = ELightingModel::Lambert;
+		break;
+	case EViewModeIndex::VMI_Unlit:         // Unlit
+		LightingModel = ELightingModel::None;
+		break;
+	default:
+		LightingModel = ELightingModel::Phong; // 기본값
+		break;
+	}
+
+	// 모든 메시에 조명 모델 적용
 	for (UMeshComponent* MeshComponent : Proxies.Meshes)
 	{
+		// StaticMeshComponent인 경우 조명 모델 설정
+		if (UStaticMeshComponent* StaticMeshComp = Cast<UStaticMeshComponent>(MeshComponent))
+		{
+			StaticMeshComp->SetLightingModel(LightingModel);
+		}
+
 		MeshComponent->Render(OwnerRenderer, ViewMatrix, ProjectionMatrix);
 	}
 
@@ -690,10 +742,15 @@ void FSceneRenderer::RenderDebugPass()
 	{
 		for (USceneComponent* Component : SelectedActor->GetSceneComponents())
 		{
-			// 일단 데칼만 구현됨
+			// Decal 디버그 볼륨
 			if (UDecalComponent* Decal = Cast<UDecalComponent>(Component))
 			{
 				Decal->RenderDebugVolume(OwnerRenderer, ViewMatrix, ProjectionMatrix);
+			}
+			// SpotLight 디버그 볼륨 (원뿔 모양)
+			else if (USpotLightComponent* SpotLight = Cast<USpotLightComponent>(Component))
+			{
+				SpotLight->RenderDebugVolume(OwnerRenderer, ViewMatrix, ProjectionMatrix);
 			}
 		}
 	}
@@ -714,7 +771,7 @@ void FSceneRenderer::RenderDebugPass()
 void FSceneRenderer::RenderOverayEditorPrimitivesPass()
 {
 	// 후처리된 최종 이미지 위에 원본 씬의 뎁스 버퍼를 사용하여 3D 오버레이를 렌더링합니다.
-	RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTarget);
+	RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTargetWithId);
 
 	// 뎁스 버퍼를 Clear하고 LessEqual로 그리기 때문에 오버레이로 표시되는데 오버레이 끼리는 깊이 테스트가 가능함
 	RHIDevice->ClearDepthBuffer(1.0f, 0);
@@ -803,16 +860,6 @@ void FSceneRenderer::ApplyScreenEffectsPass()
 // 최종 결과물의 실제 BackBuffer에 그리는 함수
 void FSceneRenderer::CompositeToBackBuffer()
 {
-	// 마지막 BackBuffer 그리는 단계에서만 뷰포트 크기 설정
-	D3D11_VIEWPORT vp = {};
-	vp.TopLeftX = static_cast<float>(Viewport->GetStartX());
-	vp.TopLeftY = static_cast<float>(Viewport->GetStartY());
-	vp.Width = static_cast<float>(Viewport->GetSizeX());
-	vp.Height = static_cast<float>(Viewport->GetSizeY());
-	vp.MinDepth = 0.0f;
-	vp.MaxDepth = 1.0f;
-	RHIDevice->GetDeviceContext()->RSSetViewports(1, &vp);
-
 	// 1. 최종 결과물을 Source로 만들기 위해 스왑하고, 작업 후 SRV 슬롯 0을 자동 해제하는 가드 생성
 	FSwapGuard SwapGuard(RHIDevice, 0, 1);
 

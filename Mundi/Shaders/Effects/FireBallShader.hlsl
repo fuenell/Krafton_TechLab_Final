@@ -67,7 +67,7 @@ float4 mainPS(PS_INPUT input) : SV_TARGET
     }
     
     float t = saturate(dist / gRadius);
-    float f = exp(-gFalloff * t * t);
+    float f = exp(-gFalloff * t * t);   
 
     // f > 0이라 경계 뚝 끊기지 않게 smoothstep로 처리
     const float edgeEps = 0.1; // 상수 혹은 cbuffer로 노출

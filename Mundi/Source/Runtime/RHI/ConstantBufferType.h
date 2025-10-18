@@ -131,6 +131,8 @@ struct HighLightBufferType
 struct ColorBufferType
 {
     FVector4 Color;
+    uint32 UUID;
+    FVector Padding;
 };
 
 
@@ -166,6 +168,30 @@ struct FLightBufferType
     FVector2D Padding;
 };
 
+// b10 고유번호 고정
+struct FViewportConstants
+{
+    // x = Viewport TopLeftX
+    // y = Viewport TopLeftY
+    // z = Viewport Width
+    // w = Viewport Height
+    FVector4 ViewportRect;
+
+    // x = Screen Width (전체 렌더 타겟 너비)
+    // y = Screen Height (전체 렌더 타겟 높이)
+    // z = 1.0f / Screen Width
+    // w = 1.0f / Screen Height
+    FVector4 ScreenSize;
+};
+
+struct CameraBufferType
+{
+    FVector CameraPosition;
+    float Padding;
+};
+
+static_assert(sizeof(CameraBufferType) % 16 == 0, "CameraBufferType size must be multiple of 16!");
+
 #define CONSTANT_BUFFER_INFO(TYPE, SLOT, VS, PS) \
 constexpr uint32 TYPE##Slot = SLOT;\
 constexpr bool TYPE##IsVS = VS;\
@@ -185,7 +211,9 @@ MACRO(HighLightBufferType)          \
 MACRO(ColorBufferType)              \
 MACRO(BillboardBufferType)          \
 MACRO(FireBallBufferType)           \
-MACRO(FLightBufferType)
+MACRO(CameraBufferType)             \
+MACRO(FLightBufferType)             \
+MACRO(FViewportConstants)
 
 //VS, PS 세팅은 함수 파라미터로 결정하게 하는게 훨씬 나을듯 나중에 수정 필요
 //그리고 UV Scroll 상수버퍼도 처리해줘야함
@@ -201,5 +229,7 @@ CONSTANT_BUFFER_INFO(HighLightBufferType, 2, true, false)
 CONSTANT_BUFFER_INFO(ColorBufferType, 3, false, true)
 CONSTANT_BUFFER_INFO(BillboardBufferType, 0, true, false)
 CONSTANT_BUFFER_INFO(FireBallBufferType, 7, false, true)
+CONSTANT_BUFFER_INFO(CameraBufferType, 7, true, true)  // b7, VS+PS (UberLit.hlsl과 일치)
 CONSTANT_BUFFER_INFO(FLightBufferType, 8, true, true)
+CONSTANT_BUFFER_INFO(FViewportConstants, 10, true, false)   // 뷰 포트 크기에 따라 전체 화면 복사를 보정하기 위해 설정 (10번 고유번호로 사용)
 

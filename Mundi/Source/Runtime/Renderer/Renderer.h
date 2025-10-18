@@ -28,6 +28,7 @@ public:
 	void SetCurrentViewportSize(uint32 InWidth, uint32 InHeight) { CurrentViewportWidth = InWidth; CurrentViewportHeight = InHeight; }
 	uint32 GetCurrentViewportWidth() const { return CurrentViewportWidth; }
 	uint32 GetCurrentViewportHeight() const { return CurrentViewportHeight; }
+	UPrimitiveComponent* GetPrimitiveCollided(int MouseX, int MouseY) const;
 
 	// 추후 다른 곳을 이동
 	void DrawIndexedPrimitiveComponent(UStaticMesh* InMesh, D3D11_PRIMITIVE_TOPOLOGY InTopology, const TArray<FMaterialSlot>& InComponentMaterialSlots);
@@ -42,6 +43,9 @@ public:
 	void ClearLineBatch();
 
 	D3D11RHI* GetRHIDevice() { return RHIDevice; }
+
+	void SetCurrentCamera(ACameraActor* InCamera) { CurrentCamera = InCamera; }
+	ACameraActor* GetCurrentCamera() const { return CurrentCamera; }
 
 private:
 	D3D11RHI* RHIDevice;    // NOTE: 개발 편의성을 위해서 DX11를 종속적으로 사용한다 (URHIDevice를 사용하지 않음)
@@ -66,5 +70,7 @@ private:
 	//UStaticMesh* PreStaticMesh = nullptr; // VertexBuffer, IndexBuffer
 	/*ID3D11Buffer* PreVertexBuffer = nullptr;
 	ID3D11ShaderResourceView* PreSRV = nullptr;*/
+
+	ACameraActor* CurrentCamera = nullptr;
 };
 

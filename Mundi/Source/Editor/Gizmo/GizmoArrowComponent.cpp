@@ -62,6 +62,7 @@ void UGizmoArrowComponent::Render(URenderer* Renderer, const FMatrix& View, cons
 
     // 하이라이트 상수
     Renderer->GetRHIDevice()->SetAndUpdateConstantBuffer(HighLightBufferType(true, FVector(1, 1, 1), AxisIndex, bHighlighted ? 1 : 0, 0, 1));
+    Renderer->GetRHIDevice()->SetAndUpdateConstantBuffer(ColorBufferType(FVector4(), 0));
     // 리사이징
     const float ScaleFactor = ComputeScreenConstantScale(Renderer, View, Proj, 30.0f);
 

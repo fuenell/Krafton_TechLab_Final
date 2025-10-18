@@ -269,6 +269,15 @@ enum class EGizmoSpace : uint8
     Local
 };
 
+// 조명 모델 열거형 (UberLit.hlsl 매크로와 대응)
+enum class ELightingModel : uint8
+{
+    None,       // 조명 없음 (기본 동작)
+    Gouraud,    // Per-Vertex 조명 (Diffuse + Specular)
+    Lambert,    // Per-Pixel Diffuse만
+    Phong       // Per-Pixel Diffuse + Specular (Blinn-Phong)
+};
+
 enum class EKeyInput : uint8
 {
     // Keyboard Keys
@@ -319,10 +328,13 @@ enum class EViewModeIndex : uint32
 {
     None,
 
-    VMI_Lit,
-    VMI_Unlit,
-    VMI_Wireframe,
-    VMI_SceneDepth,
+    VMI_Lit,                // 기본 조명 (Phong)
+    VMI_Lit_Gouraud,        // Gouraud 조명 (Per-Vertex)
+    VMI_Lit_Lambert,        // Lambert 조명 (Per-Pixel Diffuse)
+    VMI_Lit_Phong,          // Phong 조명 (Per-Pixel Full)
+    VMI_Unlit,              // 조명 없음
+    VMI_Wireframe,          // 와이어프레임
+    VMI_SceneDepth,         // 깊이 버퍼 시각화
 
     End,
 };
@@ -341,8 +353,10 @@ enum class ERTVMode : uint32
 {
 	BackBufferWithDepth,
 	BackBufferWithoutDepth,
+    SceneIdTarget,
     SceneColorTarget,
     SceneColorTargetWithoutDepth,
+    SceneColorTargetWithId, //모델 그릴때만 사용, 후처리는 별도
 };
 
 // RHI가 사용하는 텍스쳐들의 SRV

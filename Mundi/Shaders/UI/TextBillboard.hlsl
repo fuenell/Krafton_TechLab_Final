@@ -9,6 +9,12 @@ cbuffer CameraInfo : register(b0)
     //float3 cameraUp_worldspace;
 };
 
+cbuffer ColorId : register(b3)
+{
+    float4 Color;
+    uint UUID;
+}
+
 struct VS_INPUT
 {
     float3 centerPos : WORLDPOSITION;
@@ -21,6 +27,12 @@ struct PS_INPUT
 {
     float4 pos_screenspace : SV_POSITION;
     float2 tex : TEXCOORD0;
+};
+
+struct PS_OUTPUT
+{
+    float4 Color : SV_Target0;
+    uint UUID : SV_Target1;
 };
 
 Texture2D fontAtlas : register(t0);
@@ -47,11 +59,14 @@ PS_INPUT mainVS(VS_INPUT input)
     return output;
 }
 
-float4 mainPS(PS_INPUT input) : SV_Target
+PS_OUTPUT mainPS(PS_INPUT input) 
 {
+    PS_OUTPUT Output;
     float4 color = fontAtlas.Sample(linearSampler, input.tex);
 
     clip(color.a - 0.5f); // alpha - 0.5f < 0 이면 해당픽셀 렌더링 중단
 
-    return color;
+    Output.Color = color;
+    Output.UUID = UUID;
+    return Output;
 }

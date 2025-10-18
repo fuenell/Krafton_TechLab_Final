@@ -78,11 +78,12 @@ struct FMaterial
 // --- 상수 버퍼 (Constant Buffers) ---
 // Extended to support both lighting and StaticMeshShader features
 
-// b0: ModelBuffer (VS) - WorldMatrix only for compatibility with existing code
+// b0: ModelBuffer (VS) - Matches ModelBufferType exactly (64 bytes)
 cbuffer ModelBuffer : register(b0)
 {
-    row_major float4x4 WorldMatrix;
-    row_major float4x4 WorldInverseTranspose; // For normal transformation with non-uniform scale
+    row_major float4x4 WorldMatrix;  // 64 bytes only
+    // Note: C++ ModelBufferType doesn't include WorldInverseTranspose
+    // Must use WorldMatrix for normal transformation (works for uniform scale)
 };
 
 // b1: ViewProjBuffer (VS) - Matches ViewProjBufferType
@@ -90,17 +91,6 @@ cbuffer ViewProjBuffer : register(b1)
 {
     row_major float4x4 ViewMatrix;
     row_major float4x4 ProjectionMatrix;
-};
-
-// b2: HighLightBuffer (VS) - For selection/gizmo highlighting
-cbuffer HighLightBuffer : register(b2)
-{
-    uint Picked;        // 1 if object is picked/selected
-    float3 PickColor;   // Highlight color
-    uint AxisX;         // X-axis indicator (0=none, 1=red, 2=green, 3=blue)
-    uint AxisY;         // Y-axis indicator (1=yellow)
-    uint AxisZ;         // Z-axis indicator
-    uint IsGizmo;       // 1 if this is a gizmo object
 };
 
 // b3: ColorBuffer (PS) - For color blending/lerping
@@ -111,19 +101,12 @@ cbuffer ColorBuffer : register(b3)
 
 // b4: PixelConstBuffer (PS) - Material information from OBJ files
 // Must match FPixelConstBufferType exactly!
+// HLSL bool = 4 bytes, C++ bool = 1 byte -> need careful padding
 cbuffer PixelConstBuffer : register(b4)
 {
-    FMaterial Material;         // FMaterialInPs - 64 bytes
-    bool HasMaterial;           // 4 bytes   
-    bool HasTexture;            // 4 bytes
-};
-
-// b5: PSScrollCB (PS) - UV scroll animation
-cbuffer PSScrollCB : register(b5)
-{
-    float2 UVScrollSpeed;       // UV scroll speed (u, v)
-    float UVScrollTime;         // Current time for animation
-    float ScrollPadding;
+    FMaterial Material;         // 64 bytes
+    bool HasMaterial;           // 4 bytes (HLSL)
+    bool HasTexture;            // 4 bytes (HLSL)
 };
 
 // b7: CameraBuffer (VS+PS) - Camera properties (moved from b2)
@@ -170,20 +153,20 @@ struct PS_INPUT
 // --- 유틸리티 함수 ---
 
 // Ambient Light Calculation
-// Uses material's AmbientColor (Ka) if available, otherwise uses diffuse color
+// Uses the provided materialColor (which includes texture if available)
 float3 CalculateAmbientLight(FAmbientLightInfo light, float4 materialColor)
 {
-    float3 ambientMaterial = HasMaterial ? Material.AmbientColor : materialColor.rgb;
-    return light.Color.rgb * light.Intensity * ambientMaterial;
+    // Use materialColor directly (already contains texture if available)
+    return light.Color.rgb * light.Intensity * materialColor.rgb;
 }
 
 // Diffuse Light Calculation (Lambert)
-// Uses material's DiffuseColor (Kd) if available
+// Uses the provided materialColor (which includes texture if available)
 float3 CalculateDiffuse(float3 lightDir, float3 normal, float4 lightColor, float intensity, float4 materialColor)
 {
     float NdotL = max(dot(normal, lightDir), 0.0f);
-    float3 diffuseMaterial = HasMaterial ? Material.DiffuseColor : materialColor.rgb;
-    return lightColor.rgb * intensity * diffuseMaterial * NdotL;
+    // Use materialColor directly (already contains texture if available)
+    return lightColor.rgb * intensity * materialColor.rgb * NdotL;
 }
 
 // Specular Light Calculation (Blinn-Phong)
@@ -211,7 +194,7 @@ float CalculateAttenuationWithFalloff(float3 attenuation, float distance, float 
     float baseAttenuation = CalculateAttenuation(attenuation, distance);
     // Apply falloff exponent to create steeper or gentler falloff curves
     // falloffExponent = 1.0 means linear, > 1.0 means sharper falloff, < 1.0 means gentler
-    return pow(baseAttenuation, falloffExponent);
+    return baseAttenuation;
 }
 
 // Linear to sRGB conversion (Gamma Correction)
@@ -275,9 +258,9 @@ float3 CalculatePointLight(FPointLightInfo light, float3 worldPos, float3 normal
         // Inverse square falloff (physically accurate)
         // Scale by radius squared to normalize brightness across different radius values
         float radiusSq = light.AttenuationRadius * light.AttenuationRadius;
-        attenuation = radiusSq / (distance * distance);
+        attenuation = (distance * distance) / radiusSq;
         // Clamp to avoid over-bright values at very close distances
-        attenuation = min(attenuation, 1.0f);
+        attenuation = pow(min(1.0f - attenuation, 1.0f), light.FalloffExponent);
     }
 
     // Diffuse
@@ -310,8 +293,8 @@ float3 CalculateSpotLight(FSpotLightInfo light, float3 worldPos, float3 normal, 
 
     // Spot cone attenuation
     float cosAngle = dot(-lightDir, spotDir);
-    float innerCos = cos(light.InnerConeAngle);
-    float outerCos = cos(light.OuterConeAngle);
+    float innerCos = cos(radians(light.InnerConeAngle));
+    float outerCos = cos(radians(light.OuterConeAngle));
 
     // Early out if outside cone
     if (cosAngle < outerCos)
@@ -326,12 +309,11 @@ float3 CalculateSpotLight(FSpotLightInfo light, float3 worldPos, float3 normal, 
     }
     else
     {
-        // Inverse square falloff (physically accurate)
         // Scale by radius squared to normalize brightness across different radius values
         float radiusSq = light.AttenuationRadius * light.AttenuationRadius;
-        distanceAttenuation = radiusSq / (distance * distance);
+        distanceAttenuation = (distance * distance) / radiusSq;
         // Clamp to avoid over-bright values at very close distances
-        distanceAttenuation = min(distanceAttenuation, 1.0f);
+        distanceAttenuation = pow(min(1.0f - distanceAttenuation, 1.0f), light.FalloffExponent);
     }
 
     // Smooth falloff between inner and outer cone
@@ -370,8 +352,10 @@ PS_INPUT mainVS(VS_INPUT Input)
     // Finally to clip space
     Out.Position = mul(viewPos, ProjectionMatrix);
 
-    // Transform normal to world space using inverse transpose for correct non-uniform scale handling
-    float3 worldNormal = normalize(mul(Input.Normal, (float3x3) WorldInverseTranspose));
+    // Transform normal to world space
+    // Using WorldMatrix (works correctly for uniform scale only)
+    // For non-uniform scale, would need transpose(inverse(WorldMatrix))
+    float3 worldNormal = normalize(mul(Input.Normal, (float3x3) WorldMatrix));
     Out.Normal = worldNormal;
 
     Out.TexCoord = Input.TexCoord;
@@ -420,26 +404,6 @@ PS_INPUT mainVS(VS_INPUT Input)
 
 #endif
 
-    // Apply highlight/gizmo coloring (from StaticMeshShader)
-    // This happens after lighting to override colors for selection/gizmo display
-    if (IsGizmo == 1)
-    {
-        // Gizmo axis coloring
-        if (AxisY == 1)
-        {
-            Out.Color = float4(1.0f, 1.0f, 0.0f, Out.Color.a); // Yellow for Y-axis
-        }
-        else
-        {
-            if (AxisX == 1)
-                Out.Color = float4(1.0f, 0.0f, 0.0f, Out.Color.a); // Red for X-axis
-            else if (AxisX == 2)
-                Out.Color = float4(0.0f, 1.0f, 0.0f, Out.Color.a); // Green
-            else if (AxisX == 3)
-                Out.Color = float4(0.0f, 0.0f, 1.0f, Out.Color.a); // Blue for Z-axis
-        }
-    }
-
     return Out;
 }
 
@@ -450,10 +414,10 @@ float4 mainPS(PS_INPUT Input) : SV_TARGET
 {
     // Apply UV scrolling if enabled
     float2 uv = Input.TexCoord;
-    if (HasMaterial && HasTexture)
-    {
-        uv += UVScrollSpeed * UVScrollTime;
-    }
+    //if (HasMaterial && HasTexture)
+    //{
+    //    uv += UVScrollSpeed * UVScrollTime;
+    //}
 
     // Sample texture
     float4 texColor = g_DiffuseTexColor.Sample(g_Sample, uv);
@@ -495,20 +459,19 @@ float4 mainPS(PS_INPUT Input) : SV_TARGET
     float3 normal = normalize(Input.Normal);
     float4 baseColor = Input.Color;
 
-    // Apply material color if available
-    if (HasMaterial)
-    {
-        baseColor.rgb = Material.DiffuseColor;
-    }
-
-    // Multiply with texture
+    // Start with texture if available
     if (HasTexture)
     {
-        baseColor.rgb *= texColor.rgb;
+        baseColor.rgb = texColor.rgb;
     }
-    else if (!HasMaterial)
+    else if (HasMaterial)
     {
-        // Blend with LerpColor if no material/texture
+        // No texture, use material diffuse color
+        baseColor.rgb = Material.DiffuseColor;
+    }
+    else
+    {
+        // No texture and no material, blend with LerpColor
         baseColor.rgb = lerp(baseColor.rgb, LerpColor.rgb, LerpColor.a);
     }
 
@@ -552,20 +515,19 @@ float4 mainPS(PS_INPUT Input) : SV_TARGET
     float3 viewDir = normalize(CameraPosition - Input.WorldPos);
     float4 baseColor = Input.Color;
 
-    // Apply material color if available
-    if (HasMaterial)
-    {
-        baseColor.rgb = Material.DiffuseColor;
-    }
-
-    // Multiply with texture
+    // Start with texture if available
     if (HasTexture)
     {
-        baseColor.rgb *= texColor.rgb;
+        baseColor.rgb = texColor.rgb;
     }
-    else if (!HasMaterial)
+    else if (HasMaterial)
     {
-        // Blend with LerpColor if no material/texture
+        // No texture, use material diffuse color
+        baseColor.rgb = Material.DiffuseColor;
+    }
+    else
+    {
+        // No texture and no material, blend with LerpColor
         baseColor.rgb = lerp(baseColor.rgb, LerpColor.rgb, LerpColor.a);
     }
 

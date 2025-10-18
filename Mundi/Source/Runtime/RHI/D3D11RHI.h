@@ -61,7 +61,7 @@ public:
 
 public:
 	// clear
-	void ClearBackBuffer();
+	void ClearAllBuffer();
 	void ClearDepthBuffer(float Depth, UINT Stencil);
 	void CreateBlendState();
 
@@ -129,8 +129,6 @@ public:
 
 	void SetViewport(UINT width, UINT height);
 
-	void setviewort(UINT width, UINT height);
-
 	// Viewport query
 	UINT GetViewportWidth() const { return (UINT)ViewportInfo.Width; }
 	UINT GetViewportHeight() const { return (UINT)ViewportInfo.Height; }
@@ -142,11 +140,18 @@ public:
 	// NOTE: 추후 private 로 이동 필요?
 	// 현재 SRV, RTV 를 다루는 함수
 	ID3D11RenderTargetView* GetCurrentTargetRTV() const;
+	ID3D11RenderTargetView* GetIdBufferRTV() const { return IdBufferRTV; }
+
 	ID3D11DepthStencilView* GetSceneDSV() const;
+
+	ID3D11ShaderResourceView* GetSRV(RHI_SRV_Index SRVIndex) const;
 	ID3D11ShaderResourceView* GetCurrentSourceSRV() const;
 
+	ID3D11Texture2D* GetIdBuffer() const { return IdBuffer; }
+	ID3D11Texture2D* GetIdStagingBuffer() const { return IdStagingBuffer; }
+
 	// [Enum 으로 SRV, RTV 를 다루는 함수]
-	ID3D11ShaderResourceView* GetSRV(RHI_SRV_Index SRVIndex) const;
+
 	ID3D11SamplerState* GetSamplerState(RHI_Sampler_Index SamplerIndex) const;
 	void OMSetRenderTargets(ERTVMode RTVMode);
 
@@ -171,6 +176,7 @@ public:
 private:
 	void CreateDeviceAndSwapChain(HWND hWindow); // 여기서 디바이스, 디바이스 컨택스트, 스왑체인, 뷰포트를 초기화한다
 	void CreateFrameBuffer();
+	void CreateIdBuffer();
 	void CreateRasterizerState();
 	void CreateConstantBuffer(ID3D11Buffer** ConstantBuffer, uint32 Size);
 	void CreateDepthStencilState();
@@ -181,6 +187,7 @@ private:
 	void ReleaseBlendState();
 	void ReleaseRasterizerState(); // rs
 	void ReleaseFrameBuffer(); // fb, rtv
+	void ReleaseIdBuffer();
 	void ReleaseDeviceAndSwapChain();
 
 	// FSwapGuard 클래스가 D3D11RHI의 private 멤버에 접근할 수 있도록 허용
@@ -212,9 +219,14 @@ private:
 	ID3D11DepthStencilState* DepthStencilStateOverlayWriteStencil = nullptr;   // overlay writes stencil=1
 	ID3D11DepthStencilState* DepthStencilStateStencilRejectOverlay = nullptr;  // draw only where stencil==0
 
-	ID3D11BlendState* BlendState{};
+	ID3D11BlendState* BlendStateTransparent{};
+	ID3D11BlendState* BlendStateOpaque{};
 
 	ID3D11Texture2D* FrameBuffer{};
+	ID3D11Texture2D* IdBuffer{};
+	ID3D11Texture2D* IdStagingBuffer{};
+
+	ID3D11RenderTargetView* IdBufferRTV{};
 	ID3D11RenderTargetView* BackBufferRTV{};
 	ID3D11DepthStencilView* DepthStencilView{};
 
@@ -233,23 +245,7 @@ private:
 
     // 버퍼 핸들
 	CONSTANT_BUFFER_LIST(DECLARE_CONSTANT_BUFFER)
- //   ID3D11Buffer* ModelCB{};
- //   ID3D11Buffer* ViewProjCB{};
- //   ID3D11Buffer* HighLightCB{};
- //   ID3D11Buffer* BillboardCB{};
- //   ID3D11Buffer* ColorCB{};
- //   ID3D11Buffer* PixelConstCB{};
-	  ID3D11Buffer* UVScrollCB{};
- //   ID3D11Buffer* DecalCB{};
-	//ID3D11Buffer* FireBallCB{};
-
-	//// PostProcess용 상수 버퍼
-	//ID3D11Buffer* PostProcessCB{};
-	//ID3D11Buffer* InvViewProjCB{};
-	//ID3D11Buffer* FogCB{};
-	//ID3D11Buffer* FXAACB{};
-
-	//ID3D11Buffer* ConstantBuffer{};
+	ID3D11Buffer* UVScrollCB{};
 
 	ID3D11SamplerState* DefaultSamplerState = nullptr;
 	ID3D11SamplerState* LinearClampSamplerState = nullptr;

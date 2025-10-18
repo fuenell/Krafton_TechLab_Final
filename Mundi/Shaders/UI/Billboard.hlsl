@@ -7,6 +7,11 @@ cbuffer CameraInfo : register(b0)
     row_major matrix viewInverse;
 };
 
+cbuffer ColorId : register(b3)
+{
+    float4 Color;
+    uint UUID;
+}
 struct VS_INPUT
 {
     float3 localPos : POSITION;   // quad local offset (-0.5~0.5)
@@ -17,6 +22,12 @@ struct PS_INPUT
 {
     float4 pos : SV_POSITION;
     float2 uv  : TEXCOORD0;
+};
+
+struct PS_OUTPUT
+{
+    float4 Color : SV_Target0;
+    uint UUID : SV_Target1;
 };
 
 Texture2D BillboardTex : register(t0);
@@ -34,11 +45,14 @@ PS_INPUT mainVS(VS_INPUT input)
     return o;
 }
 
-float4 mainPS(PS_INPUT i) : SV_Target
+PS_OUTPUT mainPS(PS_INPUT i) 
 {
-
+    PS_OUTPUT Output;
+    
     float4 c = BillboardTex.Sample(LinearSamp, i.uv);
     if (c.a < 0.1f)
         discard;
-    return c;
+    Output.Color = c;
+    Output.UUID = UUID;
+    return Output;
 }

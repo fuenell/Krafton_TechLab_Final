@@ -151,6 +151,7 @@ void UTextRenderComponent::Render(URenderer* Renderer, const FMatrix& View, cons
         View,
         Proj,
         FMatrix()));
+    Renderer->GetRHIDevice()->SetAndUpdateConstantBuffer(ColorBufferType(FVector4(), this->InternalIndex));
 
     Renderer->GetRHIDevice()->PrepareShader(Material->GetShader());
     TArray<FBillboardVertexInfo_GPU> vertices = CreateVerticesForString(FString("UUID : ") + FString(std::to_string(Owner->UUID)), Owner->GetActorLocation());//TODO : HELLOWORLD를 멤버변수 TEXT로바꾸기

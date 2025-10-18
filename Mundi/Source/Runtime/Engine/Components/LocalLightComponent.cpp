@@ -5,10 +5,6 @@ IMPLEMENT_CLASS(ULocalLightComponent)
 
 ULocalLightComponent::ULocalLightComponent()
 {
-	AttenuationRadius = 1000.0f;
-	FalloffExponent = 1.0f;
-	Attenuation = FVector(0.0f, 0.0f, 1.0f);
-	bUseAttenuationCoefficients = true;
 }
 
 ULocalLightComponent::~ULocalLightComponent()

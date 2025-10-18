@@ -8,13 +8,17 @@
 #include "World.h"
 #include "WorldPartitionManager.h"
 #include "JsonSerializer.h"
+#include "CameraActor.h"
+#include "CameraComponent.h"
 
 IMPLEMENT_CLASS(UStaticMeshComponent)
 
 UStaticMeshComponent::UStaticMeshComponent()
 {
-	SetMaterial("Shaders/StaticMesh/StaticMeshShader.hlsl");
+	/*SetMaterial("Shaders/Materials/UberLit.hlsl");*/
+
 	SetStaticMesh("Data/cube-tex.obj");     // 임시 기본 static mesh 설정
+	SetLightingModel(ELightingModel::Phong); // 기본 조명 모델 설정 (Phong)
 }
 
 UStaticMeshComponent::~UStaticMeshComponent()
@@ -25,6 +29,67 @@ UStaticMeshComponent::~UStaticMeshComponent()
 	}
 }
 
+void UStaticMeshComponent::SetLightingModel(ELightingModel InModel)
+{
+    // Material이 이미 생성되어 있고 모델이 같다면 반환 (최적화)
+    if (Material && LightingModel == InModel)
+        return;
+
+    LightingModel = InModel;
+
+    // 조명 모델에 따라 적절한 셰이더로 전환
+    FString ShaderPath = "Shaders/Materials/UberLit.hlsl";
+    
+    TArray<FShaderMacro> Macros;
+    
+    switch (LightingModel)
+    {
+        case ELightingModel::Gouraud:
+            Macros.push_back(FShaderMacro{ "LIGHTING_MODEL_GOURAUD", "1" });
+            break;
+            
+        case ELightingModel::Lambert:
+            Macros.push_back(FShaderMacro{ "LIGHTING_MODEL_LAMBERT", "1" });
+            break;
+            
+        case ELightingModel::Phong:
+            Macros.push_back(FShaderMacro{ "LIGHTING_MODEL_PHONG", "1" });
+            break;
+            
+        case ELightingModel::None:
+        default:
+            // 매크로 없이 기본 동작 (조명 없음)
+            break;
+    }
+
+    // UResourceManager를 통해 매크로가 적용된 셰이더 로드
+    UShader* NewShader = UResourceManager::GetInstance().Load<UShader>(ShaderPath, Macros);
+    
+    if (NewShader)
+    {
+        // Material이 없으면 생성
+        if (!Material)
+        {
+            Material = UResourceManager::GetInstance().GetOrCreateMaterial(
+                ShaderPath + "_Material", 
+                EVertexLayoutType::PositionColorTexturNormal
+            );
+        }
+        
+        // 셰이더 교체
+        Material->SetShader(NewShader);
+        
+        UE_LOG("Lighting model changed to %s", 
+            LightingModel == ELightingModel::Gouraud ? "Gouraud" :
+            LightingModel == ELightingModel::Lambert ? "Lambert" :
+            LightingModel == ELightingModel::Phong ? "Phong" : "None");
+    }
+    else
+    {
+        UE_LOG("Failed to load shader for lighting model");
+    }
+}
+
 void UStaticMeshComponent::Render(URenderer* Renderer, const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix)
 {
 	UStaticMesh* Mesh = GetStaticMesh();
@@ -32,6 +97,18 @@ void UStaticMeshComponent::Render(URenderer* Renderer, const FMatrix& ViewMatrix
 	{
 		Renderer->GetRHIDevice()->SetAndUpdateConstantBuffer(ModelBufferType(GetWorldMatrix()));
 		Renderer->GetRHIDevice()->SetAndUpdateConstantBuffer(ViewProjBufferType(ViewMatrix, ProjectionMatrix));
+		Renderer->GetRHIDevice()->SetAndUpdateConstantBuffer(ColorBufferType(FVector4(), this->InternalIndex));
+		// b7: CameraBuffer - Renderer에서 카메라 위치 가져오기
+		FVector CameraPos = FVector::Zero();
+		if (ACameraActor* Camera = Renderer->GetCurrentCamera())
+		{
+			if (UCameraComponent* CamComp = Camera->GetCameraComponent())
+			{
+				CameraPos = CamComp->GetWorldLocation();
+			}
+		}
+		Renderer->GetRHIDevice()->SetAndUpdateConstantBuffer(CameraBufferType(CameraPos, 0.0f));
+
 		Renderer->GetRHIDevice()->PrepareShader(GetMaterial()->GetShader());
 		Renderer->DrawIndexedPrimitiveComponent(GetStaticMesh(), D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST, MaterialSlots);
 	}

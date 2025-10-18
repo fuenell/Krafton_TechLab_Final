@@ -83,16 +83,16 @@ LRESULT CALLBACK UEditorEngine::WndProc(HWND hWnd, UINT message, WPARAM wParam, 
     {
     case WM_SIZE:
     {
-        WPARAM sizeType = wParam;
-        if (sizeType != SIZE_MINIMIZED)
+        WPARAM SizeType = wParam;
+        if (SizeType != SIZE_MINIMIZED)
         {
             GetViewportSize(hWnd);
 
-            UINT newWidth = static_cast<UINT>(ClientWidth);
-            UINT newHeight = static_cast<UINT>(ClientHeight);
-            GEngine.RHIDevice.OnResize(newWidth, newHeight);
-            EditorINI["WindowWidth"] = std::to_string(newWidth);
-            EditorINI["WindowHeight"] = std::to_string(newHeight);
+            UINT NewWidth = static_cast<UINT>(ClientWidth);
+            UINT NewHeight = static_cast<UINT>(ClientHeight);
+            GEngine.RHIDevice.OnResize(NewWidth, NewHeight);
+            EditorINI["WindowWidth"] = std::to_string(NewWidth);
+            EditorINI["WindowHeight"] = std::to_string(NewHeight);
 
             if (ImGui::GetCurrentContext() != nullptr) 
             {

@@ -49,38 +49,14 @@ URenderer::~URenderer()
 
 void URenderer::BeginFrame()
 {
-	// 백버퍼/깊이버퍼를 클리어
-	//RHIDevice->ClearBackBuffer();  // 배경색
-	//RHIDevice->ClearDepthBuffer(1.0f, 0);                 // 깊이값 초기화
-	//RHIDevice->CreateBlendState();
 	RHIDevice->IASetPrimitiveTopology();
-	// RS
-	//RHIDevice->RSSetViewport();
 
-	// ✅ 디버그: BeginFrame에서 설정한 viewport 출력
-	//D3D11_VIEWPORT vp;
-	//UINT numViewports = 1;
-	//RHIDevice->GetDeviceContext()->RSGetViewports(&numViewports, &vp);
-	//static int frameCount = 0;
-	//if (frameCount++ % 60 == 0) // 60프레임마다 출력
-	//{
-	//	UE_LOG("[BeginFrame] Viewport: TopLeft(%.1f, %.1f), Size(%.1f x %.1f)", 
-	//		vp.TopLeftX, vp.TopLeftY, vp.Width, vp.Height);
-	//}
-
-	//OM
-	//RHIDevice->OMSetBlendState();
 	RHIDevice->OMSetRenderTargets(ERTVMode::BackBufferWithDepth);
 
 	// 프레임별 데칼 통계를 추적하기 위해 초기화
 	FDecalStatManager::GetInstance().ResetFrameStats();
 
-	// TODO - 한 종류 메쉬만 스폰했을 때 깨지는 현상 방지 임시이므로 고쳐야합니다
-	// ★ 캐시 무효화
-	//PreShader = nullptr;
-	//PreUMaterial = nullptr; // 이거 주석 처리 시: 피킹하면 그 UStatucjMesh의 텍스쳐가 전부 사라짐
-	//PreStaticMesh = nullptr; // 이거 주석 처리 시: 메시가 이상해짐
-	//PreViewModeIndex = EViewModeIndex::VMI_Wireframe; // 어차피 SetViewModeType이 다시 셋
+	RHIDevice->ClearAllBuffer();
 }
 
 void URenderer::EndFrame()
@@ -93,6 +69,43 @@ void URenderer::RenderSceneForView(UWorld* World, ACameraActor* Camera, FViewpor
 	// 매 프레임 FSceneRenderer 생성 후 삭제한다
 	FSceneRenderer SceneRenderer(World, Camera, Viewport, this);
 	SceneRenderer.Render();
+}
+
+UPrimitiveComponent* URenderer::GetPrimitiveCollided(int MouseX, int MouseY) const
+{
+	//GPU와 동기화 문제 때문에 Map이 호출될때까지 기다려야해서 피킹 하는 프레임에 엄청난 프레임 드랍이 일어남.
+   //******비동기 방식으로 무조건 바꿔야함****************
+	uint32 PickedId = 0;
+
+	ID3D11DeviceContext* DeviceContext = RHIDevice->GetDeviceContext();
+	//스테이징 버퍼를 가져와야 하는데 이걸 Device 추상 클래스가 Getter로 가지고 있는게 좋은 설계가 아닌 것 같아서 일단 캐스팅함
+
+
+	D3D11_BOX Box{};
+	Box.left = MouseX;
+	Box.right = MouseX + 1;
+	Box.top = MouseY;
+	Box.bottom = MouseY + 1;
+	Box.front = 0;
+	Box.back = 1;
+
+	DeviceContext->CopySubresourceRegion(
+		RHIDevice->GetIdStagingBuffer(),
+		0,
+		0, 0, 0,
+		RHIDevice->GetIdBuffer(),
+		0,
+		&Box);
+	D3D11_MAPPED_SUBRESOURCE MapResource{};
+	if (SUCCEEDED(DeviceContext->Map(RHIDevice->GetIdStagingBuffer(), 0, D3D11_MAP_READ, 0, &MapResource)))
+	{
+		PickedId = *static_cast<uint32*>(MapResource.pData);
+		DeviceContext->Unmap(RHIDevice->GetIdStagingBuffer(), 0);
+	}
+
+	if (PickedId == 0)
+		return nullptr;
+	return Cast<UPrimitiveComponent>(GUObjectArray[PickedId]);
 }
 
 void URenderer::DrawIndexedPrimitiveComponent(UStaticMesh* InMesh, D3D11_PRIMITIVE_TOPOLOGY InTopology, const TArray<FMaterialSlot>& InComponentMaterialSlots)

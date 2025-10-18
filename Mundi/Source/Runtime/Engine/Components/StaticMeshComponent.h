@@ -24,6 +24,10 @@ protected:
     ~UStaticMeshComponent() override;
 
 public:
+    // 조명 모델 설정
+    void SetLightingModel(ELightingModel InModel);
+    ELightingModel GetLightingModel() const { return LightingModel; }
+
     void Render(URenderer* Renderer, const FMatrix& View, const FMatrix& Proj) override;
 
     void SetStaticMesh(const FString& PathFileName);
@@ -57,6 +61,9 @@ protected:
     void MarkWorldPartitionDirty();
 
 protected:
+    // 조명 모델 설정
+    ELightingModel LightingModel = ELightingModel::Phong; // 기본값: Phong
+
     UStaticMesh* StaticMesh = nullptr;
     TArray<FMaterialSlot> MaterialSlots;
 

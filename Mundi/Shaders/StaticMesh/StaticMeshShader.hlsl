@@ -96,6 +96,7 @@ struct FMaterial
 cbuffer ColorBuffer : register(b3)
 {
     float4 LerpColor;
+    uint UUID;
 }
 
 cbuffer PixelConstData : register(b4)
@@ -117,6 +118,13 @@ struct PS_INPUT
     float3 normal : NORMAL0;
     float4 color : COLOR; // Color to pass to the pixel shader
     float2 texCoord : TEXCOORD0;
+    uint UUID : UUID;
+};
+
+struct PS_OUTPUT
+{
+    float4 Color : SV_Target0;
+    uint UUID : SV_Target1;
 };
 
 PS_INPUT mainVS(VS_INPUT input)
@@ -179,8 +187,9 @@ PS_INPUT mainVS(VS_INPUT input)
     return output;
 }
 
-float4 mainPS(PS_INPUT input) : SV_TARGET
+PS_OUTPUT mainPS(PS_INPUT input)
 {
+    PS_OUTPUT Output;
     // Lerp the incoming color with the global LerpColor
     float4 finalColor = input.color;
     finalColor.rgb = lerp(finalColor.rgb, LerpColor.rgb, LerpColor.a) * (1.0f - HasMaterial);
@@ -192,6 +201,8 @@ float4 mainPS(PS_INPUT input) : SV_TARGET
         finalColor.rgb = g_DiffuseTexColor.Sample(g_Sample, uv);
     }
     
-    return finalColor;
+    Output.Color = finalColor;
+    Output.UUID = UUID;
+    return Output;
 }
 
