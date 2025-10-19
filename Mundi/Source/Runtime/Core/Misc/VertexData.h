@@ -23,8 +23,9 @@ struct FVertexDynamic
 {
     FVector Position;
     FVector Normal;
-    FVector4 Color;
     FVector2D UV;
+    FVector4 Tangent;
+    FVector4 Color;
 
     void FillFrom(const FMeshData& mesh, size_t i)
  {
@@ -38,6 +39,7 @@ struct FVertexDynamic
         Position = src.pos;
         Color = src.color;
         UV = src.tex;
+        Tangent = src.Tangent;
         Normal = FVector{ src.normal.X, src.normal.Y, src.normal.Z };
     }
 };

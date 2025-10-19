@@ -104,6 +104,7 @@ cbuffer PixelConstBuffer : register(b4)
     FMaterial Material;         // 64 bytes
     uint bHasMaterial;          // 4 bytes (HLSL)
     uint bHasTexture;           // 4 bytes (HLSL)
+    uint bHasNormalTexture;
 };
 
 // b7: CameraBuffer (VS+PS) - Camera properties (moved from b2)
@@ -149,8 +150,9 @@ struct VS_INPUT
 {
     float3 Position : POSITION;
     float3 Normal : NORMAL0;
-    float4 Color : COLOR;
     float2 TexCoord : TEXCOORD0;
+    float4 Tangent : TANGENT0;
+    float4 Color : COLOR;
 };
 
 struct PS_INPUT
@@ -158,6 +160,7 @@ struct PS_INPUT
     float4 Position : SV_POSITION;
     float3 WorldPos : POSITION;     // World position for per-pixel lighting
     float3 Normal : NORMAL0;
+    row_major float3x3 TBN : TBN;
     float4 Color : COLOR;
     float2 TexCoord : TEXCOORD0;
 };
@@ -397,6 +400,14 @@ PS_INPUT mainVS(VS_INPUT Input)
     // Normal vectors transform by transpose(inverse(WorldMatrix))
     float3 worldNormal = normalize(mul(Input.Normal, (float3x3) WorldInverseTranspose));
     Out.Normal = worldNormal;
+    float3 Tangent = mul(Input.Tangent.xyz, (float3x3) WorldMatrix) * Input.Tangent.w;
+    float3 BiTangent = cross(worldNormal, Tangent);
+    row_major float3x3 TBN;
+    TBN._m00_m01_m02 = Tangent;
+    TBN._m10_m11_m12 = BiTangent;
+    TBN._m20_m21_m22 = worldNormal;
+    
+    Out.TBN = TBN;
 
     Out.TexCoord = Input.TexCoord;
 
@@ -605,6 +616,12 @@ PS_OUTPUT mainPS(PS_INPUT Input)
 #elif LIGHTING_MODEL_PHONG
     // Phong Shading: Calculate diffuse and specular lighting per-pixel (Blinn-Phong)
     float3 normal = normalize(Input.Normal);
+    if(bHasNormalTexture)
+    {
+        normal = g_NormalTexColor.Sample(g_Sample2, uv);
+        normal = normal * 2.0f - 1.0f;
+        normal = mul(normal, Input.TBN);
+    }
     float3 viewDir = normalize(CameraPosition - Input.WorldPos);
     float4 baseColor = Input.Color;
 

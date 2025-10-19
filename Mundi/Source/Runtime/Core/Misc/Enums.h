@@ -123,14 +123,17 @@ struct FNormalVertex
 {
     FVector pos;
     FVector normal;
-    FVector4 color;
     FVector2D tex;
+    FVector4 Tangent;
+    FVector4 color;
+    
 
     friend FArchive& operator<<(FArchive& Ar, FNormalVertex& Vtx)
     {
         // Serialize member by member to avoid issues with struct padding and alignment
         Ar << Vtx.pos;
         Ar << Vtx.normal;
+        Ar << Vtx.Tangent;
         Ar << Vtx.color;
         Ar << Vtx.tex;
         return Ar;

@@ -68,8 +68,9 @@ struct VS_INPUT
 {
     float3 position : POSITION; // Input position from vertex buffer
     float3 normal : NORMAL0;
-    float4 color : COLOR; // Input color from vertex buffer
     float2 texCoord : TEXCOORD0;
+    float4 Tangent : TANGENT0;
+    float4 color : COLOR; // Input color from vertex buffer
 };
 
 

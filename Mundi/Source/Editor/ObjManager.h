@@ -413,8 +413,45 @@ public:
 	{
 		OutStaticMesh->PathFileName = InObjInfo.ObjFileName;
 		uint32 NumDuplicatedVertex = static_cast<uint32>(InObjInfo.PositionIndices.size());
+		TArray<FVector> TangentForVertex;
+		TArray<FVector> BiTangentForVertex;
+		TangentForVertex.SetNum(NumDuplicatedVertex, FVector(0.f,0.f,0.f));
+		BiTangentForVertex.SetNum(NumDuplicatedVertex, FVector(0.f, 0.f, 0.f));
+
+		for (uint32 Index = 0; Index < NumDuplicatedVertex; Index += 3)
+		{
+			FVector P0 = InObjInfo.Positions[InObjInfo.PositionIndices[Index]];
+			FVector P1 = InObjInfo.Positions[InObjInfo.PositionIndices[Index + 1]];
+			FVector P2 = InObjInfo.Positions[InObjInfo.PositionIndices[Index + 2]];
+
+			FVector E1 = P1 - P0;
+			FVector E2 = P2 - P0;
+
+			FVector2D UvP0 = InObjInfo.TexCoords[InObjInfo.TexCoordIndices[Index]];
+			FVector2D UvP1 = InObjInfo.TexCoords[InObjInfo.TexCoordIndices[Index+1]];
+			FVector2D UvP2 = InObjInfo.TexCoords[InObjInfo.TexCoordIndices[Index + 2]];
+
+			float DeltaU1 = UvP1.X - UvP0.X;	
+			float DeltaV1 = UvP1.Y - UvP0.Y;
+			float DeltaU2 = UvP2.X - UvP0.X;	
+			float DeltaV2 = UvP2.Y - UvP0.Y;
+
+			float DeterminantInv = 1.0f / (DeltaU1 * DeltaV2 - DeltaV1 * DeltaU2);
+
+			FVector Tangent = (E1 * DeltaV2 - E2 * DeltaV1) * DeterminantInv;
+			FVector BiTangent = (-E1 * DeltaU2 + E2 * DeltaU1) * DeterminantInv;
+
+			TangentForVertex[Index] += Tangent;
+			TangentForVertex[Index+1] += Tangent;
+			TangentForVertex[Index+2] += Tangent;
+
+			BiTangentForVertex[Index] += BiTangent;
+			BiTangentForVertex[Index+1] += BiTangent;
+			BiTangentForVertex[Index+2] += BiTangent;
+		}
 
 		std::unordered_map<VertexKey, uint32, VertexKeyHash> VertexMap;
+
 		for (uint32 CurIndex = 0; CurIndex < NumDuplicatedVertex; ++CurIndex)
 		{
 			VertexKey Key{ InObjInfo.PositionIndices[CurIndex], InObjInfo.TexCoordIndices[CurIndex], InObjInfo.NormalIndices[CurIndex] };
@@ -425,11 +462,21 @@ public:
 			}
 			else
 			{
+				FVector Tangent = TangentForVertex[CurIndex];
+				FVector Normal = InObjInfo.Normals[Key.NormalIndex];
+				FVector BiTangent = BiTangentForVertex[CurIndex];
+
+				Tangent = Tangent - Normal * FVector::Dot(Tangent, Normal);
+				Tangent.Normalize();
+				FVector4 FinalTangent(Tangent.X, Tangent.Y, Tangent.Z);
+				FinalTangent.W = FVector::Dot(FVector::Cross(Tangent, Normal), BiTangent) > 0.0f ? 1.0f : -1.0f;
+
 				FNormalVertex NormalVertex(
 					InObjInfo.Positions[Key.PosIndex],
-					InObjInfo.Normals[Key.NormalIndex],
-					FVector4(1, 1, 1, 1),
-					InObjInfo.TexCoords[Key.TexIndex]
+					Normal,
+					InObjInfo.TexCoords[Key.TexIndex],
+					FinalTangent,
+					FVector4(1, 1, 1, 1)
 				);
 				OutStaticMesh->Vertices.push_back(NormalVertex);
 				uint32 NewIndex = static_cast<uint32>(OutStaticMesh->Vertices.size() - 1);

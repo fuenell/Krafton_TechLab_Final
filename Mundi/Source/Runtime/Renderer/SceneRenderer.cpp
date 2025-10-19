@@ -627,13 +627,13 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 			ID3D11ShaderResourceView* NormalTextureSRV = nullptr;
 
 			FPixelConstBufferType PixelConst{}; // 기본값으로 초기화
-			bool bHasTexture = false;
 
 			if (Batch.Material) // 머티리얼 유효성 검사
 			{
 				// 유효한 머티리얼이 있는 경우
 				const FMaterialParameters& MaterialInfo = Batch.Material->GetMaterialInfo();
-
+				PixelConst.Material = MaterialInfo;
+				PixelConst.bHasMaterial = true;
 				// --- 텍스처 로드 및 SRV 준비 ---
 				if (!MaterialInfo.DiffuseTextureFileName.empty())
 				{
@@ -642,7 +642,7 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 						if (TextureData->GetShaderResourceView())
 						{
 							DiffuseTextureSRV = TextureData->GetShaderResourceView();
-							bHasTexture = true;
+							PixelConst.bHasDiffuseTexture = true;
 						}
 					}
 				}
@@ -654,22 +654,19 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 						if (TextureData->GetShaderResourceView())
 						{
 							NormalTextureSRV = TextureData->GetShaderResourceView();
-							bHasTexture = true;
+							PixelConst.bHasNormalTexture = true;
 						}
 					}
 				}
-
-				// --- 픽셀 상수 버퍼 준비 (머티리얼 정보 사용) ---
-				PixelConst = FPixelConstBufferType(FMaterialInPs(MaterialInfo), true);
-				PixelConst.bHasTexture = bHasTexture;
 			}
 			else
 			{
 				// 머티리얼이 없는 경우 (예: 기본 버텍스 컬러 사용)
 				// 기본값 FMaterialParameters 생성 (모든 값이 기본값)
 				FMaterialParameters DefaultMaterialInfo;
-				PixelConst = FPixelConstBufferType(FMaterialInPs(DefaultMaterialInfo), false);
-				PixelConst.bHasTexture = false;
+				PixelConst.Material = DefaultMaterialInfo;
+				PixelConst.bHasDiffuseTexture = false;
+				PixelConst.bHasNormalTexture = false;
 				// srv는 nullptr 유지
 			}
 
