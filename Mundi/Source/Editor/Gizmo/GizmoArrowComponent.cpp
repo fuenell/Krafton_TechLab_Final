@@ -11,7 +11,7 @@ UGizmoArrowComponent::UGizmoArrowComponent()
 	SetStaticMesh("Data/Gizmo/TranslationHandle.obj");
 
 	// GizmoMaterial을 기즈모용 셰이더로 설정
-	SetMaterialByName(0, "Shaders/StaticMesh/StaticMeshShader.hlsl");
+	SetMaterialByName(0, "Shaders/StaticMesh/Gizmo.hlsl");
 }
 
 UGizmoArrowComponent::~UGizmoArrowComponent()
@@ -102,7 +102,7 @@ void UGizmoArrowComponent::CollectMeshBatches(
 	{
 		// [Fallback 로직]
 		UE_LOG("GizmoArrowComponent: GizmoMaterial is invalid. Falling back to default vertex color shader.");
-		MaterialToUse = UResourceManager::GetInstance().Load<UMaterial>("Shaders/StaticMesh/StaticMeshShader.hlsl");
+		MaterialToUse = UResourceManager::GetInstance().Load<UMaterial>("Shaders/StaticMesh/Gizmo.hlsl");
 		if (MaterialToUse)
 		{
 			ShaderToUse = MaterialToUse->GetShader();

@@ -6,7 +6,7 @@ IMPLEMENT_CLASS(UGizmoRotateComponent)
 UGizmoRotateComponent::UGizmoRotateComponent()
 {
     SetStaticMesh("Data/Gizmo/RotationHandle.obj");
-    SetMaterialByName(0, "Shaders/StaticMesh/StaticMeshShader.hlsl");
+    SetMaterialByName(0, "Shaders/StaticMesh/Gizmo.hlsl");
 }
 
 UGizmoRotateComponent::~UGizmoRotateComponent()

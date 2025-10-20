@@ -116,15 +116,11 @@ struct ViewProjBufferType
 };
 
 
-// b2
-struct HighLightBufferType
+// b2: Gizmo rendering constant buffer
+struct GizmoBufferType
 {
-    uint32 Picked;
-    FVector Color;
-    uint32 X;
-    uint32 Y;
-    uint32 Z;
-    uint32 Gizmo;
+    FVector Color;          // Gizmo base color (axis color or light color)
+    uint32 bIsHighlighted;  // 1 = hovering (yellow), 0 = normal (use Color)
 };
 
 
@@ -218,7 +214,7 @@ MACRO(FogBufferType)                \
 MACRO(FXAABufferType)               \
 MACRO(FPixelConstBufferType)        \
 MACRO(ViewProjBufferType)           \
-MACRO(HighLightBufferType)          \
+MACRO(GizmoBufferType)              \
 MACRO(ColorBufferType)              \
 MACRO(BillboardBufferType)          \
 MACRO(FireBallBufferType)           \
@@ -237,7 +233,7 @@ CONSTANT_BUFFER_INFO(FogBufferType, 2, false, true)
 CONSTANT_BUFFER_INFO(FXAABufferType, 2, false, true)
 CONSTANT_BUFFER_INFO(FPixelConstBufferType, 4, false, true)
 CONSTANT_BUFFER_INFO(ViewProjBufferType, 1, true, false)
-CONSTANT_BUFFER_INFO(HighLightBufferType, 2, true, false)
+CONSTANT_BUFFER_INFO(GizmoBufferType, 2, true, false)  // b2, VS only (Gizmo.hlsl)
 CONSTANT_BUFFER_INFO(ColorBufferType, 3, false, true)
 CONSTANT_BUFFER_INFO(BillboardBufferType, 0, true, false)
 CONSTANT_BUFFER_INFO(FireBallBufferType, 7, false, true)

@@ -2,7 +2,7 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!-- Shader Files -->
   <ItemGroup>
-    <FxCompile Include="Shaders\StaticMesh\StaticMeshShader.hlsl">
+    <FxCompile Include="Shaders\StaticMesh\Gizmo.hlsl">
       <Filter>Shaders\StaticMesh</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\Effects\Decal.hlsl">
@@ -38,6 +38,7 @@
     <FxCompile Include="Shaders\Materials\UberLit.hlsl">
       <Filter>Shaders\Materials</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\PostProcess\TileDebugVisualization_PS.hlsl" />
   </ItemGroup>
   <!-- Root Files -->
   <ItemGroup>
@@ -154,16 +155,10 @@
     <ClCompile Include="Source\Runtime\Engine\Components\SpotLightComponent.cpp">
       <Filter>Source\Runtime\Engine\Components</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Runtime\Engine\Components\AABoundingBoxComponent.cpp">
-      <Filter>Source\Runtime\Engine\Components</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Runtime\Engine\Components\BillboardComponent.cpp">
       <Filter>Source\Runtime\Engine\Components</Filter>
     </ClCompile>
     <ClCompile Include="Source\Runtime\Engine\Components\CameraComponent.cpp">
-      <Filter>Source\Runtime\Engine\Components</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Runtime\Engine\Components\CubeComponent.cpp">
       <Filter>Source\Runtime\Engine\Components</Filter>
     </ClCompile>
     <ClCompile Include="Source\Runtime\Engine\Components\DecalComponent.cpp">
@@ -190,19 +185,10 @@
     <ClCompile Include="Source\Runtime\Engine\Components\SceneComponent.cpp">
       <Filter>Source\Runtime\Engine\Components</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Runtime\Engine\Components\ShapeComponent.cpp">
-      <Filter>Source\Runtime\Engine\Components</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Runtime\Engine\Components\SphereComponent.cpp">
-      <Filter>Source\Runtime\Engine\Components</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Runtime\Engine\Components\StaticMeshComponent.cpp">
       <Filter>Source\Runtime\Engine\Components</Filter>
     </ClCompile>
     <ClCompile Include="Source\Runtime\Engine\Components\TextRenderComponent.cpp">
-      <Filter>Source\Runtime\Engine\Components</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Runtime\Engine\Components\TriangleComponent.cpp">
       <Filter>Source\Runtime\Engine\Components</Filter>
     </ClCompile>
     <ClCompile Include="Source\Runtime\Engine\Collision\AABB.cpp">
@@ -289,9 +275,6 @@
     <ClCompile Include="Source\Editor\Gizmo\GizmoArrowComponent.cpp">
       <Filter>Source\Editor\Gizmo</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Gizmo\GizmoComponent.cpp">
-      <Filter>Source\Editor\Gizmo</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Editor\Gizmo\GizmoRotateComponent.cpp">
       <Filter>Source\Editor\Gizmo</Filter>
     </ClCompile>
@@ -299,9 +282,6 @@
       <Filter>Source\Editor\Gizmo</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\Grid\GridActor.cpp">
-      <Filter>Source\Editor\Grid</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\Grid\GridComponent.cpp">
       <Filter>Source\Editor\Grid</Filter>
     </ClCompile>
     <ClCompile Include="Source\Slate\GlobalConsole.cpp">
@@ -430,6 +410,9 @@
     <ClCompile Include="Source\Runtime\Renderer\SceneView.cpp">
       <Filter>Source\Runtime\Renderer</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Runtime\Engine\GameFramework\EmptyActor.cpp" />
+    <ClCompile Include="Source\Runtime\Renderer\TileLightCuller.cpp" />
+    <ClCompile Include="Source\Slate\Widgets\PropertyRenderer.cpp" />
   </ItemGroup>
   <!-- ThirdParty/ImGui Files -->
   <!-- Source Files -->
@@ -604,16 +587,10 @@
     <ClInclude Include="Source\Runtime\Engine\Components\SpotLightComponent.h">
       <Filter>Source\Runtime\Engine\Components</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Runtime\Engine\Components\AABoundingBoxComponent.h">
-      <Filter>Source\Runtime\Engine\Components</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Runtime\Engine\Components\BillboardComponent.h">
       <Filter>Source\Runtime\Engine\Components</Filter>
     </ClInclude>
     <ClInclude Include="Source\Runtime\Engine\Components\CameraComponent.h">
-      <Filter>Source\Runtime\Engine\Components</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Runtime\Engine\Components\CubeComponent.h">
       <Filter>Source\Runtime\Engine\Components</Filter>
     </ClInclude>
     <ClInclude Include="Source\Runtime\Engine\Components\DecalComponent.h">
@@ -640,19 +617,10 @@
     <ClInclude Include="Source\Runtime\Engine\Components\SceneComponent.h">
       <Filter>Source\Runtime\Engine\Components</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Runtime\Engine\Components\ShapeComponent.h">
-      <Filter>Source\Runtime\Engine\Components</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Runtime\Engine\Components\SphereComponent.h">
-      <Filter>Source\Runtime\Engine\Components</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Runtime\Engine\Components\StaticMeshComponent.h">
       <Filter>Source\Runtime\Engine\Components</Filter>
     </ClInclude>
     <ClInclude Include="Source\Runtime\Engine\Components\TextRenderComponent.h">
-      <Filter>Source\Runtime\Engine\Components</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Runtime\Engine\Components\TriangleComponent.h">
       <Filter>Source\Runtime\Engine\Components</Filter>
     </ClInclude>
     <ClInclude Include="Source\Runtime\Engine\Collision\AABB.h">
@@ -757,9 +725,6 @@
     <ClInclude Include="Source\Editor\Gizmo\GizmoArrowComponent.h">
       <Filter>Source\Editor\Gizmo</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\Gizmo\GizmoComponent.h">
-      <Filter>Source\Editor\Gizmo</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Editor\Gizmo\GizmoRotateComponent.h">
       <Filter>Source\Editor\Gizmo</Filter>
     </ClInclude>
@@ -770,9 +735,6 @@
       <Filter>Source\Editor\Grid</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Grid\GridActor.h">
-      <Filter>Source\Editor\Grid</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\Grid\GridComponent.h">
       <Filter>Source\Editor\Grid</Filter>
     </ClInclude>
     <ClInclude Include="Source\Slate\GlobalConsole.h">
@@ -901,6 +863,11 @@
     <ClInclude Include="ThirdParty\ImGui\imstb_truetype.h">
       <Filter>ThirdParty\ImGui</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Runtime\Core\Object\Property.h" />
+    <ClInclude Include="Source\Runtime\Engine\GameFramework\EmptyActor.h" />
+    <ClInclude Include="Source\Runtime\Renderer\TileCullingStats.h" />
+    <ClInclude Include="Source\Runtime\Renderer\TileLightCuller.h" />
+    <ClInclude Include="Source\Slate\Widgets\PropertyRenderer.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source">

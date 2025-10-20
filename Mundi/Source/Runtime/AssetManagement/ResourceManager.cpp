@@ -437,7 +437,7 @@ void UResourceManager::CreateDefaultShader()
 {
     // 템플릿 Load 멤버함수 호출해서 Resources[UShader의 typeIndex][shader 파일 이름]에 UShader 포인터 할당
     Load<UShader>("Shaders/Primitives/Primitive.hlsl");
-    Load<UShader>("Shaders/StaticMesh/StaticMeshShader.hlsl");
+    Load<UShader>("Shaders/StaticMesh/Gizmo.hlsl");
     Load<UShader>("Shaders/UI/TextBillboard.hlsl");
     Load<UShader>("Shaders/UI/Billboard.hlsl");
 }
@@ -445,6 +445,10 @@ void UResourceManager::CreateDefaultShader()
 void UResourceManager::InitShaderILMap()
 {
     TArray<D3D11_INPUT_ELEMENT_DESC> layout;
+
+    layout.Add({ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 });
+    ShaderToInputLayoutMap["Shaders/StaticMesh/Gizmo.hlsl"] = layout;
+	layout.clear();
 
     layout.Add({ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 });
     layout.Add({ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0 });
@@ -458,7 +462,6 @@ void UResourceManager::InitShaderILMap()
     layout.Add({ "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0 });
     layout.Add({ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 48, D3D11_INPUT_PER_VERTEX_DATA, 0 });
    
-    ShaderToInputLayoutMap["Shaders/StaticMesh/StaticMeshShader.hlsl"] = layout;
     ShaderToInputLayoutMap["Shaders/Effects/Decal.hlsl"] = layout;
     ShaderToInputLayoutMap["Shaders/Effects/FireBallShader.hlsl"] = layout;
 	ShaderToInputLayoutMap["Shaders/Materials/UberLit.hlsl"] = layout;

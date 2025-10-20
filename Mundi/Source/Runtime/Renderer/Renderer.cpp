@@ -315,7 +315,6 @@ void URenderer::InitializeLineBatch()
 
 	// Load line shader
 	LineShader = UResourceManager::GetInstance().Load<UShader>("Shaders/UI/ShaderLine.hlsl");
-	//LineShader = UResourceManager::GetInstance().Load<UShader>("StaticMeshShader.hlsl", EVertexLayoutType::PositionColorTexturNormal);
 }
 
 void URenderer::BeginLineBatch()

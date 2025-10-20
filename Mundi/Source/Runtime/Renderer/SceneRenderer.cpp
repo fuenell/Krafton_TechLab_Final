@@ -1139,10 +1139,9 @@ void FSceneRenderer::RenderOverayEditorPrimitivesPass()
 			CurrentPriority = GizmoComp->GetRenderPriority();
 		}
 
-		// 1. [상태 설정] 이 기즈모의 하이라이트 상수 버퍼 설정 (색상 포함)
+		// 1. [상태 설정] 이 기즈모의 색상 및 하이라이트 상태 설정
 		RHIDevice->SetAndUpdateConstantBuffer(
-			HighLightBufferType(true, GizmoComp->GetColor(),
-				GizmoComp->GetAxisIndex(), GizmoComp->IsHighlighted() ? 1 : 0, 0, 1)
+			GizmoBufferType{ GizmoComp->GetColor(), GizmoComp->IsHighlighted() ? 1u : 0u }
 		);
 		// [상태 설정] Gizmo는 자체 머티리얼 색상을 쓰므로, 글로벌 컬러 오버라이드 끄기
 		RHIDevice->SetAndUpdateConstantBuffer(ColorBufferType(FLinearColor(), 0));
@@ -1179,10 +1178,9 @@ void FSceneRenderer::RenderOverayEditorPrimitivesPass()
 			CurrentPriority = GizmoComp->GetRenderPriority();
 		}
 
-		// 1. [상태 설정] 이 기즈모의 하이라이트 상수 버퍼 설정 (색상 포함)
+		// 1. [상태 설정] 이 기즈모의 색상 및 하이라이트 상태 설정
 		RHIDevice->SetAndUpdateConstantBuffer(
-			HighLightBufferType(true, GizmoComp->GetColor(),
-				GizmoComp->GetAxisIndex(), GizmoComp->IsHighlighted() ? 1 : 0, 0, 1)
+			GizmoBufferType{ GizmoComp->GetColor(), GizmoComp->IsHighlighted() ? 1u : 0u }
 		);
 		// [상태 설정] Gizmo는 자체 머티리얼 색상을 쓰므로, 글로벌 컬러 오버라이드 끄기
 		RHIDevice->SetAndUpdateConstantBuffer(ColorBufferType(FLinearColor(), 0));
@@ -1196,7 +1194,7 @@ void FSceneRenderer::RenderOverayEditorPrimitivesPass()
 	}
 
 	// 모든 오버레이 렌더링 후 하이라이트 상태 비활성화
-	RHIDevice->SetAndUpdateConstantBuffer(HighLightBufferType(false, FVector(1, 1, 1), 0, 0, 0, 0));
+	// No need to reset GizmoBuffer - it's set per-gizmo during rendering
 }
 
 void FSceneRenderer::ApplyScreenEffectsPass()
@@ -1301,7 +1299,7 @@ void FSceneRenderer::CompositeToBackBuffer()
 void FSceneRenderer::FinalizeFrame()
 {
 	//RHIDevice->UpdateHighLightConstantBuffers(false, FVector(1, 1, 1), 0, 0, 0, 0);
-	RHIDevice->SetAndUpdateConstantBuffer(HighLightBufferType(false, FVector(1, 1, 1), 0, 0, 0, 0));
+	// No need to reset GizmoBuffer - it's set per-gizmo during rendering
 
 
 	if (World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_Culling))
