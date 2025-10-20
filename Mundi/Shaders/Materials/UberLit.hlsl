@@ -400,8 +400,8 @@ PS_INPUT mainVS(VS_INPUT Input)
     // Normal vectors transform by transpose(inverse(WorldMatrix))
     float3 worldNormal = normalize(mul(Input.Normal, (float3x3) WorldInverseTranspose));
     Out.Normal = worldNormal;
-    float3 Tangent = mul(Input.Tangent.xyz, (float3x3) WorldMatrix) * Input.Tangent.w;
-    float3 BiTangent = cross(worldNormal, Tangent);
+    float3 Tangent = mul(Input.Tangent.xyz, (float3x3) WorldMatrix);
+    float3 BiTangent = cross(Tangent, worldNormal) * Input.Tangent.w;
     row_major float3x3 TBN;
     TBN._m00_m01_m02 = Tangent;
     TBN._m10_m11_m12 = BiTangent;
