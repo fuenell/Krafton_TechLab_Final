@@ -153,6 +153,7 @@ void URenderer::DrawIndexedPrimitiveComponent(UStaticMesh* InMesh, D3D11_PRIMITI
 	RHIDevice->GetDeviceContext()->IASetPrimitiveTopology(InTopology);
 	RHIDevice->PSSetDefaultSampler(0);
 
+	
 	if (InMesh->HasMaterial())
 	{
 		const TArray<FGroupInfo>& MeshGroupInfos = InMesh->GetMeshGroupInfo();
@@ -160,9 +161,10 @@ void URenderer::DrawIndexedPrimitiveComponent(UStaticMesh* InMesh, D3D11_PRIMITI
 		for (uint32 i = 0; i < NumMeshGroupInfos; ++i)
 		{
 			UMaterial* const Material = UResourceManager::GetInstance().Get<UMaterial>(InComponentMaterialSlots[i].MaterialName.ToString());
-			const FMaterialParameters& MaterialInfo = Material->GetMaterialInfo();
-			ID3D11ShaderResourceView* srv = nullptr;
-			bool bHasTexture = false;
+			const FMaterialInfo& MaterialInfo = Material->GetMaterialInfo();
+			FPixelConstBufferType PixelConst{ FPixelConstBufferType(FMaterialInPs(MaterialInfo)) };
+			PixelConst.bHasMaterial = true;
+			TArray<ID3D11ShaderResourceView*> SrvList;
 			if (!MaterialInfo.DiffuseTextureFileName.empty())
 			{
 				// UTF-8 -> UTF-16 변환 (Windows)
@@ -178,27 +180,45 @@ void URenderer::DrawIndexedPrimitiveComponent(UStaticMesh* InMesh, D3D11_PRIMITI
 				{
 					if (TextureData->TextureSRV)
 					{
-						srv = TextureData->TextureSRV;
-						bHasTexture = true;
+						SrvList.Add(TextureData->TextureSRV);
+						PixelConst.bHasDiffuseTexture = true;
 					}
 				}
 			}
-			RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &srv);
+			if (!MaterialInfo.NormalTextureFileName.empty())
+			{
+				// UTF-8 -> UTF-16 변환 (Windows)
+				int needW = ::MultiByteToWideChar(CP_UTF8, 0, MaterialInfo.NormalTextureFileName.c_str(), -1, nullptr, 0);
+				std::wstring WTextureFileName;
+				if (needW > 0)
+				{
+					WTextureFileName.resize(needW - 1);
+					::MultiByteToWideChar(CP_UTF8, 0, MaterialInfo.NormalTextureFileName.c_str(), -1, WTextureFileName.data(), needW);
+				}
+				// 반환 여기서 로드 
+				if (FTextureData* TextureData = UResourceManager::GetInstance().CreateOrGetTextureData(WTextureFileName))
+				{
+					if (TextureData->TextureSRV)
+					{
+						SrvList.Add(TextureData->TextureSRV);
+						PixelConst.bHasNormalTexture = true;
+					}
+				}
+			}
+			RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 2, SrvList.data());
 			//RHIDevice->UpdatePixelConstantBuffers(MaterialInfo, true, bHasTexture); // 성공 여부 기반
-			FPixelConstBufferType PixelConst{ FPixelConstBufferType(FMaterialInPs(MaterialInfo), true) };
-			PixelConst.bHasTexture = bHasTexture;
-			PixelConst.Padding = FVector2D(0.0f, 0.0f);
+			
 			RHIDevice->SetAndUpdateConstantBuffer(PixelConst);
 			RHIDevice->GetDeviceContext()->DrawIndexed(MeshGroupInfos[i].IndexCount, MeshGroupInfos[i].StartIndex, 0);
 		}
 	}
 	else
 	{
-		FMaterialParameters ObjMaterialInfo;
+		FMaterialInfo ObjMaterialInfo{};
 		FPixelConstBufferType PixelConst{ FPixelConstBufferType(FMaterialInPs(ObjMaterialInfo)) };
-		PixelConst.bHasTexture = false;
+		PixelConst.bHasDiffuseTexture = false;
+		PixelConst.bHasNormalTexture = false;
 		PixelConst.bHasMaterial = false;
-		PixelConst.Padding = FVector2D(0.0f, 0.0f);
 		//RHIDevice->UpdatePixelConstantBuffers(ObjMaterialInfo, false, false); // PSSet도 해줌
 		RHIDevice->SetAndUpdateConstantBuffer(PixelConst);
 		RHIDevice->GetDeviceContext()->DrawIndexed(IndexCount, 0, 0);

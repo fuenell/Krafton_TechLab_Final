@@ -15,6 +15,8 @@ enum class EPropertyType : uint8
 	Struct,
 	Texture,        // UTexture* 타입 (리소스 선택 UI)
 	StaticMesh,     // UStaticMesh* 타입 (리소스 선택 UI)
+	Material,		// UMaterial* 타입 (리소스 선택 UI)
+	Array			// TArray 용으로 추가
 
 	// 추후 추가될 프로퍼티들은 직접 해줘야함.
 };
@@ -24,6 +26,7 @@ struct FProperty
 {
 	const char* Name = nullptr;              // 프로퍼티 이름
 	EPropertyType Type = EPropertyType::Unknown;  // 프로퍼티 타입
+	EPropertyType InnerType = EPropertyType::Unknown; // TArray<T>의 'T' 타입
 	size_t Offset = 0;                       // 클래스 인스턴스 내 오프셋
 	const char* Category = nullptr;          // UI 카테고리
 	float MinValue = 0.0f;                   // 범위 최소값

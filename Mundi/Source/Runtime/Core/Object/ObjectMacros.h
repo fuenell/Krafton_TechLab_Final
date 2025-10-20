@@ -150,6 +150,23 @@ public:
 		Class->AddProperty(Prop); \
 	}
 
+// TArray<...> 프로퍼티 추가
+// 첫 번째 인자로 배열의 내부 요소 타입을 받습니다.
+#define ADD_PROPERTY_ARRAY(InnerPropertyType, VarName, CategoryName, bEditAnywhere, ...) \
+{ \
+	static_assert(std::is_array_v<std::remove_reference_t<decltype(CategoryName)>>, \
+				  "CategoryName must be a string literal!"); \
+	FProperty Prop; \
+	Prop.Name = #VarName; \
+	Prop.Type = EPropertyType::Array; \
+	Prop.InnerType = InnerPropertyType; /* EPropertyType::Material 같은 enum 값 */ \
+	Prop.Offset = offsetof(ThisClass_t, VarName); \
+	Prop.Category = CategoryName; \
+	Prop.bIsEditAnywhere = bEditAnywhere; \
+	Prop.Tooltip = "" __VA_ARGS__; \
+	Class->AddProperty(Prop); \
+}
+
 // 클래스 메타데이터 설정 매크로
 // StaticRegisterProperties() 함수 내에서 사용
 
@@ -176,3 +193,11 @@ public:
 	Class->bIsComponent = true; \
 	Class->DisplayName = InDisplayName; \
 	Class->Description = InDesc;
+
+
+#define CREATE_EDITOR_COMPONENT(InVariableName, Type)\
+	InVariableName = NewObject<Type>();\
+	InVariableName->SetOwner(this->GetOwner());\
+	InVariableName->SetupAttachment(this, EAttachmentRule::KeepRelative);\
+	this->GetOwner()->AddOwnedComponent(InVariableName);\
+	InVariableName->SetEditability(false);

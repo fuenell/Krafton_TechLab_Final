@@ -19,6 +19,7 @@ struct FMeshBatchElement;
 class UMeshComponent;
 class UBillboardComponent;
 class UTextRenderComponent;
+class UGizmoArrowComponent;
 class FSceneView;
 class FTileLightCuller;
 
@@ -33,6 +34,7 @@ struct FVisibleRenderProxySet
 
 	TArray<UDecalComponent*> Decals;
 	TArray<UFireBallComponent*> FireBalls;
+	TArray<UGizmoArrowComponent*> Gizmos;  // Editor overlay gizmos (from both Editor and Level actors)
 };
 
 struct FSceneLocals

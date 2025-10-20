@@ -64,6 +64,9 @@ public:
 	virtual void DuplicateSubObjects() override;
 	DECLARE_DUPLICATE(USpotLightComponent)
 
+	// Update Gizmo to match light properties
+	void UpdateDirectionGizmo();
+
 protected:
 	float InnerConeAngle = 30.0f; // 내부 원뿔 각도
 	float OuterConeAngle = 45.0f; // 외부 원뿔 각도
@@ -71,4 +74,7 @@ protected:
 	// 이전 값 추적 (UI 변경 감지용)
 	float PreviousInnerConeAngle = 30.0f;
 	float PreviousOuterConeAngle = 45.0f;
+
+	// Direction Gizmo (shows light direction)
+	class UGizmoArrowComponent* DirectionGizmo = nullptr;
 };

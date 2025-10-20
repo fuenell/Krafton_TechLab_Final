@@ -78,10 +78,9 @@ struct FMaterialInPs
     uint32 IlluminationModel; // illum. Default illumination model to Phong for non-Pbr materials
 
     FVector TransmissionFilter; // Tf
-    float Padding; // 4 bytes padding
-
+    float dummy; // 4 bytes padding
     FMaterialInPs() = default;
-    FMaterialInPs(const FMaterialParameters& MaterialInfo)
+    FMaterialInPs(const FMaterialInfo& MaterialInfo)
         :DiffuseColor(MaterialInfo.DiffuseColor),
         OpticalDensity(MaterialInfo.OpticalDensity),
         AmbientColor(MaterialInfo.AmbientColor),
@@ -91,8 +90,9 @@ struct FMaterialInPs
         EmissiveColor(MaterialInfo.EmissiveColor),
         IlluminationModel(MaterialInfo.IlluminationModel),
         TransmissionFilter(MaterialInfo.TransmissionFilter),
-        Padding(0.f)
+        dummy(0)
     { 
+
     }
 };
 
@@ -101,8 +101,9 @@ struct FPixelConstBufferType
 {
     FMaterialInPs Material;
     uint32 bHasMaterial;
-    uint32 bHasTexture;
-	FVector2D Padding; // 16바이트 정렬을 위한 패딩
+    uint32 bHasDiffuseTexture;
+    uint32 bHasNormalTexture;
+	float Padding; // 16바이트 정렬을 위한 패딩
 };
 
 static_assert(sizeof(FPixelConstBufferType) % 16 == 0, "PixelConstData size mismatch!");
@@ -234,7 +235,7 @@ CONSTANT_BUFFER_INFO(PostProcessBufferType, 0, false, true)
 CONSTANT_BUFFER_INFO(InvViewProjBufferType, 1, false, true)
 CONSTANT_BUFFER_INFO(FogBufferType, 2, false, true)
 CONSTANT_BUFFER_INFO(FXAABufferType, 2, false, true)
-CONSTANT_BUFFER_INFO(FPixelConstBufferType, 4, true, true)  // VS+PS: GOURAUD lighting model uses Material in VS
+CONSTANT_BUFFER_INFO(FPixelConstBufferType, 4, false, true)
 CONSTANT_BUFFER_INFO(ViewProjBufferType, 1, true, false)
 CONSTANT_BUFFER_INFO(HighLightBufferType, 2, true, false)
 CONSTANT_BUFFER_INFO(ColorBufferType, 3, false, true)

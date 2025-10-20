@@ -458,59 +458,6 @@ void UTargetActorTransformWidget::RenderSelectedComponentDetails(USceneComponent
 	USceneComponent* TargetComponentForDetails = SelectedComponent;
 	if (!TargetComponentForDetails) return;
 
-	// TODO: 리플렉션으로 그려줘야함
-	// StaticMeshComponent Material UI (수동 유지)
-	if (UStaticMeshComponent* TargetStaticMeshComponent = Cast<UStaticMeshComponent>(TargetComponentForDetails))
-	{
-		ImGui::Separator();
-		ImGui::Text("Materials");
-
-		// Material UI
-		if (UStaticMesh* CurMesh = TargetStaticMeshComponent->GetStaticMesh())
-		{
-			const TArray<FString> MaterialNames = UResourceManager::GetInstance().GetAllFilePaths<UMaterial>();
-			TArray<const char*> MaterialNamesCharPtr;
-			MaterialNamesCharPtr.reserve(MaterialNames.size());
-			for (const FString& n : MaterialNames)
-				MaterialNamesCharPtr.push_back(n.c_str());
-
-			const TArray<FGroupInfo>& GroupInfos = CurMesh->GetMeshGroupInfo();
-			const uint32 NumGroupInfos = static_cast<uint32>(GroupInfos.size());
-
-			for (uint32 i = 0; i < NumGroupInfos; ++i)
-			{
-				ImGui::PushID(static_cast<int>(i));
-				const char* Label = GroupInfos[i].InitialMaterialName.c_str();
-				int SelectedMaterialIdx = -1;
-
-				if (i < TargetStaticMeshComponent->GetMaterialSlots().size())
-				{
-					const FString& AssignedName = TargetStaticMeshComponent->GetMaterial(i)->GetMaterialInfo().MaterialName;
-					for (int idx = 0; idx < static_cast<int>(MaterialNames.size()); ++idx)
-					{
-						if (MaterialNames[idx] == AssignedName)
-						{
-							SelectedMaterialIdx = idx;
-							break;
-						}
-					}
-				}
-
-				ImGui::SetNextItemWidth(240);
-				if (ImGui::Combo(Label, &SelectedMaterialIdx, MaterialNamesCharPtr.data(),
-					static_cast<int>(MaterialNamesCharPtr.size())))
-				{
-					if (SelectedMaterialIdx >= 0 && SelectedMaterialIdx < static_cast<int>(MaterialNames.size()))
-					{
-						TargetStaticMeshComponent->SetMaterialByUser(i, MaterialNames[SelectedMaterialIdx]);
-						UE_LOG("Set material slot %u to %s", i, MaterialNames[SelectedMaterialIdx].c_str());
-					}
-				}
-				ImGui::PopID();
-			}
-		}
-	}
-
 	// 리플렉션이 적용된 컴포넌트는 자동으로 UI 생성
 	if (TargetComponentForDetails)
 	{

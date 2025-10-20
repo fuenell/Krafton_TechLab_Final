@@ -46,6 +46,11 @@ AGizmoActor::AGizmoActor()
 	ArrowY->SetDefaultScale({ GizmoTotalSize, GizmoTotalSize, GizmoTotalSize });
 	ArrowZ->SetDefaultScale({ GizmoTotalSize, GizmoTotalSize, GizmoTotalSize });
 
+	// Set high render priority so selection gizmo renders on top of DirectionGizmos
+	ArrowX->SetRenderPriority(100);
+	ArrowY->SetRenderPriority(100);
+	ArrowZ->SetRenderPriority(100);
+
 	AddOwnedComponent(ArrowX);
 	AddOwnedComponent(ArrowY);
 	AddOwnedComponent(ArrowZ);
@@ -78,6 +83,11 @@ AGizmoActor::AGizmoActor()
 	RotateY->SetDefaultScale({ GizmoTotalSize, GizmoTotalSize, GizmoTotalSize });
 	RotateZ->SetDefaultScale({ GizmoTotalSize, GizmoTotalSize, GizmoTotalSize });
 
+	// Set high render priority so selection gizmo renders on top of DirectionGizmos
+	RotateX->SetRenderPriority(100);
+	RotateY->SetRenderPriority(100);
+	RotateZ->SetRenderPriority(100);
+
 	AddOwnedComponent(RotateX);
 	AddOwnedComponent(RotateY);
 	AddOwnedComponent(RotateZ);
@@ -109,6 +119,11 @@ AGizmoActor::AGizmoActor()
 	ScaleX->SetDefaultScale({ GizmoTotalSize, GizmoTotalSize, GizmoTotalSize });
 	ScaleY->SetDefaultScale({ GizmoTotalSize, GizmoTotalSize, GizmoTotalSize });
 	ScaleZ->SetDefaultScale({ GizmoTotalSize, GizmoTotalSize, GizmoTotalSize });
+
+	// Set high render priority so selection gizmo renders on top of DirectionGizmos
+	ScaleX->SetRenderPriority(100);
+	ScaleY->SetRenderPriority(100);
+	ScaleZ->SetRenderPriority(100);
 
 	if (ScaleX) ScaleX->SetRelativeRotation(FQuat::MakeFromEulerZYX(FVector(0, 0, 0)));
 	if (ScaleY) ScaleY->SetRelativeRotation(FQuat::MakeFromEulerZYX(FVector(0, 0, 90)));

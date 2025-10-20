@@ -68,8 +68,9 @@ struct VS_INPUT
 {
     float3 position : POSITION; // Input position from vertex buffer
     float3 normal : NORMAL0;
-    float4 color : COLOR; // Input color from vertex buffer
     float2 texCoord : TEXCOORD0;
+    float4 Tangent : TANGENT0;
+    float4 color : COLOR; // Input color from vertex buffer
 };
 
 
@@ -162,18 +163,15 @@ PS_INPUT mainVS(VS_INPUT input)
     
     if (Gizmo == 1)
     {
+        // Use Color from HighLightBuffer for custom gizmo colors (e.g., DirectionGizmo)
+        // Highlight effect: full yellow when hovered (Y == 1)
         if (Y == 1)
         {
-            c = float4(1.0, 1.0, 0.0, c.a); // Yellow
+            c = float4(1.0, 1.0, 0.0, c.a); // Full yellow when highlighted (hovering)
         }
         else
         {
-            if (X == 1)
-                c = float4(1.0, 0.0, 0.0, c.a); // Red
-            else if (X == 2)
-                c = float4(0.0, 1.0, 0.0, c.a); // Green
-            else if (X == 3)
-                c = float4(0.0, 0.0, 1.0, c.a); // Blue
+            c = float4(Color, c.a); // Use the color from HighLightBuffer (base color)
         }
     }
     

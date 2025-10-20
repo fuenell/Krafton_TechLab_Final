@@ -6,7 +6,7 @@
 #include "Archive.h"
 #include <d3d11.h>
 
-struct FMaterialParameters
+struct FMaterialInfo
 {
     int32 IlluminationModel = 2;  // illum. Default illumination model to Phong for non-Pbr materials
 
@@ -32,7 +32,7 @@ struct FMaterialParameters
 
     FString MaterialName;
 
-    friend FArchive& operator<<(FArchive& Ar, FMaterialParameters& Info)
+    friend FArchive& operator<<(FArchive& Ar, FMaterialInfo& Info)
     {
         Ar << Info.IlluminationModel;
         Ar << Info.DiffuseColor;
@@ -78,14 +78,14 @@ struct FMaterialParameters
 // ---- FObjMaterialInfo 전용 Serialization 특수화 ----
 namespace Serialization {
     template<>
-    inline void WriteArray<FMaterialParameters>(FArchive& Ar, const TArray<FMaterialParameters>& Arr) {
+    inline void WriteArray<FMaterialInfo>(FArchive& Ar, const TArray<FMaterialInfo>& Arr) {
         uint32 Count = (uint32)Arr.size();
         Ar << Count;
-        for (auto& Mat : Arr) Ar << const_cast<FMaterialParameters&>(Mat);
+        for (auto& Mat : Arr) Ar << const_cast<FMaterialInfo&>(Mat);
     }
 
     template<>
-    inline void ReadArray<FMaterialParameters>(FArchive& Ar, TArray<FMaterialParameters>& Arr) {
+    inline void ReadArray<FMaterialInfo>(FArchive& Ar, TArray<FMaterialInfo>& Arr) {
         uint32 Count;
         Ar << Count;
         Arr.resize(Count);
@@ -123,14 +123,17 @@ struct FNormalVertex
 {
     FVector pos;
     FVector normal;
-    FVector4 color;
     FVector2D tex;
+    FVector4 Tangent;
+    FVector4 color;
+    
 
     friend FArchive& operator<<(FArchive& Ar, FNormalVertex& Vtx)
     {
         // Serialize member by member to avoid issues with struct padding and alignment
         Ar << Vtx.pos;
         Ar << Vtx.normal;
+        Ar << Vtx.Tangent;
         Ar << Vtx.color;
         Ar << Vtx.tex;
         return Ar;

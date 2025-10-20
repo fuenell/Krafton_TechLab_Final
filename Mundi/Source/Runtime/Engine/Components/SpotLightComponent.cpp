@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "SpotLightComponent.h"
 #include "BillboardComponent.h"
+#include "Gizmo/GizmoArrowComponent.h"
 
 IMPLEMENT_CLASS(USpotLightComponent)
 
@@ -111,12 +112,50 @@ void USpotLightComponent::UpdateLightData()
 
 	// Cone 각도 유효성 검사 (UI에서 변경된 경우를 대비)
 	ValidateConeAngles();
+
+	// Update direction gizmo to reflect any changes
+	UpdateDirectionGizmo();
 }
 
 void USpotLightComponent::OnRegister()
 {
 	Super_t::OnRegister();
 	SpriteComponent->SetTextureName("Data/UI/Icons/SpotLight_64x.png");
+
+	// Create Direction Gizmo if not already created
+	if (!DirectionGizmo)
+	{
+		CREATE_EDITOR_COMPONENT(DirectionGizmo, UGizmoArrowComponent);
+
+		// DirectionGizmo->SetCanEverPick(false);
+
+		// Set gizmo mesh (using the same mesh as GizmoActor's arrow)
+		DirectionGizmo->SetStaticMesh("Data/Gizmo/TranslationHandle.obj");
+		DirectionGizmo->SetMaterialByName(0, "Shaders/StaticMesh/StaticMeshShader.hlsl");
+
+		// Use world-space scale (not screen-constant scale like typical gizmos)
+		DirectionGizmo->SetUseScreenConstantScale(false);
+
+		// Set default scale
+		DirectionGizmo->SetDefaultScale(FVector(0.5f, 0.3f, 0.3f));
+
+		// Update gizmo properties to match light
+		UpdateDirectionGizmo();
+	}
+}
+
+void USpotLightComponent::UpdateDirectionGizmo()
+{
+	if (!DirectionGizmo)
+		return;
+
+	// Set direction to match light direction (used for hovering/picking, not for rendering)
+	FVector LightDir = GetDirection();
+	DirectionGizmo->SetDirection(LightDir);
+
+	// Set color to match base light color (without intensity or temperature multipliers)
+	const FLinearColor& BaseColor = GetLightColor();
+	DirectionGizmo->SetColor(FVector(BaseColor.R, BaseColor.G, BaseColor.B));
 }
 
 void USpotLightComponent::RenderDebugVolume(URenderer* Renderer, const FMatrix& View, const FMatrix& Proj) const

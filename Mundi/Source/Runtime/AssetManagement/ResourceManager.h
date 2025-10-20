@@ -67,7 +67,6 @@ public:
 	FString& GetProperShader(const FString& InTextureName);
 
 	// --- 리소스 생성 및 관리 ---
-	UMaterial* GetOrCreateMaterial(const FString& Name);
 	FTextureData* CreateOrGetTextureData(const FWideString& FilePath);
 	void UpdateDynamicVertexBuffer(const FString& name, TArray<FBillboardVertexInfo_GPU>& vertices);
 	UMaterial* GetDefaultMaterial();

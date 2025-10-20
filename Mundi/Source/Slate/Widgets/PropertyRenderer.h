@@ -30,5 +30,19 @@ private:
 	static bool RenderStructProperty(const FProperty& Prop, void* Instance);
 	static bool RenderTextureProperty(const FProperty& Prop, void* Instance);
 	static bool RenderStaticMeshProperty(const FProperty& Prop, void* Instance);
-	// TODO: static bool RenderMaterialProperty(const FProperty& Prop, void* Instance);
+	static bool RenderMaterialProperty(const FProperty& Prop, void* Instance);
+	static bool RenderMaterialArrayProperty(const FProperty& Prop, void* Instance);
+	static bool RenderSingleMaterialSlot(const char* Label, UMaterial** MaterialPtr, UObject* OwningObject, uint32 MaterialIndex);	// 단일 UMaterial* 슬롯을 렌더링하는 헬퍼 함수.
+	
+	static void CacheMaterialResources();	// 필요할 때 리소스 목록을 멤버 변수에 캐시합니다.
+	static void ClearMaterialResourcesCache();	// 렌더링 패스가 끝날 때 캐시를 비웁니다.
+
+private:
+	// 렌더링 중 캐시되는 리소스 목록
+	static TArray<FString> CachedMaterialPaths;
+	static TArray<const char*> CachedMaterialItems;
+	static TArray<FString> CachedShaderPaths;
+	static TArray<const char*> CachedShaderItems;
+	static TArray<FString> CachedTexturePaths;
+	static TArray<const char*> CachedTextureItems;
 };

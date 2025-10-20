@@ -15,27 +15,14 @@
 IMPLEMENT_CLASS(UStaticMeshComponent)
 
 BEGIN_PROPERTIES(UStaticMeshComponent)
-MARK_AS_COMPONENT("스태틱 메시 컴포넌트", "스태틱 메시를 렌더링하는 컴포넌트입니다.")
-ADD_PROPERTY_STATICMESH(UStaticMesh*, StaticMesh, "Static Mesh", true, "렌더링할 스태틱 메시입니다.")
+	MARK_AS_COMPONENT("스태틱 메시 컴포넌트", "스태틱 메시를 렌더링하는 컴포넌트입니다.")
+	ADD_PROPERTY_STATICMESH(UStaticMesh*, StaticMesh, "Static Mesh", true, "렌더링할 스태틱 메시입니다.")
+	ADD_PROPERTY_ARRAY(EPropertyType::Material, MaterialSlots, "Materials", true, "메시 섹션에 할당된 머티리얼 슬롯입니다.")
 END_PROPERTIES()
 
 UStaticMeshComponent::UStaticMeshComponent()
 {
 	SetStaticMesh("Data/cube-tex.obj");     // 임시 기본 static mesh 설정
-
-	//// 기본 Material 생성 (기본 Phong 셰이더 사용)
-	//FString ShaderPath = "Shaders/Materials/UberLit.hlsl";
-	//TArray<FShaderMacro> DefaultMacros;
-	//DefaultMacros.push_back(FShaderMacro{ "LIGHTING_MODEL_PHONG", "1" });
-
-	//UShader* DefaultShader = UResourceManager::GetInstance().Load<UShader>(ShaderPath, DefaultMacros);
-	//if (DefaultShader)
-	//{
-	//	Material = UResourceManager::GetInstance().GetOrCreateMaterial(
-	//		ShaderPath + "_DefaultMaterial"
-	//	);
-	//	Material->SetShader(DefaultShader);
-	//}
 }
 
 UStaticMeshComponent::~UStaticMeshComponent()
@@ -74,9 +61,7 @@ void UStaticMeshComponent::Render(URenderer* Renderer, const FMatrix& ViewMatrix
 	//}
 }
 
-void UStaticMeshComponent::CollectMeshBatches(
-	TArray<FMeshBatchElement>& OutMeshBatchElements,
-	const FSceneView* View)
+void UStaticMeshComponent::CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View)
 {
 	// 1. 렌더링할 메시 애셋이 유효한지 검사
 	if (!StaticMesh || !StaticMesh->GetStaticMeshAsset())
@@ -215,10 +200,9 @@ void UStaticMeshComponent::SetStaticMesh(const FString& PathFileName)
 		StaticMesh->AddUsingComponents(this);
 
 		const TArray<FGroupInfo>& GroupInfos = StaticMesh->GetMeshGroupInfo();
-		if (MaterialSlots.size() < GroupInfos.size())
-		{
-			MaterialSlots.resize(GroupInfos.size());
-		}
+
+		// 배열 크기 늘리기/줄이기 처리
+		MaterialSlots.resize(GroupInfos.size());
 
 		// MaterailSlots.size()가 GroupInfos.size() 보다 클 수 있기 때문에, GroupInfos.size()로 설정
 		for (int i = 0; i < GroupInfos.size(); ++i)

@@ -66,44 +66,6 @@ void UResourceManager::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* I
     CreateDefaultShader();
 }
 
-UMaterial* UResourceManager::GetOrCreateMaterial(const FString& Name)
-{
-    auto it = MaterialMap.find(Name);
-    if (it != MaterialMap.end())
-        return it->second;
-
-    // FName → FString 변환
-    FString BaseName = Name;
-
-    // Shader, Texture 로드
-    UShader* Shader;
-    UTexture* Texture;
-
-    if (UResourceManager::GetInstance().Get<UShader>(Name))
-    {
-        Shader = UResourceManager::GetInstance().Get<UShader>(Name);
-    }
-    else
-    {
-        Shader = UResourceManager::GetInstance().Load<UShader>(Name);
-    }
-    if (UResourceManager::GetInstance().Get<UTexture>(Name))
-    {
-        Texture = UResourceManager::GetInstance().Get<UTexture>(Name);
-    }
-    else
-    {
-        Texture = UResourceManager::GetInstance().Load<UTexture>(Name);
-    }
-    // Material 생성
-    UMaterial* Mat = NewObject<UMaterial>();
-    if (Shader)  Mat->SetShader(Shader);
-    if (Texture) Mat->SetTexture(EMaterialTextureSlot::Diffuse, Name);
-
-    MaterialMap[Name] = Mat;
-    return Mat;
-}
-
 // 전체 해제
 void UResourceManager::Clear()
 {
@@ -492,8 +454,10 @@ void UResourceManager::InitShaderILMap()
 
     layout.Add({ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 });
     layout.Add({ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 });
-    layout.Add({ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0 });
-    layout.Add({ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 48, D3D11_INPUT_PER_VERTEX_DATA, 0 });
+    layout.Add({ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0 });
+    layout.Add({ "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0 });
+    layout.Add({ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 48, D3D11_INPUT_PER_VERTEX_DATA, 0 });
+   
     ShaderToInputLayoutMap["Shaders/StaticMesh/StaticMeshShader.hlsl"] = layout;
     ShaderToInputLayoutMap["Shaders/Effects/Decal.hlsl"] = layout;
     ShaderToInputLayoutMap["Shaders/Effects/FireBallShader.hlsl"] = layout;
@@ -585,7 +549,7 @@ void UResourceManager::UpdateDynamicVertexBuffer(const FString& Name, TArray<FBi
 UMaterial* UResourceManager::GetDefaultMaterial()
 {
     // 기본 Material 생성 (기본 Phong 셰이더 사용)
-    return GetOrCreateMaterial("Shaders/Materials/UberLit.hlsl");
+    return Load<UMaterial>("Shaders/Materials/UberLit.hlsl");
 }
 
 // 여기서 텍스처 데이터 로드 및 
