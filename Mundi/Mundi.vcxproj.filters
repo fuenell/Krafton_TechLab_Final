@@ -2,8 +2,8 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!-- Shader Files -->
   <ItemGroup>
-    <FxCompile Include="Shaders\StaticMesh\Gizmo.hlsl">
-      <Filter>Shaders\StaticMesh</Filter>
+    <FxCompile Include="Shaders\UI\Gizmo.hlsl">
+      <Filter>Shaders\UI</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\Effects\Decal.hlsl">
       <Filter>Shaders\Effects</Filter>
@@ -38,7 +38,9 @@
     <FxCompile Include="Shaders\Materials\UberLit.hlsl">
       <Filter>Shaders\Materials</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\PostProcess\TileDebugVisualization_PS.hlsl" />
+    <FxCompile Include="Shaders\PostProcess\TileDebugVisualization_PS.hlsl">
+      <Filter>Shaders\PostProcess</Filter>
+    </FxCompile>
   </ItemGroup>
   <!-- Root Files -->
   <ItemGroup>
@@ -410,9 +412,15 @@
     <ClCompile Include="Source\Runtime\Renderer\SceneView.cpp">
       <Filter>Source\Runtime\Renderer</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Runtime\Engine\GameFramework\EmptyActor.cpp" />
-    <ClCompile Include="Source\Runtime\Renderer\TileLightCuller.cpp" />
-    <ClCompile Include="Source\Slate\Widgets\PropertyRenderer.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\GameFramework\EmptyActor.cpp">
+      <Filter>Source\Runtime\Engine\GameFramework</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Runtime\Renderer\TileLightCuller.cpp">
+      <Filter>Source\Runtime\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Slate\Widgets\PropertyRenderer.cpp">
+      <Filter>Source\Slate\Widgets</Filter>
+    </ClCompile>
   </ItemGroup>
   <!-- ThirdParty/ImGui Files -->
   <!-- Source Files -->
@@ -863,11 +871,21 @@
     <ClInclude Include="ThirdParty\ImGui\imstb_truetype.h">
       <Filter>ThirdParty\ImGui</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Runtime\Core\Object\Property.h" />
-    <ClInclude Include="Source\Runtime\Engine\GameFramework\EmptyActor.h" />
-    <ClInclude Include="Source\Runtime\Renderer\TileCullingStats.h" />
-    <ClInclude Include="Source\Runtime\Renderer\TileLightCuller.h" />
-    <ClInclude Include="Source\Slate\Widgets\PropertyRenderer.h" />
+    <ClInclude Include="Source\Runtime\Core\Object\Property.h">
+      <Filter>Source\Runtime\Core\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Runtime\Engine\GameFramework\EmptyActor.h">
+      <Filter>Source\Runtime\Engine\GameFramework</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Runtime\Renderer\TileCullingStats.h">
+      <Filter>Source\Runtime\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Runtime\Renderer\TileLightCuller.h">
+      <Filter>Source\Runtime\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Slate\Widgets\PropertyRenderer.h">
+      <Filter>Source\Slate\Widgets</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source">
@@ -947,9 +965,6 @@
     </Filter>
     <Filter Include="Shaders">
       <UniqueIdentifier>{e801a1f2-d38c-4899-a656-b9d19f84f509}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Shaders\StaticMesh">
-      <UniqueIdentifier>{86d370fd-b33f-4465-87e7-37fa982f877f}</UniqueIdentifier>
     </Filter>
     <Filter Include="Shaders\Effects">
       <UniqueIdentifier>{7626d39b-5009-4a8d-b1ed-e8b469f43ee0}</UniqueIdentifier>
