@@ -71,7 +71,7 @@ void UDecalComponent::TickComponent(float DeltaTime)
 }
 
 
-void UDecalComponent::RenderAffectedPrimitives(URenderer* Renderer, UPrimitiveComponent* Target, const FMatrix& View, const FMatrix& Proj, EViewModeIndex ViewMode)
+void UDecalComponent::RenderAffectedPrimitives(URenderer* Renderer, UPrimitiveComponent* Target, const FMatrix& View, const FMatrix& Proj)
 {
 	UStaticMeshComponent* SMC = Cast<UStaticMeshComponent>(Target);
 	if (!SMC || !SMC->GetStaticMesh())
@@ -79,13 +79,8 @@ void UDecalComponent::RenderAffectedPrimitives(URenderer* Renderer, UPrimitiveCo
 		return;
 	}
 
-	// WorldNormal 모드에서는 Decal 렌더링 스킵
-	if (ViewMode == EViewModeIndex::VMI_WorldNormal)
-	{
-		return;
-	}
-
 	D3D11RHI* RHIDevice = Renderer->GetRHIDevice();
+
 	// Constant Buffer 업데이트
 	FMatrix TargetWorld = Target->GetWorldMatrix();
 	FMatrix TargetWorldInvTranspose = TargetWorld.InverseAffine().Transpose();
@@ -94,53 +89,6 @@ void UDecalComponent::RenderAffectedPrimitives(URenderer* Renderer, UPrimitiveCo
 
 	const FMatrix DecalMatrix = GetDecalProjectionMatrix();
 	RHIDevice->SetAndUpdateConstantBuffer(DecalBufferType(DecalMatrix, DecalOpacity));
-
-	// CameraBuffer 바인딩 (조명 계산용 - b7)
-	// Note: LightBuffer (b8), TileCullingBuffer (b11), g_TileLightIndices (t2)는
-	// SceneRenderer에서 이미 설정되어 있으므로 추가 바인딩 불필요
-	// View 행렬의 역행렬로부터 카메라 위치 추출
-	FMatrix ViewInverse = View.InverseAffine();
-	FVector CameraPosition(ViewInverse.M[3][0], ViewInverse.M[3][1], ViewInverse.M[3][2]);
-	RHIDevice->SetAndUpdateConstantBuffer(CameraBufferType(CameraPosition));
-
-	// ViewMode에 따라 조명 모델 매크로 설정
-	TArray<FShaderMacro> ShaderMacros;
-	FString ShaderPath = "Shaders/Effects/Decal.hlsl";
-
-	switch (ViewMode)
-	{
-	case EViewModeIndex::VMI_Lit_Phong:
-		ShaderMacros.push_back(FShaderMacro{ "LIGHTING_MODEL_PHONG", "1" });
-		break;
-	case EViewModeIndex::VMI_Lit_Gouraud:
-		ShaderMacros.push_back(FShaderMacro{ "LIGHTING_MODEL_GOURAUD", "1" });
-		break;
-	case EViewModeIndex::VMI_Lit_Lambert:
-		ShaderMacros.push_back(FShaderMacro{ "LIGHTING_MODEL_LAMBERT", "1" });
-		break;
-	case EViewModeIndex::VMI_Lit:
-		// 기본 Lit 모드는 Phong 사용
-		ShaderMacros.push_back(FShaderMacro{ "LIGHTING_MODEL_PHONG", "1" });
-		break;
-	case EViewModeIndex::VMI_Unlit:
-		// 매크로 없음 (Unlit)
-		break;
-	default:
-		// 기타 ViewMode (Wireframe, SceneDepth 등)는 매크로 없음
-		break;
-	}
-
-	// Shader 설정 (ViewMode에 따른 매크로 적용)
-	UShader* DecalShader = UResourceManager::GetInstance().Load<UShader>(ShaderPath, ShaderMacros);
-	if (!DecalShader)
-	{
-		UE_LOG("DecalComponent: Failed to load shader with macros!");
-		return;
-	}
-
-	RHIDevice->GetDeviceContext()->VSSetShader(DecalShader->GetVertexShader(), nullptr, 0);
-	RHIDevice->GetDeviceContext()->PSSetShader(DecalShader->GetPixelShader(), nullptr, 0);
-	RHIDevice->GetDeviceContext()->IASetInputLayout(DecalShader->GetInputLayout());
 
 	// VertexBuffer, IndexBuffer 설정
 	UStaticMesh* Mesh = SMC->GetStaticMesh();

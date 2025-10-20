@@ -29,7 +29,7 @@ protected:
 
 public:
 	// Render API
-	void RenderAffectedPrimitives(URenderer* Renderer, UPrimitiveComponent* Target, const FMatrix& View, const FMatrix& Proj, EViewModeIndex ViewMode);
+	void RenderAffectedPrimitives(URenderer* Renderer, UPrimitiveComponent* Target, const FMatrix& View, const FMatrix& Proj);
 	virtual void RenderDebugVolume(URenderer* Renderer, const FMatrix& View, const FMatrix& Proj) const override;
 
 	// Decal Resource API
