@@ -808,7 +808,7 @@ bool FObjImporter::LoadObjModel(const FString& InFileName, FObjInfo* const OutOb
 			else if (line.rfind("Ks ", 0) == 0) { std::stringstream wss(line.substr(3)); float vx, vy, vz; wss >> vx >> vy >> vz; OutMaterialInfos[MatCount - 1].SpecularColor = FVector(vx, vy, vz); }
 			else if (line.rfind("Tf ", 0) == 0) { std::stringstream wss(line.substr(3)); float vx, vy, vz; wss >> vx >> vy >> vz; OutMaterialInfos[MatCount - 1].TransmissionFilter = FVector(vx, vy, vz); }
 			else if (line.rfind("Tr ", 0) == 0) { std::stringstream wss(line.substr(3)); float value; wss >> value; OutMaterialInfos[MatCount - 1].Transparency = value; }
-			else if (line.rfind("d ", 0) == 0) { std::stringstream wss(line.substr(3)); float value; wss >> value; OutMaterialInfos[MatCount - 1].Transparency = 1.0f - value; }
+			else if (line.rfind("d ", 0) == 0) { std::stringstream wss(line.substr(2)); float value; wss >> value; OutMaterialInfos[MatCount - 1].Transparency = 1.0f - value; }
 			else if (line.rfind("Ni ", 0) == 0) { std::stringstream wss(line.substr(3)); float value; wss >> value; OutMaterialInfos[MatCount - 1].OpticalDensity = value; }
 			else if (line.rfind("Ns ", 0) == 0) { std::stringstream wss(line.substr(3)); float value; wss >> value; OutMaterialInfos[MatCount - 1].SpecularExponent = value; }
 			else if (line.rfind("illum ", 0) == 0) { std::stringstream wss(line.substr(6)); float value; wss >> value; OutMaterialInfos[MatCount - 1].IlluminationModel = static_cast<int32>(value); }
