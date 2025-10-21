@@ -226,20 +226,82 @@ void SViewportWindow::RenderToolbar()
 		ImGui::PopStyleColor(2);
 		ImGui::PopStyleVar(2);
 
-		// 카메라 옵션
-		ImGui::SameLine();
+		// === 오른쪽 정렬 버튼들 ===
+		// Switch, ShowFlag, ViewMode는 오른쪽 고정, Camera는 ViewMode 너비에 따라 왼쪽으로 밀림
+
+		const float SwitchButtonWidth = 33.0f;  // Switch 버튼
+		const float ShowFlagButtonWidth = 50.0f;  // ShowFlag 버튼 (대략)
+		const float ButtonSpacing = 8.0f;
+
+		// 현재 ViewMode 이름으로 실제 너비 계산
+		const char* CurrentViewModeName = "뷰모드";
+		if (ViewportClient)
+		{
+			EViewModeIndex CurrentViewMode = ViewportClient->GetViewModeIndex();
+			switch (CurrentViewMode)
+			{
+			case EViewModeIndex::VMI_Lit:
+			case EViewModeIndex::VMI_Lit_Gouraud:
+			case EViewModeIndex::VMI_Lit_Lambert:
+			case EViewModeIndex::VMI_Lit_Phong:
+				CurrentViewModeName = "라이팅 포함";
+				break;
+			case EViewModeIndex::VMI_Unlit:
+				CurrentViewModeName = "언릿";
+				break;
+			case EViewModeIndex::VMI_Wireframe:
+				CurrentViewModeName = "와이어프레임";
+				break;
+			case EViewModeIndex::VMI_WorldNormal:
+				CurrentViewModeName = "월드 노멀";
+				break;
+			case EViewModeIndex::VMI_SceneDepth:
+				CurrentViewModeName = "씬 뎁스";
+				break;
+			}
+		}
+
+		// ViewMode 버튼의 실제 너비 계산
+		char viewModeText[64];
+		sprintf_s(viewModeText, "%s %s", CurrentViewModeName, "∨");
+		ImVec2 viewModeTextSize = ImGui::CalcTextSize(viewModeText);
+		const float ViewModeButtonWidth = 17.0f + 4.0f + viewModeTextSize.x + 16.0f;
+
+		// Camera 버튼 너비 계산
+		char cameraText[64];
+		sprintf_s(cameraText, "%s %s", ViewportName.ToString().c_str(), "∨");
+		ImVec2 cameraTextSize = ImGui::CalcTextSize(cameraText);
+		const float CameraButtonWidth = 17.0f + 4.0f + cameraTextSize.x + 16.0f;
+
+		// 사용 가능한 전체 너비와 현재 커서 위치
+		float AvailableWidth = ImGui::GetContentRegionAvail().x;
+		float CursorStartX = ImGui::GetCursorPosX();
+		ImVec2 CurrentCursor = ImGui::GetCursorPos();
+
+		// 오른쪽부터 역순으로 위치 계산
+		// Switch는 오른쪽 끝
+		float SwitchX = CursorStartX + AvailableWidth - SwitchButtonWidth;
+
+		// ShowFlag는 Switch 왼쪽
+		float ShowFlagX = SwitchX - ButtonSpacing - ShowFlagButtonWidth;
+
+		// ViewMode는 ShowFlag 왼쪽 (실제 너비 사용)
+		float ViewModeX = ShowFlagX - ButtonSpacing - ViewModeButtonWidth;
+
+		// Camera는 ViewMode 왼쪽 (ViewMode 너비에 따라 위치 변동)
+		float CameraX = ViewModeX - ButtonSpacing - CameraButtonWidth;
+
+		// 버튼들을 순서대로 그리기 (Y 위치는 동일하게 유지)
+		ImGui::SetCursorPos(ImVec2(CameraX, CurrentCursor.y));
 		RenderCameraOptionDropdownMenu();
 
-		// 뷰모드 드롭다운 메뉴
-		ImGui::SameLine(0, 15.0f);
+		ImGui::SetCursorPos(ImVec2(ViewModeX, CurrentCursor.y));
 		RenderViewModeDropdownMenu();
 
-		// ShowFlag 드롭다운 메뉴 (뷰모드 오른쪽)
-		ImGui::SameLine(0, 15.0f);
+		ImGui::SetCursorPos(ImVec2(ShowFlagX, CurrentCursor.y));
 		RenderShowFlagDropdownMenu();
 
-		// 뷰포트 레이아웃 전환 버튼
-		ImGui::SameLine(0, 15.0f);
+		ImGui::SetCursorPos(ImVec2(SwitchX, CurrentCursor.y));
 		RenderViewportLayoutSwitchButton();
 	}
 	ImGui::End();
@@ -577,11 +639,7 @@ void SViewportWindow::RenderGizmoSpaceButton()
 void SViewportWindow::RenderCameraOptionDropdownMenu()
 {
 	ImVec2 cursorPos = ImGui::GetCursorPos();
-	ImGui::SetCursorPosY(cursorPos.y - 2.0f);
-
-	// 오른쪽 정렬을 위한 여유 공간 계산
-	const float RightMargin = 228.0f; // 오른쪽에서 얼마나 떨어진 위치에 배치할지 (뷰모드 + Switch 버튼 공간)
-	float AvailableWidth = ImGui::GetContentRegionAvail().x; // 현재 남은 가로 공간
+	ImGui::SetCursorPosY(cursorPos.y - 0.7f);
 
 	const ImVec2 IconSize(17, 17);
 
@@ -593,12 +651,6 @@ void SViewportWindow::RenderCameraOptionDropdownMenu()
 	ImVec2 TextSize = ImGui::CalcTextSize(ButtonText);
 	const float HorizontalPadding = 8.0f;
 	const float CameraDropdownWidth = IconSize.x + 4.0f + TextSize.x + HorizontalPadding * 2.0f;
-
-	// 오른쪽 정렬: 남은 공간이 (버튼 너비 + 오른쪽 여백)보다 크면 X 위치 조정
-	if (AvailableWidth > (CameraDropdownWidth + RightMargin))
-	{
-		ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (AvailableWidth - CameraDropdownWidth - RightMargin));
-	}
 
 	// 드롭다운 버튼 스타일 적용
 	ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
@@ -891,7 +943,7 @@ void SViewportWindow::RenderViewModeDropdownMenu()
 	if (!ViewportClient) return;
 
 	ImVec2 cursorPos = ImGui::GetCursorPos();
-	ImGui::SetCursorPosY(cursorPos.y - 3.5f);
+	ImGui::SetCursorPosY(cursorPos.y - 1.0f);
 
 	const ImVec2 IconSize(17, 17);
 
@@ -1192,7 +1244,7 @@ void SViewportWindow::RenderShowFlagDropdownMenu()
 	if (!ViewportClient) return;
 
 	ImVec2 cursorPos = ImGui::GetCursorPos();
-	ImGui::SetCursorPosY(cursorPos.y - 3.5f);
+	ImGui::SetCursorPosY(cursorPos.y - 1.0f);
 
 	const ImVec2 IconSize(20, 20);
 
@@ -1714,7 +1766,7 @@ void SViewportWindow::RenderShowFlagDropdownMenu()
 void SViewportWindow::RenderViewportLayoutSwitchButton()
 {
 	ImVec2 switchCursorPos = ImGui::GetCursorPos();
-	ImGui::SetCursorPosY(switchCursorPos.y - 2.0f);
+	ImGui::SetCursorPosY(switchCursorPos.y - 0.7f);
 
 	const ImVec2 IconSize(17, 17);
 
