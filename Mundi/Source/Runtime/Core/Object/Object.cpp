@@ -17,7 +17,7 @@ void UObject::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 // 리플렉션 기반 자동 직렬화 (현재 클래스의 프로퍼티만 처리)
 void UObject::AutoSerialize(const bool bInIsLoading, JSON& InOutHandle, UClass* TargetClass)
 {
-	const TArray<FProperty>& Properties = TargetClass->GetProperties();
+	const TArray<FProperty>& Properties = TargetClass->GetAllProperties();
 
 	for (const FProperty& Prop : Properties)
 	{
