@@ -16,8 +16,6 @@ public:
     UBillboardComponent();
     ~UBillboardComponent() override = default;
 
-    // Render override
-    void Render(URenderer* Renderer, const FMatrix& View, const FMatrix& Proj) override;
     void CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View) override;
 
     // Setup
@@ -29,11 +27,11 @@ public:
     UQuad* GetStaticMesh() const { return Quad; }
     FString& GetTextureName() { return TextureName; }
 
-    UMaterial* GetMaterial(uint32 InSectionIndex) const override;
-    void SetMaterial(uint32 InElementIndex, UMaterial* InNewMaterial) override;
+    UMaterialInterface* GetMaterial(uint32 InSectionIndex) const override;
+    void SetMaterial(uint32 InElementIndex, UMaterialInterface* InNewMaterial) override;
 
     // Serialize
-    void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+    void OnSerialized() override;
 
     // Duplication
     void DuplicateSubObjects() override;
@@ -42,7 +40,7 @@ public:
 private:
     FString TextureName;
     UTexture* Texture = nullptr;  // 리플렉션 시스템용 Texture 포인터
-    UMaterial* Material = nullptr;
+    UMaterialInterface* Material = nullptr;
     UQuad* Quad = nullptr;
     float Width = 100.f;
     float Height = 100.f;

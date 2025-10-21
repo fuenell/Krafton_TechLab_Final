@@ -127,10 +127,6 @@ void UCameraComponent::DuplicateSubObjects()
 void UCameraComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
     Super::Serialize(bInIsLoading, InOutHandle);
-
-    // 리플렉션 기반 자동 직렬화
-    AutoSerialize(bInIsLoading, InOutHandle, UCameraComponent::StaticClass());
-
     // ProjectionMode는 수동 직렬화 (Enum 타입)
     if (bInIsLoading)
     {
@@ -142,4 +138,11 @@ void UCameraComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
     {
         InOutHandle["ProjectionMode"] = static_cast<int32>(ProjectionMode);
     }
+}
+
+void UCameraComponent::OnSerialized()
+{
+    Super::OnSerialized();
+
+  
 }

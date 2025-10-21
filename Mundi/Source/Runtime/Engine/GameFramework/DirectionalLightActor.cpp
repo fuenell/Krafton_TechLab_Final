@@ -34,12 +34,10 @@ void ADirectionalLightActor::DuplicateSubObjects()
 	}
 }
 
-void ADirectionalLightActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+void ADirectionalLightActor::OnSerialized()
 {
-	Super::Serialize(bInIsLoading, InOutHandle);
+	Super::OnSerialized();
 
-	if (bInIsLoading)
-	{
-		LightComponent = Cast<UDirectionalLightComponent>(RootComponent);
-	}
+	LightComponent = Cast<UDirectionalLightComponent>(RootComponent);
+
 }

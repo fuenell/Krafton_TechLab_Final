@@ -122,6 +122,24 @@ UTexture* UMaterial::GetTexture(EMaterialTextureSlot Slot) const
 	return nullptr;
 }
 
+const FMaterialInfo& UMaterial::GetMaterialInfo() const
+{
+	return MaterialInfo;
+}
+
+bool UMaterial::HasTexture(EMaterialTextureSlot Slot) const
+{
+	switch (Slot)
+	{
+	case EMaterialTextureSlot::Diffuse:
+		return !MaterialInfo.DiffuseTextureFileName.empty();
+	case EMaterialTextureSlot::Normal:
+		return !MaterialInfo.NormalTextureFileName.empty();
+	default:
+		return false;
+	}
+}
+
 void UMaterial::ResolveTextures()
 {
 	auto& RM = UResourceManager::GetInstance();
@@ -143,4 +161,175 @@ void UMaterial::ResolveTextures()
 		ResolvedTextures[static_cast<int32>(EMaterialTextureSlot::Normal)] = RM.Load<UTexture>(MaterialInfo.NormalTextureFileName);
 	else
 		ResolvedTextures[static_cast<int32>(EMaterialTextureSlot::Normal)] = nullptr; // 또는 기본 노멀 텍스처
+}
+
+
+IMPLEMENT_CLASS(UMaterialInstanceDynamic)
+
+UMaterialInstanceDynamic::UMaterialInstanceDynamic()
+{
+}
+
+UMaterialInstanceDynamic* UMaterialInstanceDynamic::Create(UMaterialInterface* InParentMaterial)
+{
+	if (!InParentMaterial)
+		return nullptr;
+
+	// MID를 또다른 MID 위에 중첩해서 만드는 것은 현재 지원하지 않음 (필요 시 재귀적으로 구현 가능)
+	if (Cast<UMaterialInstanceDynamic>(InParentMaterial))
+	{
+		UE_LOG("Creating a MID from another MID is not supported.");
+		return nullptr;
+	}
+
+	return new UMaterialInstanceDynamic(InParentMaterial);
+}
+
+void UMaterialInstanceDynamic::CopyParametersFrom(const UMaterialInstanceDynamic* Other)
+{
+	if (!Other)
+	{
+		return;
+	}
+
+	// 부모는 생성 시(Create) 설정되므로, 여기서는 덮어쓴 값만 복사합니다.
+	this->OverriddenTextures = Other->OverriddenTextures;
+	this->OverriddenScalarParameters = Other->OverriddenScalarParameters;
+	this->OverriddenVectorParameters = Other->OverriddenVectorParameters;
+
+	this->bIsCachedMaterialInfoDirty = true;
+}
+
+UMaterialInstanceDynamic::UMaterialInstanceDynamic(UMaterialInterface* InParentMaterial)
+	: ParentMaterial(InParentMaterial)
+{
+	// 생성자에서는 부모 포인터를 저장하는 것 외에 아무것도 하지 않습니다.
+}
+
+UShader* UMaterialInstanceDynamic::GetShader()
+{
+	// 셰이더는 항상 부모의 것을 그대로 사용합니다.
+	if (ParentMaterial)
+	{
+		return ParentMaterial->GetShader();
+	}
+	return nullptr;
+}
+
+UTexture* UMaterialInstanceDynamic::GetTexture(EMaterialTextureSlot Slot) const
+{
+	// 1. 이 인스턴스에서 덮어쓴 텍스처가 있는지 먼저 확인합니다.
+	UTexture* const* OverriddenTexture = OverriddenTextures.Find(Slot);
+	if (OverriddenTexture)
+	{
+		// 찾았다면(nullptr이 아니라면) 그 값을 반환합니다.
+		return *OverriddenTexture;
+	}
+
+	// 2. 덮어쓴 값이 없다면, 부모 머티리얼에게 물어봅니다.
+	if (ParentMaterial)
+	{
+		return ParentMaterial->GetTexture(Slot);
+	}
+
+	return nullptr;
+}
+
+bool UMaterialInstanceDynamic::HasTexture(EMaterialTextureSlot Slot) const
+{
+	// 1. 이 인스턴스에서 덮어쓴 텍스처가 있는지 먼저 확인합니다.
+	// Value가 nullptr일 수도 있으므로, 키의 존재 자체를 확인합니다.
+	if (OverriddenTextures.Contains(Slot))
+	{
+		// 키가 존재하고, 그 값이 nullptr이 아니면 true
+		return OverriddenTextures.Find(Slot) != nullptr;
+	}
+
+	// 2. 덮어쓴 값이 없다면, 부모 머티리얼에게 물어봅니다.
+	if (ParentMaterial)
+	{
+		return ParentMaterial->HasTexture(Slot);
+	}
+
+	return false;
+}
+
+const FMaterialInfo& UMaterialInstanceDynamic::GetMaterialInfo() const
+{
+	if (bIsCachedMaterialInfoDirty)
+	{
+		if (ParentMaterial)
+		{
+			// 1. 부모의 MaterialInfo를 복사하여 캐시를 초기화합니다.
+			CachedMaterialInfo = ParentMaterial->GetMaterialInfo();
+		}
+
+		// 2. 이 인스턴스에 덮어쓴 스칼라 파라미터로 캐시를 수정합니다.
+		//    (리플렉션이 없으므로 하드코딩으로 처리)
+		for (const auto& Pair : OverriddenScalarParameters)
+		{
+			if (Pair.first == "SpecularExponent")
+			{
+				CachedMaterialInfo.SpecularExponent = Pair.second;
+			}
+			else if (Pair.first == "OpticalDensity")
+			{
+				CachedMaterialInfo.OpticalDensity = Pair.second;
+			}
+			else if (Pair.first == "Transparency")
+			{
+				CachedMaterialInfo.Transparency = Pair.second;
+			}
+		}
+
+		// 3. 이 인스턴스에 덮어쓴 벡터 파라미터로 캐시를 수정합니다.
+		for (const auto& Pair : OverriddenVectorParameters)
+		{
+			const FVector ColorVec = FVector(Pair.second.R, Pair.second.G, Pair.second.B);
+			if (Pair.first == "DiffuseColor")
+			{
+				CachedMaterialInfo.DiffuseColor = ColorVec;
+			}
+			else if (Pair.first == "AmbientColor")
+			{
+				CachedMaterialInfo.AmbientColor = ColorVec;
+			}
+			else if (Pair.first == "SpecularColor")
+			{
+				CachedMaterialInfo.SpecularColor = ColorVec;
+			}
+			else if (Pair.first == "EmissiveColor")
+			{
+				CachedMaterialInfo.EmissiveColor = ColorVec;
+			}
+		}
+
+		bIsCachedMaterialInfoDirty = false;
+	}
+	return CachedMaterialInfo;
+}
+
+void UMaterialInstanceDynamic::SetTextureParameterValue(EMaterialTextureSlot Slot, UTexture* Value)
+{
+	OverriddenTextures.Add(Slot, Value);
+	// 텍스처는 FMaterialInfo에 직접적인 영향을 주지 않으므로 dirty 플래그를 설정하지 않습니다.
+	// GetTexture() 함수가 OverriddenTextures 맵을 직접 확인하기 때문입니다.
+}
+
+void UMaterialInstanceDynamic::SetVectorParameterValue(const FString& ParameterName, const FLinearColor& Value)
+{
+	OverriddenVectorParameters.Add(ParameterName, Value);
+	bIsCachedMaterialInfoDirty = true;
+}
+
+void UMaterialInstanceDynamic::SetScalarParameterValue(const FString& ParameterName, float Value)
+{
+	OverriddenScalarParameters.Add(ParameterName, Value);
+	bIsCachedMaterialInfoDirty = true;
+}
+
+void UMaterialInstanceDynamic::SetOverriddenTextures(const TMap<EMaterialTextureSlot, UTexture*>& InTextures)
+{
+	OverriddenTextures = InTextures;
+	bIsCachedMaterialInfoDirty = true;
 }

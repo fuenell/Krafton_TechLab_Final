@@ -34,12 +34,10 @@ void ASpotLightActor::DuplicateSubObjects()
 	}
 }
 
-void ASpotLightActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+void ASpotLightActor::OnSerialized()
 {
-	Super::Serialize(bInIsLoading, InOutHandle);
+	Super::OnSerialized();
 
-	if (bInIsLoading)
-	{
-		LightComponent = Cast<USpotLightComponent>(RootComponent);
-	}
+	LightComponent = Cast<USpotLightComponent>(RootComponent);
+	
 }

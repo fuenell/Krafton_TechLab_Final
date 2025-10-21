@@ -162,12 +162,10 @@ FBoundingSphere UFireBallComponent::GetBoundingSphere() const
 
 #pragma endregion
 
-void UFireBallComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+void UFireBallComponent::OnSerialized()
 {
-	Super::Serialize(bInIsLoading, InOutHandle);
+	Super::OnSerialized();
 
-	// 리플렉션 기반 자동 직렬화
-	AutoSerialize(bInIsLoading, InOutHandle, UFireBallComponent::StaticClass());
 }
 
 void UFireBallComponent::DuplicateSubObjects()

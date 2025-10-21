@@ -50,11 +50,9 @@ void UHeightFogComponent::RenderHeightFog(URenderer* Renderer)
 {
 }
 
-
 void UHeightFogComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
 	Super::Serialize(bInIsLoading, InOutHandle);
-
 	if (bInIsLoading)
 	{
 		// Load FogInscatteringColor
@@ -108,9 +106,12 @@ void UHeightFogComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		InOutHandle["FogMaxOpacity"] = FogMaxOpacity;
 
 	}
+}
+void UHeightFogComponent::OnSerialized()
+{
+	Super::OnSerialized();
 
-	// 리플렉션 기반 자동 직렬화
-	AutoSerialize(bInIsLoading, InOutHandle, UHeightFogComponent::StaticClass());
+	
 }
 
 void UHeightFogComponent::DuplicateSubObjects()

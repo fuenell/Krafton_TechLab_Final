@@ -21,7 +21,7 @@ public:
 	void OnRegister(UWorld* InWorld) override;
 
 	// Serialization & Duplication
-	virtual void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+	virtual void OnSerialized() override;
 	virtual void DuplicateSubObjects() override;
 	DECLARE_DUPLICATE(ULightComponent)
 

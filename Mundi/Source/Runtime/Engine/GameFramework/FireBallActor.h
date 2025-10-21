@@ -22,7 +22,7 @@ public:
 	DECLARE_DUPLICATE(AFireBallActor)
 
 	// Serialize
-	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+	void OnSerialized() override;
 
 protected:
 	UFireBallComponent* FireBallComponent;

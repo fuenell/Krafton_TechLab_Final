@@ -19,10 +19,8 @@ void AEmptyActor::DuplicateSubObjects()
 	Super::DuplicateSubObjects();
 }
 
-void AEmptyActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+void AEmptyActor::OnSerialized()
 {
-	Super::Serialize(bInIsLoading, InOutHandle);
+	Super::OnSerialized();
 
-	// 리플렉션 기반 자동 직렬화
-	AutoSerialize(bInIsLoading, InOutHandle, AEmptyActor::StaticClass());
 }

@@ -41,9 +41,9 @@ void AFireBallActor::DuplicateSubObjects()
 	}
 }
 
-void AFireBallActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+void AFireBallActor::OnSerialized()
 {
-	Super::Serialize(bInIsLoading, InOutHandle);
+	Super::OnSerialized();
 
 	// 로딩 시 Native 컴포넌트 중복 방지 로직:
 	// 
@@ -58,48 +58,46 @@ void AFireBallActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 	// 주의사항:
 	// - IsNative() 플래그가 정확하게 설정되어야 함
 	// - 플래그가 잘못 설정되면 필요한 컴포넌트가 잘못 제거될 수 있음
-	if (bInIsLoading)
+	// 1단계: Native StaticMeshComponent 수집
+	TArray<UStaticMeshComponent*> NativeStaticMeshes;
+	for (UActorComponent* Component : OwnedComponents)
 	{
-		// 1단계: Native StaticMeshComponent 수집
-		TArray<UStaticMeshComponent*> NativeStaticMeshes;
-		for (UActorComponent* Component : OwnedComponents)
+		if (UStaticMeshComponent* StaticMesh = Cast<UStaticMeshComponent>(Component))
 		{
-			if (UStaticMeshComponent* StaticMesh = Cast<UStaticMeshComponent>(Component))
+			if (StaticMesh->IsNative())
 			{
-				if (StaticMesh->IsNative())
-				{
-					NativeStaticMeshes.push_back(StaticMesh);
-				}
+				NativeStaticMeshes.push_back(StaticMesh);
 			}
-		}
-
-		// 2단계: 씬에서 역직렬화된 FireBallComponent를 우선시하여 포인터를 갱신
-		if (UFireBallComponent* LoadedFireBall = Cast<UFireBallComponent>(RootComponent))
-		{
-			FireBallComponent = LoadedFireBall;
-		}
-		else
-		{
-			// RootComponent가 아니면 SceneComponents에서 검색
-			for (USceneComponent* SceneComp : SceneComponents)
-			{
-				if (UFireBallComponent* Candidate = Cast<UFireBallComponent>(SceneComp))
-				{
-					FireBallComponent = Candidate;
-					break;
-				}
-			}
-		}
-
-		// 3단계: 생성자에서 만든 Native StaticMeshComponent들을 제거하여 중복 방지
-		for (UStaticMeshComponent* NativeMesh : NativeStaticMeshes)
-		{
-			if (!NativeMesh)
-			{
-				continue;
-			}
-			NativeMesh->DetachFromParent();
-			RemoveOwnedComponent(NativeMesh);
 		}
 	}
+
+	// 2단계: 씬에서 역직렬화된 FireBallComponent를 우선시하여 포인터를 갱신
+	if (UFireBallComponent* LoadedFireBall = Cast<UFireBallComponent>(RootComponent))
+	{
+		FireBallComponent = LoadedFireBall;
+	}
+	else
+	{
+		// RootComponent가 아니면 SceneComponents에서 검색
+		for (USceneComponent* SceneComp : SceneComponents)
+		{
+			if (UFireBallComponent* Candidate = Cast<UFireBallComponent>(SceneComp))
+			{
+				FireBallComponent = Candidate;
+				break;
+			}
+		}
+	}
+
+	// 3단계: 생성자에서 만든 Native StaticMeshComponent들을 제거하여 중복 방지
+	for (UStaticMeshComponent* NativeMesh : NativeStaticMeshes)
+	{
+		if (!NativeMesh)
+		{
+			continue;
+		}
+		NativeMesh->DetachFromParent();
+		RemoveOwnedComponent(NativeMesh);
+	}
+	
 }

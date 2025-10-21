@@ -34,12 +34,10 @@ float ULocalLightComponent::GetAttenuationFactor(const FVector& WorldPosition) c
 	return FMath::Max(0.0f, Attenuation);
 }
 
-void ULocalLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+void ULocalLightComponent::OnSerialized()
 {
-	Super::Serialize(bInIsLoading, InOutHandle);
+	Super::OnSerialized();
 
-	// 리플렉션 기반 자동 직렬화
-	AutoSerialize(bInIsLoading, InOutHandle, ULocalLightComponent::StaticClass());
 }
 
 void ULocalLightComponent::DuplicateSubObjects()

@@ -21,8 +21,7 @@ struct FMeshBatchElement
 	UShader* PixelShader = nullptr;
 
 	// 셰이더 파라미터(텍스처, 상수 버퍼)를 제공합니다.
-	UMaterial* Material = nullptr;
-
+	UMaterialInterface* Material = nullptr;
 	// GPU에 바인딩될 정점 버퍼입니다.
 	ID3D11Buffer* VertexBuffer = nullptr;
 

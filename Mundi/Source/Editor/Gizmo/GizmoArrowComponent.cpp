@@ -19,12 +19,12 @@ UGizmoArrowComponent::~UGizmoArrowComponent()
 
 }
 
-UMaterial* UGizmoArrowComponent::GetMaterial(uint32 InSectionIndex) const
+UMaterialInterface* UGizmoArrowComponent::GetMaterial(uint32 InSectionIndex) const
 {
 	return GizmoMaterial;
 }
 
-void UGizmoArrowComponent::SetMaterial(uint32 InElementIndex, UMaterial* InNewMaterial)
+void UGizmoArrowComponent::SetMaterial(uint32 InElementIndex, UMaterialInterface* InNewMaterial)
 {
 	GizmoMaterial = InNewMaterial;
 }
@@ -89,7 +89,7 @@ void UGizmoArrowComponent::CollectMeshBatches(TArray<FMeshBatchElement>& OutMesh
 	}
 
 	// --- 사용할 머티리얼 결정 ---
-	UMaterial* MaterialToUse = GizmoMaterial;
+	UMaterialInterface* MaterialToUse = GizmoMaterial;
 	UShader* ShaderToUse = nullptr;
 
 	if (MaterialToUse && MaterialToUse->GetShader())

@@ -6,13 +6,9 @@
 class UStaticMesh;
 class UShader;
 class UTexture;
+class UMaterialInterface;
+class UMaterialInstanceDynamic;
 struct FSceneCompData;
-
-struct FMaterialSlot
-{
-	FName MaterialName;
-	bool bChangedByUser = false; // user에 의해 직접 Material이 바뀐 적이 있는지.
-};
 
 class UStaticMeshComponent : public UMeshComponent
 {
@@ -24,27 +20,25 @@ public:
 
 protected:
 	~UStaticMeshComponent() override;
+	void ClearDynamicMaterials();
 
 public:
-	void Render(URenderer* Renderer, const FMatrix& View, const FMatrix& Proj) override;
 	void CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View) override;
 
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+	void OnSerialized() override;
 
 	void SetStaticMesh(const FString& PathFileName);
 
 	UStaticMesh* GetStaticMesh() const { return StaticMesh; }
 	
-	UMaterial* GetMaterial(uint32 InSectionIndex) const override;
-	void SetMaterial(uint32 InElementIndex, UMaterial* InNewMaterial) override;
+	UMaterialInterface* GetMaterial(uint32 InSectionIndex) const override;
+	void SetMaterial(uint32 InElementIndex, UMaterialInterface* InNewMaterial) override;
+
+	UMaterialInstanceDynamic* CreateAndSetMaterialInstanceDynamic(uint32 ElementIndex);
 
 	void SetMaterialByUser(const uint32 InMaterialSlotIndex, const FString& InMaterialName);
-	const TArray<UMaterial*> GetMaterialSlots() const { return MaterialSlots; }
-
-	bool IsChangedMaterialByUser() const
-	{
-		return bChangedMaterialByUser;
-	}
+	const TArray<UMaterialInterface*> GetMaterialSlots() const { return MaterialSlots; }
 
 	FAABB GetWorldAABB() const;
 
@@ -57,7 +51,6 @@ protected:
 
 protected:
 	UStaticMesh* StaticMesh = nullptr;
-	TArray<UMaterial*> MaterialSlots;
-
-	bool bChangedMaterialByUser = false;
+	TArray<UMaterialInterface*> MaterialSlots;
+	TArray<UMaterialInstanceDynamic*> DynamicMaterialInstances;
 };

@@ -22,7 +22,7 @@ public:
     }
     void Clear() { Actors.Empty(); }
 
-    void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+    void Serialize(const bool bInIsLoading, JSON& InOutHandle);
 private:
     TArray<AActor*> Actors;
 };

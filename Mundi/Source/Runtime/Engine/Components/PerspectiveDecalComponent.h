@@ -31,6 +31,7 @@ public:
 	DECLARE_DUPLICATE(UPerspectiveDecalComponent)
 
 	// Serialize
+	void OnSerialized() override;
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
 private:

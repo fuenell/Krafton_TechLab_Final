@@ -23,16 +23,10 @@ UDecalComponent::UDecalComponent()
 	SetCanEverTick(true);
 }
 
-void UDecalComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+void UDecalComponent::OnSerialized()
 {
-	Super::Serialize(bInIsLoading, InOutHandle);
+	Super::OnSerialized();
 
-	if (bInIsLoading && InOutHandle.hasKey("DecalTexturePath") && !InOutHandle.hasKey("DecalTexture"))
-	{
-		InOutHandle["DecalTexture"] = InOutHandle["DecalTexturePath"];
-	}
-
-	AutoSerialize(bInIsLoading, InOutHandle, UDecalComponent::StaticClass());
 }
 
 void UDecalComponent::DuplicateSubObjects()

@@ -150,12 +150,10 @@ void UPointLightComponent::RenderDebugVolume(URenderer* Renderer) const
 	Renderer->AddLines(StartPoints, EndPoints, Colors);
 }
 
-void UPointLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+void UPointLightComponent::OnSerialized()
 {
-	Super::Serialize(bInIsLoading, InOutHandle);
+	Super::OnSerialized();
 
-	// 리플렉션 기반 자동 직렬화 (이 클래스의 프로퍼티만)
-	AutoSerialize(bInIsLoading, InOutHandle, UPointLightComponent::StaticClass());
 }
 
 void UPointLightComponent::DuplicateSubObjects()

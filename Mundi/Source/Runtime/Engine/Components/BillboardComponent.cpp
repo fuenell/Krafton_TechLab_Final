@@ -48,31 +48,22 @@ void UBillboardComponent::SetTextureName(FString TexturePath)
 	}
 }
 
-UMaterial* UBillboardComponent::GetMaterial(uint32 InSectionIndex) const
+UMaterialInterface* UBillboardComponent::GetMaterial(uint32 InSectionIndex) const
 {
 	return Material;
 }
 
-void UBillboardComponent::SetMaterial(uint32 InElementIndex, UMaterial* InNewMaterial)
+void UBillboardComponent::SetMaterial(uint32 InElementIndex, UMaterialInterface* InNewMaterial)
 {
 	Material = InNewMaterial;
 }
 
-void UBillboardComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+void UBillboardComponent::OnSerialized()
 {
-	Super::Serialize(bInIsLoading, InOutHandle);
+	Super::OnSerialized();
 
-	if (bInIsLoading && InOutHandle.hasKey("TextureName") && !InOutHandle.hasKey("Texture"))
-	{
-		InOutHandle["Texture"] = InOutHandle["TextureName"];
-	}
+	TextureName = Texture->GetTextureName();
 
-	AutoSerialize(bInIsLoading, InOutHandle, UBillboardComponent::StaticClass());
-
-	if (bInIsLoading && Texture)
-	{
-		TextureName = Texture->GetTextureName();
-	}
 }
 
 void UBillboardComponent::DuplicateSubObjects()
@@ -81,33 +72,6 @@ void UBillboardComponent::DuplicateSubObjects()
 
 	// Quad, Material은 공유 리소스이므로 복제하지 않음
 	// Texture는 TextureName을 통해 리소스 매니저에서 가져오므로 복제하지 않음
-}
-
-// 여기서만 Cull_Back을 꺼야함. 
-void UBillboardComponent::Render(URenderer* Renderer, const FMatrix& View, const FMatrix& Proj)
-{
-	//// 빌보드를 위한 업데이트
-	//ACameraActor* CameraActor = GetOwner()->GetWorld()->GetCameraActor();
-	//FVector CamRight = CameraActor->GetActorRight();
-	//FVector CamUp = CameraActor->GetActorUp();
-	//FVector cameraPosition = CameraActor->GetActorLocation();
-
-
-	//FLinearColor Color{ 1,1,1,1 };
-	//if (ULightComponentBase* LightBase = Cast<ULightComponentBase>(this->GetAttachParent()))
-	//{
-	//	Color = LightBase->GetLightColor();
-	//}
-
-	////Renderer->GetRHIDevice()->UpdateBillboardConstantBuffers(Owner->GetActorLocation() + GetRelativeLocation() + FVector(0.f, 0.f, 1.f) * Owner->GetActorScale().Z, View, Proj, CamRight, CamUp);
-	////정작 location, view proj만 사용하고 있길래 그냥 Identity넘김
-	//Renderer->GetRHIDevice()->SetAndUpdateConstantBuffer(ColorBufferType(Color, this->InternalIndex));
-	//Renderer->GetRHIDevice()->SetAndUpdateConstantBuffer(BillboardBufferType(GetWorldLocation(), View, Proj, View.InverseAffineFast()));
-
-	//Renderer->GetRHIDevice()->PrepareShader(Material->GetShader());
-	//Renderer->GetRHIDevice()->OMSetDepthStencilState(EComparisonFunc::LessEqual);
-	//Renderer->GetRHIDevice()->RSSetState(ERasterizerMode::Solid_NoCull);
-	//Renderer->DrawIndexedPrimitiveComponent(this, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
 void UBillboardComponent::CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View)
@@ -120,7 +84,7 @@ void UBillboardComponent::CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshB
 	}
 
 	// 2. 사용할 머티리얼과 셰이더 결정
-	UMaterial* MaterialToUse = GetMaterial(0); // this->Material 반환
+	UMaterialInterface* MaterialToUse = GetMaterial(0); // this->Material 반환
 	UShader* ShaderToUse = nullptr;
 
 	if (MaterialToUse && MaterialToUse->GetShader())

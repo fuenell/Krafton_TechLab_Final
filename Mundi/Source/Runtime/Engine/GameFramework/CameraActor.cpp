@@ -178,7 +178,6 @@ void ACameraActor::ProcessEditorCameraInput(float DeltaSeconds)
 void ACameraActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
     Super::Serialize(bInIsLoading, InOutHandle);
-
     // 수동 직렬화 (프로퍼티로 등록되지 않은 변수들)
     if (bInIsLoading)
     {
@@ -206,9 +205,14 @@ void ACameraActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
         InOutHandle["CameraPitchDeg"] = CameraPitchDeg;
         InOutHandle["PerspectiveCameraInput"] = PerspectiveCameraInput;
     }
+}
 
-    // 등록된 프로퍼티 자동 직렬화
-    AutoSerialize(bInIsLoading, InOutHandle, ACameraActor::StaticClass());
+void ACameraActor::OnSerialized()
+{
+    Super::OnSerialized();
+
+    
+
 }
 
 void ACameraActor::DuplicateSubObjects()

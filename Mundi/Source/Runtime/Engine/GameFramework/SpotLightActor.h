@@ -19,7 +19,7 @@ public:
 	void DuplicateSubObjects() override;
 	DECLARE_DUPLICATE(ASpotLightActor)
 
-	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+	void OnSerialized() override;
 
 protected:
 	USpotLightComponent* LightComponent;

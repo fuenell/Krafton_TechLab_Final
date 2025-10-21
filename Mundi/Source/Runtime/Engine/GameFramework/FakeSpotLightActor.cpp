@@ -55,9 +55,9 @@ void AFakeSpotLightActor::DuplicateSubObjects()
 	}
 }
 
-void AFakeSpotLightActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+void AFakeSpotLightActor::OnSerialized()
 {
-	Super::Serialize(bInIsLoading, InOutHandle);
+	Super::OnSerialized();
 
 	
 	// 로딩 시 컴포넌트 중복 방지 로직:
@@ -67,36 +67,34 @@ void AFakeSpotLightActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 	// 3. 이 로직은 native 컴포넌트를 제거하고 직렬화된 컴포넌트로 교체함
 	// 4. 이를 통해 PIE나 씬 로드 시 중복 컴포넌트를 방지함
 	
-	if (bInIsLoading)
+	UPerspectiveDecalComponent* DecalComponentPre = nullptr;
+	UBillboardComponent* BillboardCompPre = nullptr;
+
+	// 직렬화된 컴포넌트를 찾아서 포인터 교체
+	for (auto& Component : SceneComponents)
 	{
-		UPerspectiveDecalComponent* DecalComponentPre = nullptr;
-		UBillboardComponent* BillboardCompPre = nullptr;
-
-		// 직렬화된 컴포넌트를 찾아서 포인터 교체
-		for (auto& Component : SceneComponents)
+		if (UPerspectiveDecalComponent* PerpectiveDecalComp = Cast<UPerspectiveDecalComponent>(Component))
 		{
-			if (UPerspectiveDecalComponent* PerpectiveDecalComp = Cast<UPerspectiveDecalComponent>(Component))
-			{
-				DecalComponentPre = DecalComponent;  // 기존 native 컴포넌트 백업
-				DecalComponent->DetachFromParent();  // 부모에서 분리
-				DecalComponent = PerpectiveDecalComp;  // 새로 로드된 컴포넌트로 교체
-			}
-			else if (UBillboardComponent* BillboardCompTemp = Cast<UBillboardComponent>(Component))
-			{
-				BillboardCompPre = BillboardComponent;  // 기존 native 컴포넌트 백업
-				BillboardComponent->DetachFromParent();  // 부모에서 분리
-				BillboardComponent = BillboardCompTemp;  // 새로 로드된 컴포넌트로 교체
-			}
+			DecalComponentPre = DecalComponent;  // 기존 native 컴포넌트 백업
+			DecalComponent->DetachFromParent();  // 부모에서 분리
+			DecalComponent = PerpectiveDecalComp;  // 새로 로드된 컴포넌트로 교체
 		}
-
-		// 기존 native 컴포넌트를 OwnedComponents에서 제거 (메모리는 나중에 정리됨)
-		if (DecalComponentPre)
+		else if (UBillboardComponent* BillboardCompTemp = Cast<UBillboardComponent>(Component))
 		{
-			DecalComponentPre->GetOwner()->RemoveOwnedComponent(DecalComponentPre);
-		}
-		if (BillboardCompPre)
-		{
-			BillboardCompPre->GetOwner()->RemoveOwnedComponent(BillboardCompPre);
+			BillboardCompPre = BillboardComponent;  // 기존 native 컴포넌트 백업
+			BillboardComponent->DetachFromParent();  // 부모에서 분리
+			BillboardComponent = BillboardCompTemp;  // 새로 로드된 컴포넌트로 교체
 		}
 	}
+
+	// 기존 native 컴포넌트를 OwnedComponents에서 제거 (메모리는 나중에 정리됨)
+	if (DecalComponentPre)
+	{
+		DecalComponentPre->GetOwner()->RemoveOwnedComponent(DecalComponentPre);
+	}
+	if (BillboardCompPre)
+	{
+		BillboardCompPre->GetOwner()->RemoveOwnedComponent(BillboardCompPre);
+	}
+	
 }

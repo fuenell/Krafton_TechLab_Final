@@ -49,12 +49,12 @@ void UAmbientLightComponent::OnUnregister()
 	GWorld->GetLightManager()->DeRegisterLight(this);
 }
 
-void UAmbientLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+void UAmbientLightComponent::OnSerialized()
 {
-	Super::Serialize(bInIsLoading, InOutHandle);
+	Super::OnSerialized();
 
-	// 리플렉션 기반 자동 직렬화 (추가 프로퍼티 없음)
-	AutoSerialize(bInIsLoading, InOutHandle, UAmbientLightComponent::StaticClass());
+	//// 리플렉션 기반 자동 직렬화 (추가 프로퍼티 없음)
+	//Serialize(bInIsLoading, InOutHandle, UAmbientLightComponent::StaticClass());
 }
 
 void UAmbientLightComponent::DuplicateSubObjects()

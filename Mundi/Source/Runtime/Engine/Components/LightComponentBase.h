@@ -28,7 +28,7 @@ public:
 	virtual void UpdateLightData();
 
 	// Serialization & Duplication
-	virtual void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+	virtual void OnSerialized() override;
 	virtual void DuplicateSubObjects() override;
 	DECLARE_DUPLICATE(ULightComponentBase)
 

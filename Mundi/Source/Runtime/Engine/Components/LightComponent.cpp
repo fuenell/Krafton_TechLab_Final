@@ -104,12 +104,10 @@ void ULightComponent::OnRegister(UWorld* InWorld)
 	}
 }
 
-void ULightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+void ULightComponent::OnSerialized()
 {
-	Super::Serialize(bInIsLoading, InOutHandle);
+	Super::OnSerialized();
 
-	// 리플렉션 기반 자동 직렬화
-	AutoSerialize(bInIsLoading, InOutHandle, ULightComponent::StaticClass());
 }
 
 void ULightComponent::DuplicateSubObjects()

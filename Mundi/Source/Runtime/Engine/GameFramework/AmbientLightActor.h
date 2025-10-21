@@ -19,7 +19,7 @@ public:
 	void DuplicateSubObjects() override;
 	DECLARE_DUPLICATE(AAmbientLightActor)
 
-	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+	void OnSerialized() override;
 
 protected:
 	UAmbientLightComponent* LightComponent;

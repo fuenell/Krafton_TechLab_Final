@@ -81,12 +81,10 @@ void UDirectionalLightComponent::OnTransformUpdated()
 	GWorld->GetLightManager()->UpdateLight(this);
 }
 
-void UDirectionalLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+void UDirectionalLightComponent::OnSerialized()
 {
-	Super::Serialize(bInIsLoading, InOutHandle);
+	Super::OnSerialized();
 
-	// 리플렉션 기반 자동 직렬화 (추가 프로퍼티 없음)
-	AutoSerialize(bInIsLoading, InOutHandle, UDirectionalLightComponent::StaticClass());
 }
 
 void UDirectionalLightComponent::DuplicateSubObjects()

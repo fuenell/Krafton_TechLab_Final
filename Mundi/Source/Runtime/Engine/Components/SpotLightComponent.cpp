@@ -474,18 +474,12 @@ void USpotLightComponent::RenderDebugVolume(URenderer* Renderer) const
 	Renderer->AddLines(StartPoints, EndPoints, Colors);
 }
 
-void USpotLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+void USpotLightComponent::OnSerialized()
 {
-	Super::Serialize(bInIsLoading, InOutHandle);
+	Super::OnSerialized();
 
-	// 리플렉션 기반 자동 직렬화 (이 클래스의 프로퍼티만)
-	AutoSerialize(bInIsLoading, InOutHandle, USpotLightComponent::StaticClass());
+	ValidateConeAngles();
 
-	// 로드 후 Cone 각도 유효성 검사
-	if (bInIsLoading)
-	{
-		ValidateConeAngles();
-	}
 }
 
 void USpotLightComponent::DuplicateSubObjects()

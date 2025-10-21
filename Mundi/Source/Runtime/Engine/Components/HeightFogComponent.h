@@ -41,7 +41,9 @@ public:
 
     void OnRegister(UWorld* InWorld) override;
 	// Serialize
+	void OnSerialized() override;
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+
 
 	// ───── 복사 관련 ────────────────────────────
 	void DuplicateSubObjects() override;

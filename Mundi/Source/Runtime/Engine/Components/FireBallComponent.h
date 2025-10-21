@@ -47,7 +47,7 @@ public:
 	FBoundingSphere GetBoundingSphere() const;
 
 	// ─────────────── Serialization ───────────────
-	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+	void OnSerialized() override;
 
 	// ───── 복사 관련 ────────────────────────────
 	void DuplicateSubObjects() override;

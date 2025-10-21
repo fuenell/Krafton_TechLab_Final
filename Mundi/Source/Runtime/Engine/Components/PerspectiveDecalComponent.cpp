@@ -163,11 +163,9 @@ void UPerspectiveDecalComponent::DuplicateSubObjects()
 {
 	Super::DuplicateSubObjects();
 }
-
 void UPerspectiveDecalComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
 	Super::Serialize(bInIsLoading, InOutHandle);
-
 	if (bInIsLoading)
 	{
 		float FovYTemp;
@@ -178,7 +176,12 @@ void UPerspectiveDecalComponent::Serialize(const bool bInIsLoading, JSON& InOutH
 	{
 		InOutHandle["FovY"] = GetFovY();
 	}
+}
 
-	// 리플렉션 기반 자동 직렬화
-	AutoSerialize(bInIsLoading, InOutHandle, UPerspectiveDecalComponent::StaticClass());
+void UPerspectiveDecalComponent::OnSerialized()
+{
+	Super::OnSerialized();
+
+	
+
 }

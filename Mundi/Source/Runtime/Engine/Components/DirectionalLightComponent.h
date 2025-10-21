@@ -26,7 +26,7 @@ public:
 	void OnTransformUpdated() override;
 
 	// Serialization & Duplication
-	virtual void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+	virtual void OnSerialized() override;
 	virtual void DuplicateSubObjects() override;
 	DECLARE_DUPLICATE(UDirectionalLightComponent)
 

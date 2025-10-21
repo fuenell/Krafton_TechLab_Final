@@ -93,6 +93,7 @@ public:
 
     // Serialize
     void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+    void OnSerialized() override;
 
     virtual void OnTransformUpdated();
 

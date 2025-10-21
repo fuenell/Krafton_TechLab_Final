@@ -140,45 +140,45 @@ TArray<FBillboardVertexInfo_GPU> UTextRenderComponent::CreateVerticesForString(c
     return vertices;
 }
 
-void UTextRenderComponent::Render(URenderer* Renderer, const FMatrix& View, const FMatrix& Proj)
+// NOTE: 추후 UTextRenderComponent 복구 시 도움이 될 것 같아서 주석으로 남겨둠
+//void UTextRenderComponent::Render(URenderer* Renderer, const FMatrix& View, const FMatrix& Proj)
+//{
+    //UWorld* World = GetOwner() ? GetOwner()->GetWorld() : nullptr;
+    //const bool bShowBounds = World && World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_BillboardText);
+    //const bool bSelected = (World && World->GetSelectionManager()->GetSelectedActor() == GetOwner());
+    //if (!bShowBounds || !bSelected)
+    //    return;
+
+    //Material->Load("TextBillboard.dds", Renderer->GetRHIDevice()->GetDevice());
+    //ACameraActor* CameraActor = GetOwner()->GetWorld()->GetCameraActor();
+    //FVector CamRight = CameraActor->GetActorRight();
+    //FVector CamUp = CameraActor->GetActorUp();
+
+    //FVector cameraPosition = CameraActor->GetActorLocation();
+    //Renderer->GetRHIDevice()->SetAndUpdateConstantBuffer(ColorBufferType(FLinearColor(), this->InternalIndex));
+
+    //Renderer->GetRHIDevice()->PrepareShader(Material->GetShader());
+    //TArray<FBillboardVertexInfo_GPU> vertices = CreateVerticesForString(FString("UUID : ") + FString(std::to_string(Owner->UUID)), Owner->GetActorLocation());//TODO : HELLOWORLD를 멤버변수 TEXT로바꾸기
+    //UResourceManager::GetInstance().UpdateDynamicVertexBuffer("TextBillboard", vertices);
+
+    //Renderer->GetRHIDevice()->OMSetDepthStencilState(EComparisonFunc::LessEqual);
+    //// 텍스트 빌보드도 이 구간에서만 백페이스 컬링 비활성화
+    //Renderer->GetRHIDevice()->RSSetState(ERasterizerMode::Solid_NoCull);
+    //Renderer->DrawIndexedPrimitiveComponent(this, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+//}
+
+void UTextRenderComponent::OnSerialized()
 {
-    UWorld* World = GetOwner() ? GetOwner()->GetWorld() : nullptr;
-    const bool bShowBounds = World && World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_BillboardText);
-    const bool bSelected = (World && World->GetSelectionManager()->GetSelectedActor() == GetOwner());
-    if (!bShowBounds || !bSelected)
-        return;
+	Super::OnSerialized();
 
-    Material->Load("TextBillboard.dds", Renderer->GetRHIDevice()->GetDevice());
-    ACameraActor* CameraActor = GetOwner()->GetWorld()->GetCameraActor();
-    FVector CamRight = CameraActor->GetActorRight();
-    FVector CamUp = CameraActor->GetActorUp();
-
-    FVector cameraPosition = CameraActor->GetActorLocation();
-    Renderer->GetRHIDevice()->SetAndUpdateConstantBuffer(ColorBufferType(FLinearColor(), this->InternalIndex));
-
-    Renderer->GetRHIDevice()->PrepareShader(Material->GetShader());
-    TArray<FBillboardVertexInfo_GPU> vertices = CreateVerticesForString(FString("UUID : ") + FString(std::to_string(Owner->UUID)), Owner->GetActorLocation());//TODO : HELLOWORLD를 멤버변수 TEXT로바꾸기
-    UResourceManager::GetInstance().UpdateDynamicVertexBuffer("TextBillboard", vertices);
-
-    Renderer->GetRHIDevice()->OMSetDepthStencilState(EComparisonFunc::LessEqual);
-    // 텍스트 빌보드도 이 구간에서만 백페이스 컬링 비활성화
-    Renderer->GetRHIDevice()->RSSetState(ERasterizerMode::Solid_NoCull);
-    Renderer->DrawIndexedPrimitiveComponent(this, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
-void UTextRenderComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
-{
-	Super::Serialize(bInIsLoading, InOutHandle);
-
-	AutoSerialize(bInIsLoading, InOutHandle, UTextRenderComponent::StaticClass());
-}
-
-UMaterial* UTextRenderComponent::GetMaterial(uint32 InSectionIndex) const
+UMaterialInterface* UTextRenderComponent::GetMaterial(uint32 InSectionIndex) const
 {
     return Material;
 }
 
-void UTextRenderComponent::SetMaterial(uint32 InElementIndex, UMaterial* InNewMaterial)
+void UTextRenderComponent::SetMaterial(uint32 InElementIndex, UMaterialInterface* InNewMaterial)
 {
     Material = InNewMaterial;
 }

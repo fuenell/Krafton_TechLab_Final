@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Actor.h"
 
 class AEmptyActor : public AActor
@@ -13,5 +13,5 @@ public:
 	void DuplicateSubObjects() override;
 	DECLARE_DUPLICATE(AEmptyActor)
 
-	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+	void OnSerialized() override;
 };

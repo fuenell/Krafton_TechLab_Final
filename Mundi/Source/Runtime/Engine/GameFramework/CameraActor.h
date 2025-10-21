@@ -58,6 +58,7 @@ public:
     void ProcessEditorCameraInput(float DeltaSeconds);
 
     // ───── 직렬화 관련 ────────────────────────────
+    void OnSerialized() override;
     void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
     // ───── 복사 관련 ────────────────────────────

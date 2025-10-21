@@ -326,46 +326,41 @@ void USceneComponent::UpdateRelativeTransform()
 
 void USceneComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
-    Super::Serialize(bInIsLoading, InOutHandle);
+	Super::Serialize(bInIsLoading, InOutHandle);
 
-    if (bInIsLoading)
-    {
-        FJsonSerializer::ReadVector(InOutHandle, "Location", RelativeLocation, FVector::Zero());
-        FJsonSerializer::ReadVector(InOutHandle, "Rotation", RelativeRotationEuler, FVector::Zero());
-        FJsonSerializer::ReadVector(InOutHandle, "Scale", RelativeScale, FVector::One());
-
-        RelativeRotation = FQuat::MakeFromEulerZYX(RelativeRotationEuler).GetNormalized();
-
-        // 해당 객체의 Transform을 위에서 읽은 값을 기반으로 변경 후, 자식에게 전파
-        UpdateRelativeTransform();
-        OnTransformUpdated();
-
+	if (bInIsLoading)
+	{
         // 나중에 자식의 Serialize 호출될 때 부모인 이 객체를 찾기 위해 Map에 추가
         FJsonSerializer::ReadUint32(InOutHandle, "Id", SceneId);
         SceneIdMap.Add(SceneId, this);
 
         // 부모 찾기
         FJsonSerializer::ReadUint32(InOutHandle, "ParentId", ParentId);
-    }
-    else
-    {
-        InOutHandle["Location"] = FJsonSerializer::VectorToJson(RelativeLocation);
-        InOutHandle["Rotation"] = FJsonSerializer::VectorToJson(RelativeRotationEuler);
-        InOutHandle["Scale"] = FJsonSerializer::VectorToJson(RelativeScale);
-        InOutHandle["Id"] = UUID;
-        
-        if (AttachParent)
-        {
-            InOutHandle["ParentId"] = AttachParent->UUID;
+	}
+	else
+	{
+		InOutHandle["Id"] = UUID;
 
-        }
-        else // RootComponent
-        {
-            InOutHandle["ParentId"] = 0;
-        }
-    }
+		if (AttachParent)
+		{
+			InOutHandle["ParentId"] = AttachParent->UUID;
+		}
+		else // RootComponent
+		{
+			InOutHandle["ParentId"] = 0;
+		}
+	}
+}
 
-    // USceneComponent는 불러온 후 회전 후처리가 필요하므로 AutoSerialize 호출 금지.
+void USceneComponent::OnSerialized()
+{
+	Super::OnSerialized();
+
+	RelativeRotation = FQuat::MakeFromEulerZYX(RelativeRotationEuler).GetNormalized();
+
+	// 해당 객체의 Transform을 위에서 읽은 값을 기반으로 변경 후, 자식에게 전파
+	UpdateRelativeTransform();
+	OnTransformUpdated();
 }
 
 void USceneComponent::OnTransformUpdated()

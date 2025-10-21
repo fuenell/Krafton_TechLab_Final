@@ -25,12 +25,10 @@ void ULightComponentBase::UpdateLightData()
 	// 자식 클래스에서 오버라이드
 }
 
-void ULightComponentBase::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+void ULightComponentBase::OnSerialized()
 {
-	Super::Serialize(bInIsLoading, InOutHandle);
+	Super::OnSerialized();
 
-	// 리플렉션 기반 자동 직렬화
-	AutoSerialize(bInIsLoading, InOutHandle, ULightComponentBase::StaticClass());
 }
 
 void ULightComponentBase::DuplicateSubObjects()

@@ -51,7 +51,7 @@ public:
 	virtual FMatrix GetDecalProjectionMatrix() const;   // NOTE: FakeSpotLight 를 위해서 가상 함수로 선언
 
 	// Serialization API
-	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+	void OnSerialized() override;
 
 	// ───── 복사 관련 ────────────────────────────
 	void DuplicateSubObjects() override;
