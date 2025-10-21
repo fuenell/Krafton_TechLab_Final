@@ -29,8 +29,8 @@ protected:
 
 public:
 	// Render API
-	void RenderAffectedPrimitives(URenderer* Renderer, UPrimitiveComponent* Target, const FMatrix& View, const FMatrix& Proj);
-	virtual void RenderDebugVolume(URenderer* Renderer, const FMatrix& View, const FMatrix& Proj) const override;
+	void RenderAffectedPrimitives(URenderer* Renderer, UPrimitiveComponent* Target);
+	virtual void RenderDebugVolume(URenderer* Renderer) const override;
 
 	// Decal Resource API
 	void SetDecalTexture(UTexture* InTexture);

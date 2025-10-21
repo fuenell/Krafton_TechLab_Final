@@ -18,7 +18,7 @@ UPerspectiveDecalComponent::UPerspectiveDecalComponent()
 }
 
 // 이 함수 전체를 복사하여 기존 함수를 대체하십시오.
-void UPerspectiveDecalComponent::RenderDebugVolume(URenderer* Renderer, const FMatrix& View, const FMatrix& Proj) const
+void UPerspectiveDecalComponent::RenderDebugVolume(URenderer* Renderer) const
 {
 	// --- OBB(Oriented Bounding Box) 그리기 ---
 	const FVector4 LineColor(0.5f, 0.8f, 0.9f, 1.0f); // 하늘색

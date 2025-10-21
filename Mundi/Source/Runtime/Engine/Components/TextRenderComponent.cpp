@@ -154,11 +154,6 @@ void UTextRenderComponent::Render(URenderer* Renderer, const FMatrix& View, cons
     FVector CamUp = CameraActor->GetActorUp();
 
     FVector cameraPosition = CameraActor->GetActorLocation();
-    Renderer->GetRHIDevice()->SetAndUpdateConstantBuffer(BillboardBufferType(
-        Owner->GetActorLocation() + FVector(0.f, 0.f, 1.f) * Owner->GetActorScale().Z,
-        View,
-        Proj,
-        FMatrix()));
     Renderer->GetRHIDevice()->SetAndUpdateConstantBuffer(ColorBufferType(FLinearColor(), this->InternalIndex));
 
     Renderer->GetRHIDevice()->PrepareShader(Material->GetShader());

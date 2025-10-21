@@ -18,7 +18,7 @@ public:
 	~UPerspectiveDecalComponent() override = default;
 
 	// Render API
-	void RenderDebugVolume(URenderer* Renderer, const FMatrix& View, const FMatrix& Proj) const override;
+	void RenderDebugVolume(URenderer* Renderer) const override;
 
 	// Projection & UV Mapping API
 	FMatrix GetDecalProjectionMatrix() const override;

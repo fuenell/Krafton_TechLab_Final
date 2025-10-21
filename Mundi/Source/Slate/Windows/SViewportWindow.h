@@ -33,6 +33,8 @@ private:
     void RenderGizmoSpaceButton();
     void RenderCameraOptionDropdownMenu();
     void RenderViewModeDropdownMenu();
+    void RenderShowFlagDropdownMenu();
+    void RenderViewportLayoutSwitchButton();
     void LoadToolbarIcons(ID3D11Device* Device);
 
 private:
@@ -78,4 +80,23 @@ private:
     UTexture* IconViewMode_Unlit = nullptr;
     UTexture* IconViewMode_Wireframe = nullptr;
     UTexture* IconViewMode_BufferVis = nullptr;
+
+    // ShowFlag 아이콘 텍스처
+    UTexture* IconShowFlag = nullptr;
+    UTexture* IconRevert = nullptr;
+    UTexture* IconStats = nullptr;
+    UTexture* IconHide = nullptr;
+    UTexture* IconBVH = nullptr;
+    UTexture* IconGrid = nullptr;
+    UTexture* IconDecal = nullptr;
+    UTexture* IconStaticMesh = nullptr;
+    UTexture* IconBillboard = nullptr;
+    UTexture* IconFog = nullptr;
+    UTexture* IconCollision = nullptr;
+    UTexture* IconAntiAliasing = nullptr;
+    UTexture* IconTile = nullptr;
+
+    // 뷰포트 레이아웃 전환 아이콘
+    UTexture* IconSingleToMultiViewport = nullptr;  // 단일 뷰포트 아이콘
+    UTexture* IconMultiToSingleViewport = nullptr;   // 멀티 뷰포트 아이콘
 };

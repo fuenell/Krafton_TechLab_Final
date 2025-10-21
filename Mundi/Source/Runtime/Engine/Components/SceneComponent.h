@@ -111,7 +111,7 @@ public:
     // Debug Rendering
     // Virtual function for rendering debug visualization (bounds, volumes, etc.)
     // Override in derived classes that need debug visualization
-    virtual void RenderDebugVolume(class URenderer* Renderer, const FMatrix& View, const FMatrix& Proj) const {}
+    virtual void RenderDebugVolume(class URenderer* Renderer) const {}
 
     static TMap<uint32, USceneComponent*>& GetSceneIdMap()
     {

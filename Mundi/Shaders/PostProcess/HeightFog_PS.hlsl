@@ -16,10 +16,12 @@ cbuffer PostProcessCB : register(b0)
     float Far;
 }
 
-cbuffer InvViewProjBuffer : register(b1)
+cbuffer ViewProjBuffer : register(b1)
 {
-    row_major float4x4 InvViewMatrix;
-    row_major float4x4 InvProjectionMatrix;
+    row_major float4x4 ViewMatrix;
+    row_major float4x4 ProjectionMatrix;
+    row_major float4x4 InverseViewMatrix;
+    row_major float4x4 InverseProjectionMatrix;
 }
 
 cbuffer FogCB : register(b2)
@@ -54,13 +56,13 @@ float4 mainPS(PS_INPUT input) : SV_TARGET
     // -----------------------------
     // 2. 월드 좌표 복원
     // -----------------------------
-    float4 viewPos = mul(ndcPos, InvProjectionMatrix);
+    float4 viewPos = mul(ndcPos, InverseProjectionMatrix);
     viewPos /= viewPos.w;
-    float4 worldPos = mul(viewPos, InvViewMatrix);
+    float4 worldPos = mul(viewPos, InverseViewMatrix);
     worldPos /= worldPos.w;
     
     // 카메라 월드 좌표
-    float4 cameraWorldPos = mul(float4(0, 0, 0, 1), InvViewMatrix);
+    float4 cameraWorldPos = mul(float4(0, 0, 0, 1), InverseViewMatrix);
 
     // -----------------------------
     // 3. 광선 벡터 및 거리

@@ -30,6 +30,7 @@ public:
 
     void Initialize(ID3D11Device* Device, UWorld* World, const FRect& InRect);
     void SwitchLayout(EViewportLayoutMode NewMode);
+    EViewportLayoutMode GetCurrentLayoutMode() const { return CurrentMode; }
 
     void SwitchPanel(SWindow* SwitchPanel);
 

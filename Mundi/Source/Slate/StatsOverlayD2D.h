@@ -24,6 +24,9 @@ public:
     void ToggleTileCulling();
     bool IsFPSVisible() const { return bShowFPS; }
     bool IsMemoryVisible() const { return bShowMemory; }
+    bool IsPickingVisible() const { return bShowPicking; }
+    bool IsDecalVisible() const { return bShowDecal; }
+    bool IsTileCullingVisible() const { return bShowTileCulling; }
 
 private:
     UStatsOverlayD2D() = default;

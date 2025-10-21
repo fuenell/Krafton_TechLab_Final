@@ -51,7 +51,8 @@ FSceneRenderer::FSceneRenderer(UWorld* InWorld, FSceneView* InView, URenderer* I
 
 	// 타일 라이트 컬러 초기화
 	TileLightCuller = std::make_unique<FTileLightCuller>();
-	TileLightCuller->Initialize(RHIDevice, 16);  // 16x16 타일 크기
+	uint32 TileSize = World->GetRenderSettings().GetTileSize();
+	TileLightCuller->Initialize(RHIDevice, TileSize);
 
 	// 라인 수집 시작
 	OwnerRenderer->BeginLineBatch();
@@ -242,6 +243,25 @@ void FSceneRenderer::PrepareView()
 	ViewConstData.ScreenSize.Z = 1.0f / RHIDevice->GetViewportWidth();
 	ViewConstData.ScreenSize.W = 1.0f / RHIDevice->GetViewportHeight();
 	RHIDevice->SetAndUpdateConstantBuffer((FViewportConstants)ViewConstData);
+
+	// 공통 상수 버퍼 설정 (View, Projection 등) - 루프 전에 한 번만
+	FVector CameraPos = View->ViewLocation;
+
+	FMatrix InvView = View->ViewMatrix.InverseAffine();
+	FMatrix InvProjection;
+	if (View->ProjectionMode == ECameraProjectionMode::Perspective)
+	{
+		InvProjection = View->ProjectionMatrix.InversePerspectiveProjection();
+	}
+	else
+	{
+		InvProjection = View->ProjectionMatrix.InverseOrthographicProjection();
+	}
+
+	ViewProjBufferType ViewProjBuffer = ViewProjBufferType(View->ViewMatrix, View->ProjectionMatrix, InvView, InvProjection);
+
+	RHIDevice->SetAndUpdateConstantBuffer(ViewProjBufferType(ViewProjBuffer));
+	RHIDevice->SetAndUpdateConstantBuffer(CameraBufferType(CameraPos, 0.0f));
 }
 
 void FSceneRenderer::GatherVisibleProxies()
@@ -256,6 +276,7 @@ void FSceneRenderer::GatherVisibleProxies()
 	const bool bDrawFog = World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_Fog);
 	const bool bDrawLight = World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_Lighting);
 	const bool bUseAntiAliasing = World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_FXAA);
+	const bool bUseBillboard = World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_Billboard);
 
 	// Helper lambda to collect components from an actor
 	auto CollectComponentsFromActor = [&](AActor* Actor, bool bIsEditorActor)
@@ -300,7 +321,7 @@ void FSceneRenderer::GatherVisibleProxies()
 						Proxies.Meshes.Add(MeshComponent);
 					}
 				}
-				else if (UBillboardComponent* BillboardComponent = Cast<UBillboardComponent>(PrimitiveComponent))
+				else if (UBillboardComponent* BillboardComponent = Cast<UBillboardComponent>(PrimitiveComponent); BillboardComponent && bUseBillboard)
 				{
 					Proxies.Billboards.Add(BillboardComponent);
 				}
@@ -421,44 +442,56 @@ void FSceneRenderer::PerformTileLightCulling()
 	if (!TileLightCuller)
 		return;
 
+	// ShowFlag 확인
+	URenderSettings& RenderSettings = World->GetRenderSettings();
+	bool bTileCullingEnabled = RenderSettings.IsShowFlagEnabled(EEngineShowFlags::SF_TileCulling);
+
 	// 뷰포트 크기 가져오기
 	UINT ViewportWidth = static_cast<UINT>(View->ViewRect.Width());
 	UINT ViewportHeight = static_cast<UINT>(View->ViewRect.Height());
 
-	// PointLight와 SpotLight 정보 수집
-	TArray<FPointLightInfo>& PointLights = GWorld->GetLightManager()->GetPointLightInfoList();
-	TArray<FSpotLightInfo>& SpotLights = GWorld->GetLightManager()->GetSpotLightInfoList();
+	// 타일 컬링이 활성화된 경우에만 컬링 수행
+	if (bTileCullingEnabled)
+	{
+		// PointLight와 SpotLight 정보 수집
+		TArray<FPointLightInfo>& PointLights = GWorld->GetLightManager()->GetPointLightInfoList();
+		TArray<FSpotLightInfo>& SpotLights = GWorld->GetLightManager()->GetSpotLightInfoList();
 
-	// 타일 컬링 수행
-	TileLightCuller->CullLights(
-		PointLights,
-		SpotLights,
-		View->ViewMatrix,
-		View->ProjectionMatrix,
-		View->ZNear,
-		View->ZFar,
-		ViewportWidth,
-		ViewportHeight
-	);
+		// 타일 컬링 수행
+		TileLightCuller->CullLights(
+			PointLights,
+			SpotLights,
+			View->ViewMatrix,
+			View->ProjectionMatrix,
+			View->ZNear,
+			View->ZFar,
+			ViewportWidth,
+			ViewportHeight
+		);
+
+		// 통계를 전역 매니저에 업데이트
+		FTileCullingStatManager::GetInstance().UpdateStats(TileLightCuller->GetStats());
+	}
 
 	// 타일 컬링 상수 버퍼 업데이트
+	uint32 TileSize = RenderSettings.GetTileSize();
 	FTileCullingBufferType TileCullingBuffer;
-	TileCullingBuffer.TileSize = 16;  // TileLightCuller 초기화 시 사용한 값과 일치
-	TileCullingBuffer.TileCountX = (ViewportWidth + 16 - 1) / 16;
-	TileCullingBuffer.TileCountY = (ViewportHeight + 16 - 1) / 16;
-	TileCullingBuffer.bUseTileCulling = 1;  // 타일 컬링 활성화
+	TileCullingBuffer.TileSize = TileSize;
+	TileCullingBuffer.TileCountX = (ViewportWidth + TileSize - 1) / TileSize;
+	TileCullingBuffer.TileCountY = (ViewportHeight + TileSize - 1) / TileSize;
+	TileCullingBuffer.bUseTileCulling = bTileCullingEnabled ? 1 : 0;  // ShowFlag에 따라 설정
 
 	RHIDevice->SetAndUpdateConstantBuffer(TileCullingBuffer);
 
-	// Structured Buffer SRV를 t2 슬롯에 바인딩
-	ID3D11ShaderResourceView* TileLightIndexSRV = TileLightCuller->GetLightIndexBufferSRV();
-	if (TileLightIndexSRV)
+	// Structured Buffer SRV를 t2 슬롯에 바인딩 (타일 컬링 활성화 시에만)
+	if (bTileCullingEnabled)
 	{
-		RHIDevice->GetDeviceContext()->PSSetShaderResources(2, 1, &TileLightIndexSRV);
+		ID3D11ShaderResourceView* TileLightIndexSRV = TileLightCuller->GetLightIndexBufferSRV();
+		if (TileLightIndexSRV)
+		{
+			RHIDevice->GetDeviceContext()->PSSetShaderResources(2, 1, &TileLightIndexSRV);
+		}
 	}
-
-	// 통계를 전역 매니저에 업데이트
-	FTileCullingStatManager::GetInstance().UpdateStats(TileLightCuller->GetStats());
 }
 
 void FSceneRenderer::PerformFrustumCulling()
@@ -580,11 +613,6 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 
 	// 기본 샘플러 미리 가져오기 (루프 내 반복 호출 방지)
 	ID3D11SamplerState* DefaultSampler = RHIDevice->GetSamplerState(RHI_Sampler_Index::Default);
-
-	// 공통 상수 버퍼 설정 (View, Projection 등) - 루프 전에 한 번만
-	FVector CameraPos = View->ViewLocation;
-	RHIDevice->SetAndUpdateConstantBuffer(ViewProjBufferType(View->ViewMatrix, View->ProjectionMatrix));
-	RHIDevice->SetAndUpdateConstantBuffer(CameraBufferType(CameraPos, 0.0f));
 
 	// 정렬된 리스트 순회
 	for (const FMeshBatchElement& Batch : InMeshBatches)
@@ -777,11 +805,6 @@ void FSceneRenderer::RenderDecalPass()
 	RHIDevice->GetDeviceContext()->PSSetShader(DecalShader->GetPixelShader(), nullptr, 0);
 	RHIDevice->GetDeviceContext()->IASetInputLayout(DecalShader->GetInputLayout());
 
-	// CameraBuffer 설정 (조명 계산용 - 모든 Decal에 공통)
-	FMatrix ViewInverse = View->ViewMatrix.InverseAffine();
-	FVector CameraPosition(ViewInverse.M[3][0], ViewInverse.M[3][1], ViewInverse.M[3][2]);
-	RHIDevice->SetAndUpdateConstantBuffer(CameraBufferType(CameraPosition));
-
 	for (UDecalComponent* Decal : Proxies.Decals)
 	{
 		// Decal이 그려질 Primitives
@@ -813,7 +836,7 @@ void FSceneRenderer::RenderDecalPass()
 		// 3. TargetPrimitive 순회하며 렌더링
 		for (UPrimitiveComponent* Target : TargetPrimitives)
 		{
-			Decal->RenderAffectedPrimitives(OwnerRenderer, Target, View->ViewMatrix, View->ProjectionMatrix);
+			Decal->RenderAffectedPrimitives(OwnerRenderer, Target);
 		}
 
 		// --- 데칼 렌더 시간 측정 종료 및 결과 저장 ---
@@ -866,7 +889,7 @@ void FSceneRenderer::RenderFireBallPass()
 
 		for (UPrimitiveComponent* Target : TargetPrimitives)
 		{
-			FireBall->RenderAffectedPrimitives(OwnerRenderer, Target, View->ViewMatrix, View->ProjectionMatrix);
+			FireBall->RenderAffectedPrimitives(OwnerRenderer, Target);
 		}
 	}
 
@@ -930,18 +953,6 @@ void FSceneRenderer::RenderPostProcessingPasses()
 	ECameraProjectionMode ProjectionMode = View->ProjectionMode;
 	//RHIDevice->UpdatePostProcessCB(ZNear, ZFar, ProjectionMode == ECameraProjectionMode::Orthographic);
 	RHIDevice->SetAndUpdateConstantBuffer(PostProcessBufferType(View->ZNear, View->ZFar, ProjectionMode == ECameraProjectionMode::Orthographic));
-	FMatrix InvView = View->ViewMatrix.InverseAffine();
-	FMatrix InvProjection;
-	if (ProjectionMode == ECameraProjectionMode::Perspective)
-	{
-		InvProjection = View->ProjectionMatrix.InversePerspectiveProjection();
-	}
-	else
-	{
-		InvProjection = View->ProjectionMatrix.InverseOrthographicProjection();
-	}
-	//RHIDevice->UpdateInvViewProjCB(InvView, InvProjection);
-	RHIDevice->SetAndUpdateConstantBuffer(InvViewProjBufferType(InvView, InvProjection));
 	UHeightFogComponent* F = FogComponent;
 	//RHIDevice->UpdateFogCB(F->GetFogDensity(), F->GetFogHeightFalloff(), F->GetStartDistance(), F->GetFogCutoffDistance(), F->GetFogInscatteringColor()->ToFVector4(), F->GetFogMaxOpacity(), F->GetFogHeight());
 	RHIDevice->SetAndUpdateConstantBuffer(FogBufferType(F->GetFogDensity(), F->GetFogHeightFalloff(), F->GetStartDistance(), F->GetFogCutoffDistance(), F->GetFogInscatteringColor()->ToFVector4(), F->GetFogMaxOpacity(), F->GetFogHeight()));
@@ -1105,7 +1116,7 @@ void FSceneRenderer::RenderDebugPass()
 		{
 			// 모든 컴포넌트에서 RenderDebugVolume 호출
 			// 각 컴포넌트는 필요한 경우 override하여 디버그 시각화 제공
-			Component->RenderDebugVolume(OwnerRenderer, View->ViewMatrix, View->ProjectionMatrix);
+			Component->RenderDebugVolume(OwnerRenderer);
 		}
 	}
 
@@ -1119,7 +1130,7 @@ void FSceneRenderer::RenderDebugPass()
 	}
 
 	// 수집된 라인을 출력하고 정리
-	OwnerRenderer->EndLineBatch(FMatrix::Identity(), View->ViewMatrix, View->ProjectionMatrix);
+	OwnerRenderer->EndLineBatch(FMatrix::Identity());
 }
 
 void FSceneRenderer::RenderOverayEditorPrimitivesPass()
@@ -1178,14 +1189,6 @@ void FSceneRenderer::RenderOverayEditorPrimitivesPass()
 	// 빌보드 렌더링에 필요한 카메라 정보 (기존 Render() 함수에서 가져옴)
 	for (UBillboardComponent* BillboardComponent : Proxies.Billboards)
 	{
-		// 1. [상태 설정] 빌보드 전용 CBuffer 설정 (기존 Render()에서 가져옴)
-		RHIDevice->SetAndUpdateConstantBuffer(BillboardBufferType(
-			BillboardComponent->GetWorldLocation(),
-			View->ViewMatrix,
-			View->ProjectionMatrix,
-			View->ViewMatrix.InverseAffineFast()
-		));
-
 		// 2. [수집]
 		MeshBatchElements.Empty();
 		BillboardComponent->CollectMeshBatches(MeshBatchElements, View);
@@ -1270,13 +1273,16 @@ void FSceneRenderer::ApplyScreenEffectsPass()
 	//	1.0f,	// 0.75 가 기본값이지만 효과 강조를 위해 1로 설정
 	//	12
 		//);
+	// FXAA 파라미터를 RenderSettings에서 가져옴
+	URenderSettings& RenderSettings = World->GetRenderSettings();
+
 	RHIDevice->SetAndUpdateConstantBuffer(FXAABufferType(
 		FVector2D(static_cast<float>(RHIDevice->GetViewportWidth()), static_cast<float>(RHIDevice->GetViewportHeight())),
 		FVector2D(1.0f / static_cast<float>(RHIDevice->GetViewportWidth()), 1.0f / static_cast<float>(RHIDevice->GetViewportHeight())),
-		0.0833f,
-		0.166f,
-		1.0f,	// 0.75 가 기본값이지만 효과 강조를 위해 1로 설정
-		12));
+		RenderSettings.GetFXAAEdgeThresholdMin(),
+		RenderSettings.GetFXAAEdgeThresholdMax(),
+		RenderSettings.GetFXAAQualitySubPix(),
+		RenderSettings.GetFXAAQualityIterations()));
 
 	RHIDevice->PrepareShader(FullScreenTriangleVS, CopyTexturePS);
 

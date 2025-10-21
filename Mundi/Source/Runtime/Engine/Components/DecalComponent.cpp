@@ -71,7 +71,7 @@ void UDecalComponent::TickComponent(float DeltaTime)
 }
 
 
-void UDecalComponent::RenderAffectedPrimitives(URenderer* Renderer, UPrimitiveComponent* Target, const FMatrix& View, const FMatrix& Proj)
+void UDecalComponent::RenderAffectedPrimitives(URenderer* Renderer, UPrimitiveComponent* Target)
 {
 	UStaticMeshComponent* SMC = Cast<UStaticMeshComponent>(Target);
 	if (!SMC || !SMC->GetStaticMesh())
@@ -85,7 +85,6 @@ void UDecalComponent::RenderAffectedPrimitives(URenderer* Renderer, UPrimitiveCo
 	FMatrix TargetWorld = Target->GetWorldMatrix();
 	FMatrix TargetWorldInvTranspose = TargetWorld.InverseAffine().Transpose();
 	RHIDevice->SetAndUpdateConstantBuffer(ModelBufferType(TargetWorld, TargetWorldInvTranspose));
-	RHIDevice->SetAndUpdateConstantBuffer(ViewProjBufferType(View, Proj));
 
 	const FMatrix DecalMatrix = GetDecalProjectionMatrix();
 	RHIDevice->SetAndUpdateConstantBuffer(DecalBufferType(DecalMatrix, DecalOpacity));
@@ -125,7 +124,7 @@ void UDecalComponent::RenderAffectedPrimitives(URenderer* Renderer, UPrimitiveCo
 	
 }
 
-void UDecalComponent::RenderDebugVolume(URenderer* Renderer, const FMatrix& View, const FMatrix& Proj) const
+void UDecalComponent::RenderDebugVolume(URenderer* Renderer) const
 {
 	// 라인 색상
 	const FVector4 BoxColor(0.5f, 0.8f, 0.9f, 1.0f); // 하늘색

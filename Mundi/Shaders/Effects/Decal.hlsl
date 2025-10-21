@@ -28,6 +28,8 @@ cbuffer ViewProjBuffer : register(b1)
 {
     row_major float4x4 ViewMatrix;
     row_major float4x4 ProjectionMatrix;
+    row_major float4x4 InverseViewMatrix;
+    row_major float4x4 InverseProjectionMatrix;
 }
 
 cbuffer PSScrollCB : register(b5)

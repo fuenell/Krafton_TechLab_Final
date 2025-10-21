@@ -11,6 +11,7 @@
 
 #include "CameraComponent.h"
 #include "CameraActor.h"
+#include "StatsOverlayD2D.h"
 
 extern float CLIENTWIDTH;
 extern float CLIENTHEIGHT;
@@ -42,6 +43,42 @@ SViewportWindow::~SViewportWindow()
 	IconScale = nullptr;
 	IconWorldSpace = nullptr;
 	IconLocalSpace = nullptr;
+
+	IconCamera = nullptr;
+	IconPerspective = nullptr;
+	IconTop = nullptr;
+	IconBottom = nullptr;
+	IconLeft = nullptr;
+	IconRight = nullptr;
+	IconFront = nullptr;
+	IconBack = nullptr;
+
+	IconSpeed = nullptr;
+	IconFOV = nullptr;
+	IconNearClip = nullptr;
+	IconFarClip = nullptr;
+
+	IconViewMode_Lit = nullptr;
+	IconViewMode_Unlit = nullptr;
+	IconViewMode_Wireframe = nullptr;
+	IconViewMode_BufferVis = nullptr;
+
+	IconShowFlag = nullptr;
+	IconRevert = nullptr;
+	IconStats = nullptr;
+	IconHide = nullptr;
+	IconBVH = nullptr;
+	IconGrid = nullptr;
+	IconDecal = nullptr;
+	IconStaticMesh = nullptr;
+	IconBillboard = nullptr;
+	IconFog = nullptr;
+	IconCollision = nullptr;
+	IconAntiAliasing = nullptr;
+	IconTile = nullptr;
+
+	IconSingleToMultiViewport = nullptr;
+	IconMultiToSingleViewport = nullptr;
 }
 
 bool SViewportWindow::Initialize(float StartX, float StartY, float Width, float Height, UWorld* World, ID3D11Device* Device, EViewportType InViewportType)
@@ -189,64 +226,83 @@ void SViewportWindow::RenderToolbar()
 		ImGui::PopStyleColor(2);
 		ImGui::PopStyleVar(2);
 
-		// 디버그 ShowFlag 토글 버튼들 (ViewMode와 독립적)
-		if (ViewportClient && ViewportClient->GetWorld())
+		// === 오른쪽 정렬 버튼들 ===
+		// Switch, ShowFlag, ViewMode는 오른쪽 고정, Camera는 ViewMode 너비에 따라 왼쪽으로 밀림
+
+		const float SwitchButtonWidth = 33.0f;  // Switch 버튼
+		const float ShowFlagButtonWidth = 50.0f;  // ShowFlag 버튼 (대략)
+		const float ButtonSpacing = 8.0f;
+
+		// 현재 ViewMode 이름으로 실제 너비 계산
+		const char* CurrentViewModeName = "뷰모드";
+		if (ViewportClient)
 		{
-			ImGui::SameLine();
-			ImGui::Text("|"); // 구분선
-			ImGui::SameLine();
-
-			URenderSettings& RenderSettings = ViewportClient->GetWorld()->GetRenderSettings();
-
-			// Tile Culling Debug
-			bool bTileCullingDebug = RenderSettings.IsShowFlagEnabled(EEngineShowFlags::SF_TileCullingDebug);
-			if (ImGui::Checkbox("TileCull", &bTileCullingDebug))
+			EViewModeIndex CurrentViewMode = ViewportClient->GetViewModeIndex();
+			switch (CurrentViewMode)
 			{
-				RenderSettings.ToggleShowFlag(EEngineShowFlags::SF_TileCullingDebug);
-			}
-
-			ImGui::SameLine();
-
-			// BVH Debug
-			bool bBVHDebug = RenderSettings.IsShowFlagEnabled(EEngineShowFlags::SF_BVHDebug);
-			if (ImGui::Checkbox("BVH", &bBVHDebug))
-			{
-				RenderSettings.ToggleShowFlag(EEngineShowFlags::SF_BVHDebug);
-			}
-
-			ImGui::SameLine();
-
-			// Grid
-			bool bGrid = RenderSettings.IsShowFlagEnabled(EEngineShowFlags::SF_Grid);
-			if (ImGui::Checkbox("Grid", &bGrid))
-			{
-				RenderSettings.ToggleShowFlag(EEngineShowFlags::SF_Grid);
-			}
-
-			ImGui::SameLine();
-
-			// Bounding Boxes
-			bool bBoundingBoxes = RenderSettings.IsShowFlagEnabled(EEngineShowFlags::SF_BoundingBoxes);
-			if (ImGui::Checkbox("Bounds", &bBoundingBoxes))
-			{
-				RenderSettings.ToggleShowFlag(EEngineShowFlags::SF_BoundingBoxes);
+			case EViewModeIndex::VMI_Lit:
+			case EViewModeIndex::VMI_Lit_Gouraud:
+			case EViewModeIndex::VMI_Lit_Lambert:
+			case EViewModeIndex::VMI_Lit_Phong:
+				CurrentViewModeName = "라이팅 포함";
+				break;
+			case EViewModeIndex::VMI_Unlit:
+				CurrentViewModeName = "언릿";
+				break;
+			case EViewModeIndex::VMI_Wireframe:
+				CurrentViewModeName = "와이어프레임";
+				break;
+			case EViewModeIndex::VMI_WorldNormal:
+				CurrentViewModeName = "월드 노멀";
+				break;
+			case EViewModeIndex::VMI_SceneDepth:
+				CurrentViewModeName = "씬 뎁스";
+				break;
 			}
 		}
 
-		// 카메라 옵션
-		ImGui::SameLine();
+		// ViewMode 버튼의 실제 너비 계산
+		char viewModeText[64];
+		sprintf_s(viewModeText, "%s %s", CurrentViewModeName, "∨");
+		ImVec2 viewModeTextSize = ImGui::CalcTextSize(viewModeText);
+		const float ViewModeButtonWidth = 17.0f + 4.0f + viewModeTextSize.x + 16.0f;
+
+		// Camera 버튼 너비 계산
+		char cameraText[64];
+		sprintf_s(cameraText, "%s %s", ViewportName.ToString().c_str(), "∨");
+		ImVec2 cameraTextSize = ImGui::CalcTextSize(cameraText);
+		const float CameraButtonWidth = 17.0f + 4.0f + cameraTextSize.x + 16.0f;
+
+		// 사용 가능한 전체 너비와 현재 커서 위치
+		float AvailableWidth = ImGui::GetContentRegionAvail().x;
+		float CursorStartX = ImGui::GetCursorPosX();
+		ImVec2 CurrentCursor = ImGui::GetCursorPos();
+
+		// 오른쪽부터 역순으로 위치 계산
+		// Switch는 오른쪽 끝
+		float SwitchX = CursorStartX + AvailableWidth - SwitchButtonWidth;
+
+		// ShowFlag는 Switch 왼쪽
+		float ShowFlagX = SwitchX - ButtonSpacing - ShowFlagButtonWidth;
+
+		// ViewMode는 ShowFlag 왼쪽 (실제 너비 사용)
+		float ViewModeX = ShowFlagX - ButtonSpacing - ViewModeButtonWidth;
+
+		// Camera는 ViewMode 왼쪽 (ViewMode 너비에 따라 위치 변동)
+		float CameraX = ViewModeX - ButtonSpacing - CameraButtonWidth;
+
+		// 버튼들을 순서대로 그리기 (Y 위치는 동일하게 유지)
+		ImGui::SetCursorPos(ImVec2(CameraX, CurrentCursor.y));
 		RenderCameraOptionDropdownMenu();
 
-		// 뷰모드 드롭다운 메뉴
-		ImGui::SameLine(0, 20.0f);
+		ImGui::SetCursorPos(ImVec2(ViewModeX, CurrentCursor.y));
 		RenderViewModeDropdownMenu();
 
-		ImGui::SameLine(0, 20.0f);
-		const ImVec2 ButtonSize(60, 30);
-		if (ImGui::Button("Switch##ToThis", ButtonSize))
-		{
-			SLATE.SwitchPanel(this);
-		}
+		ImGui::SetCursorPos(ImVec2(ShowFlagX, CurrentCursor.y));
+		RenderShowFlagDropdownMenu();
+
+		ImGui::SetCursorPos(ImVec2(SwitchX, CurrentCursor.y));
+		RenderViewportLayoutSwitchButton();
 	}
 	ImGui::End();
 }
@@ -324,11 +380,60 @@ void SViewportWindow::LoadToolbarIcons(ID3D11Device* Device)
 
 	IconViewMode_BufferVis = NewObject<UTexture>();
 	IconViewMode_BufferVis->Load("Data/Icon/Viewport_ViewMode_BufferVis.png", Device);
+
+	// ShowFlag 아이콘 텍스처 로드
+	IconShowFlag = NewObject<UTexture>();
+	IconShowFlag->Load("Data/Icon/Viewport_ShowFlag.png", Device);
+
+	IconRevert = NewObject<UTexture>();
+	IconRevert->Load("Data/Icon/Viewport_Revert.png", Device);
+
+	IconStats = NewObject<UTexture>();
+	IconStats->Load("Data/Icon/Viewport_Stats.png", Device);
+
+	IconHide = NewObject<UTexture>();
+	IconHide->Load("Data/Icon/Viewport_Hide.png", Device);
+
+	IconBVH = NewObject<UTexture>();
+	IconBVH->Load("Data/Icon/Viewport_BVH.png", Device);
+
+	IconGrid = NewObject<UTexture>();
+	IconGrid->Load("Data/Icon/Viewport_Grid.png", Device);
+
+	IconDecal = NewObject<UTexture>();
+	IconDecal->Load("Data/Icon/Viewport_Decal.png", Device);
+
+	IconStaticMesh = NewObject<UTexture>();
+	IconStaticMesh->Load("Data/Icon/Viewport_StaticMesh.png", Device);
+
+	IconBillboard = NewObject<UTexture>();
+	IconBillboard->Load("Data/Icon/Viewport_Billboard.png", Device);
+
+	IconFog = NewObject<UTexture>();
+	IconFog->Load("Data/Icon/Viewport_Fog.png", Device);
+
+	IconCollision = NewObject<UTexture>();
+	IconCollision->Load("Data/Icon/Viewport_Collision.png", Device);
+
+	IconAntiAliasing = NewObject<UTexture>();
+	IconAntiAliasing->Load("Data/Icon/Viewport_AntiAliasing.png", Device);
+
+	IconTile = NewObject<UTexture>();
+	IconTile->Load("Data/Icon/Viewport_Tile.png", Device);
+
+	// 뷰포트 레이아웃 전환 아이콘 로드
+	IconSingleToMultiViewport = NewObject<UTexture>();
+	IconSingleToMultiViewport->Load("Data/Icon/Viewport_SingleToMultiViewport.png", Device);
+	IconMultiToSingleViewport = NewObject<UTexture>();
+	IconMultiToSingleViewport->Load("Data/Icon/Viewport_MultiToSingleViewport.png", Device);
 }
 
 void SViewportWindow::RenderGizmoModeButtons()
 {
-	const ImVec2 IconSize(14, 14);
+	ImVec2 switchCursorPos = ImGui::GetCursorPos();
+	ImGui::SetCursorPosY(switchCursorPos.y - 2.0f);
+
+	const ImVec2 IconSize(17, 17);
 
 	// GizmoActor에서 직접 현재 모드 가져오기
 	EGizmoMode CurrentGizmoMode = EGizmoMode::Select;
@@ -474,7 +579,7 @@ void SViewportWindow::RenderGizmoModeButtons()
 
 void SViewportWindow::RenderGizmoSpaceButton()
 {
-	const ImVec2 IconSize(14, 14);
+	const ImVec2 IconSize(17, 17);
 
 	// GizmoActor에서 직접 현재 스페이스 가져오기
 	EGizmoSpace CurrentGizmoSpace = EGizmoSpace::World;
@@ -534,28 +639,18 @@ void SViewportWindow::RenderGizmoSpaceButton()
 void SViewportWindow::RenderCameraOptionDropdownMenu()
 {
 	ImVec2 cursorPos = ImGui::GetCursorPos();
-	ImGui::SetCursorPosY(cursorPos.y - 2.0f);
-
-	// 오른쪽 정렬을 위한 여유 공간 계산
-	const float RightMargin = 200.0f; // 오른쪽에서 얼마나 떨어진 위치에 배치할지 (뷰모드 + Switch 버튼 공간)
-	float AvailableWidth = ImGui::GetContentRegionAvail().x; // 현재 남은 가로 공간
+	ImGui::SetCursorPosY(cursorPos.y - 0.7f);
 
 	const ImVec2 IconSize(17, 17);
 
 	// 드롭다운 버튼 텍스트 준비
 	char ButtonText[64];
-	sprintf_s(ButtonText, "%s %s", ViewportName.ToString().c_str(), "▼");
+	sprintf_s(ButtonText, "%s %s", ViewportName.ToString().c_str(), "∨");
 
 	// 버튼 너비 계산 (아이콘 크기 + 간격 + 텍스트 크기 + 좌우 패딩)
 	ImVec2 TextSize = ImGui::CalcTextSize(ButtonText);
 	const float HorizontalPadding = 8.0f;
 	const float CameraDropdownWidth = IconSize.x + 4.0f + TextSize.x + HorizontalPadding * 2.0f;
-
-	// 오른쪽 정렬: 남은 공간이 (버튼 너비 + 오른쪽 여백)보다 크면 X 위치 조정
-	if (AvailableWidth > (CameraDropdownWidth + RightMargin))
-	{
-		ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (AvailableWidth - CameraDropdownWidth - RightMargin));
-	}
 
 	// 드롭다운 버튼 스타일 적용
 	ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
@@ -848,7 +943,7 @@ void SViewportWindow::RenderViewModeDropdownMenu()
 	if (!ViewportClient) return;
 
 	ImVec2 cursorPos = ImGui::GetCursorPos();
-	ImGui::SetCursorPosY(cursorPos.y - 3.5f);
+	ImGui::SetCursorPosY(cursorPos.y - 1.0f);
 
 	const ImVec2 IconSize(17, 17);
 
@@ -886,7 +981,7 @@ void SViewportWindow::RenderViewModeDropdownMenu()
 
 	// 드롭다운 버튼 텍스트 준비
 	char ButtonText[64];
-	sprintf_s(ButtonText, "%s %s", CurrentViewModeName, "▼");
+	sprintf_s(ButtonText, "%s %s", CurrentViewModeName, "∨");
 
 	// 버튼 너비 계산 (아이콘 크기 + 간격 + 텍스트 크기 + 좌우 패딩)
 	ImVec2 TextSize = ImGui::CalcTextSize(ButtonText);
@@ -1055,6 +1150,10 @@ void SViewportWindow::RenderViewModeDropdownMenu()
 			ViewportClient->SetViewModeIndex(EViewModeIndex::VMI_Unlit);
 			ImGui::CloseCurrentPopup();
 		}
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("조명 계산 없이 텍스처와 색상만 표시");
+		}
 
 		// ===== Wireframe 메뉴 =====
 		bool bIsWireframe = (CurrentViewMode == EViewModeIndex::VMI_Wireframe);
@@ -1073,6 +1172,10 @@ void SViewportWindow::RenderViewModeDropdownMenu()
 		{
 			ViewportClient->SetViewModeIndex(EViewModeIndex::VMI_Wireframe);
 			ImGui::CloseCurrentPopup();
+		}
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("메시의 외곽선(에지)만 표시");
 		}
 
 		// ===== Buffer Visualization 메뉴 (서브메뉴 포함) =====
@@ -1106,6 +1209,10 @@ void SViewportWindow::RenderViewModeDropdownMenu()
 				CurrentBufferVisSubMode = 0;
 				ImGui::CloseCurrentPopup();
 			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("씬의 깊이 정보를 그레이스케일로 표시\n어두울수록 카메라에 가까움");
+			}
 
 			// World Normal
 			bool bIsWorldNormal = (CurrentViewMode == EViewModeIndex::VMI_WorldNormal);
@@ -1118,6 +1225,10 @@ void SViewportWindow::RenderViewModeDropdownMenu()
 				CurrentBufferVisSubMode = 1;
 				ImGui::CloseCurrentPopup();
 			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("월드 공간의 노멀 벡터를 RGB로 표시\nR=X, G=Y, B=Z 축 방향");
+			}
 
 			ImGui::EndMenu();
 		}
@@ -1126,4 +1237,581 @@ void SViewportWindow::RenderViewModeDropdownMenu()
 		ImGui::PopStyleVar(2);
 		ImGui::EndPopup();
 	}
+}
+
+void SViewportWindow::RenderShowFlagDropdownMenu()
+{
+	if (!ViewportClient) return;
+
+	ImVec2 cursorPos = ImGui::GetCursorPos();
+	ImGui::SetCursorPosY(cursorPos.y - 1.0f);
+
+	const ImVec2 IconSize(20, 20);
+
+	// 드롭다운 버튼 텍스트 준비
+	char ButtonText[64];
+	sprintf_s(ButtonText, "%s", "∨");
+
+	// 버튼 너비 계산 (아이콘 크기 + 간격 + 텍스트 크기 + 좌우 패딩)
+	ImVec2 TextSize = ImGui::CalcTextSize(ButtonText);
+	const float Padding = 8.0f;
+	const float DropdownWidth = IconSize.x + 4.0f + TextSize.x + Padding * 2.0f;
+
+	// 스타일 적용
+	ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.5f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.4f, 0.4f, 0.6f));
+
+	// 드롭다운 버튼 생성 (아이콘 + 텍스트)
+	ImVec2 ButtonSize(DropdownWidth, ImGui::GetFrameHeight());
+	ImVec2 ButtonCursorPos = ImGui::GetCursorPos();
+
+	// 버튼 클릭 영역
+	if (ImGui::Button("##ShowFlagBtn", ButtonSize))
+	{
+		ImGui::OpenPopup("ShowFlagPopup");
+	}
+
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::SetTooltip("Show Flag 설정");
+	}
+
+	// 버튼 위에 내용 렌더링 (아이콘 + 텍스트, 가운데 정렬)
+	float ButtonContentWidth = IconSize.x + 4.0f + TextSize.x;
+	float ButtonContentStartX = ButtonCursorPos.x + (ButtonSize.x - ButtonContentWidth) * 0.5f;
+	ImVec2 ButtonContentCursorPos = ImVec2(ButtonContentStartX, ButtonCursorPos.y + (ButtonSize.y - IconSize.y) * 0.5f);
+	ImGui::SetCursorPos(ButtonContentCursorPos);
+
+	// ShowFlag 아이콘 표시
+	if (IconShowFlag && IconShowFlag->GetShaderResourceView())
+	{
+		ImGui::Image((void*)IconShowFlag->GetShaderResourceView(), IconSize);
+		ImGui::SameLine(0, 4);
+	}
+
+	ImGui::Text("%s", ButtonText);
+
+	ImGui::PopStyleColor(3);
+	ImGui::PopStyleVar(1);
+
+	// ===== ShowFlag 드롭다운 팝업 =====
+	if (ImGui::BeginPopup("ShowFlagPopup", ImGuiWindowFlags_NoMove))
+	{
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 4));
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
+
+		// 선택된 항목의 파란 배경 제거
+		ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0, 0, 0, 0));
+		ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.2f, 0.2f, 0.2f, 0.5f));
+		ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.3f, 0.3f, 0.3f, 0.6f));
+
+		URenderSettings& RenderSettings = ViewportClient->GetWorld()->GetRenderSettings();
+
+		// --- 디폴트 사용 (Reset) ---
+		ImVec2 ResetCursorPos = ImGui::GetCursorScreenPos();
+		if (ImGui::Selectable("##ResetDefault", false, 0, ImVec2(0, IconSize.y)))
+		{
+			// 기본 설정으로 복원
+			RenderSettings.SetShowFlags(EEngineShowFlags::SF_DefaultEnabled);
+			ImGui::CloseCurrentPopup();
+		}
+
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("모든 Show Flag를 기본 설정으로 복원합니다.");
+		}
+
+		// Selectable 위에 아이콘과 텍스트 그리기
+		ImGui::SetCursorScreenPos(ResetCursorPos);
+		if (IconRevert && IconRevert->GetShaderResourceView())
+		{
+			ImGui::Image((void*)IconRevert->GetShaderResourceView(), IconSize);
+			ImGui::SameLine(0, 4);
+		}
+		ImGui::Text("디폴트 사용");
+
+		ImGui::Separator();
+
+		// --- 뷰포트 통계 (Viewport Stats with Submenu) ---
+		// 아이콘
+		if (IconStats && IconStats->GetShaderResourceView())
+		{
+			ImGui::Image((void*)IconStats->GetShaderResourceView(), IconSize);
+			ImGui::SameLine(0, 4);
+		}
+
+		if (ImGui::BeginMenu("  뷰포트 통계"))
+		{
+			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "뷰포트 통계");
+			ImGui::Separator();
+
+			// 모두 숨김
+			ImVec2 HideAllCursorPos = ImGui::GetCursorScreenPos();
+			if (ImGui::Selectable("##HideAllStats", false, 0, ImVec2(0, IconSize.y)))
+			{
+				UStatsOverlayD2D::Get().SetShowFPS(false);
+				UStatsOverlayD2D::Get().SetShowMemory(false);
+				UStatsOverlayD2D::Get().SetShowPicking(false);
+				UStatsOverlayD2D::Get().SetShowDecal(false);
+				UStatsOverlayD2D::Get().SetShowTileCulling(false);
+			}
+
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("모든 뷰포트 통계를 숨깁니다.");
+			}
+
+			// Selectable 위에 아이콘과 텍스트 그리기
+			ImGui::SetCursorScreenPos(HideAllCursorPos);
+			if (IconHide && IconHide->GetShaderResourceView())
+			{
+				ImGui::Image((void*)IconHide->GetShaderResourceView(), IconSize);
+				ImGui::SameLine(0, 4);
+			}
+			ImGui::Text(" 모두 숨김");
+
+			ImGui::Separator();
+
+			// Individual stats checkboxes
+			bool bFPS = UStatsOverlayD2D::Get().IsFPSVisible();
+			if (ImGui::Checkbox(" FPS", &bFPS))
+			{
+				UStatsOverlayD2D::Get().ToggleFPS();
+			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("프레임 속도와 프레임 시간을 표시합니다.");
+			}
+
+			bool bMemory = UStatsOverlayD2D::Get().IsMemoryVisible();
+			if (ImGui::Checkbox(" MEMORY", &bMemory))
+			{
+				UStatsOverlayD2D::Get().ToggleMemory();
+			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("메모리 사용량과 할당 횟수를 표시합니다.");
+			}
+
+			bool bPicking = UStatsOverlayD2D::Get().IsPickingVisible();
+			if (ImGui::Checkbox(" PICKING", &bPicking))
+			{
+				UStatsOverlayD2D::Get().TogglePicking();
+			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("오브젝트 선택 성능 통계를 표시합니다.");
+			}
+
+			bool bDecalStats = UStatsOverlayD2D::Get().IsDecalVisible();
+			if (ImGui::Checkbox(" DECAL", &bDecalStats))
+			{
+				UStatsOverlayD2D::Get().ToggleDecal();
+			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("데칼 렌더링 성능 통계를 표시합니다.");
+			}
+
+			bool bTileCullingStats = UStatsOverlayD2D::Get().IsTileCullingVisible();
+			if (ImGui::Checkbox(" LIGHT", &bTileCullingStats))
+			{
+				UStatsOverlayD2D::Get().ToggleTileCulling();
+			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("타일 기반 라이트 컬링 통계를 표시합니다.");
+			}
+
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("뷰포트 성능 통계 표시 설정");
+		}
+
+		// --- 섹션: 일반 표시 플래그 ---
+		ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "일반 표시 플래그");
+		ImGui::Separator();
+
+		// BVH
+		bool bBVH = RenderSettings.IsShowFlagEnabled(EEngineShowFlags::SF_BVHDebug);
+		if (ImGui::Checkbox("##BVH", &bBVH))
+		{
+			RenderSettings.ToggleShowFlag(EEngineShowFlags::SF_BVHDebug);
+		}
+		ImGui::SameLine();
+		if (IconBVH && IconBVH->GetShaderResourceView())
+		{
+			ImGui::Image((void*)IconBVH->GetShaderResourceView(), IconSize);
+			ImGui::SameLine(0, 4);
+		}
+		ImGui::Text(" BVH");
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("BVH(Bounding Volume Hierarchy) 디버그 시각화를 표시합니다.");
+		}
+
+		// Grid
+		bool bGrid = RenderSettings.IsShowFlagEnabled(EEngineShowFlags::SF_Grid);
+		if (ImGui::Checkbox("##Grid", &bGrid))
+		{
+			RenderSettings.ToggleShowFlag(EEngineShowFlags::SF_Grid);
+		}
+		ImGui::SameLine();
+		if (IconGrid && IconGrid->GetShaderResourceView())
+		{
+			ImGui::Image((void*)IconGrid->GetShaderResourceView(), IconSize);
+			ImGui::SameLine(0, 4);
+		}
+		ImGui::Text(" 그리드");
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("월드 그리드를 표시합니다.");
+		}
+
+		// Decal
+		bool bDecal = RenderSettings.IsShowFlagEnabled(EEngineShowFlags::SF_Decals);
+		if (ImGui::Checkbox("##Decal", &bDecal))
+		{
+			RenderSettings.ToggleShowFlag(EEngineShowFlags::SF_Decals);
+		}
+		ImGui::SameLine();
+		if (IconDecal && IconDecal->GetShaderResourceView())
+		{
+			ImGui::Image((void*)IconDecal->GetShaderResourceView(), IconSize);
+			ImGui::SameLine(0, 4);
+		}
+		ImGui::Text(" 데칼");
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("데칼 렌더링을 표시합니다.");
+		}
+
+		// Static Mesh
+		bool bStaticMesh = RenderSettings.IsShowFlagEnabled(EEngineShowFlags::SF_StaticMeshes);
+		if (ImGui::Checkbox("##StaticMesh", &bStaticMesh))
+		{
+			RenderSettings.ToggleShowFlag(EEngineShowFlags::SF_StaticMeshes);
+		}
+		ImGui::SameLine();
+		if (IconStaticMesh && IconStaticMesh->GetShaderResourceView())
+		{
+			ImGui::Image((void*)IconStaticMesh->GetShaderResourceView(), IconSize);
+			ImGui::SameLine(0, 4);
+		}
+		ImGui::Text(" 스태틱 메시");
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("스태틱 메시 렌더링을 표시합니다.");
+		}
+
+		// Billboard
+		bool bBillboard = RenderSettings.IsShowFlagEnabled(EEngineShowFlags::SF_Billboard);
+		if (ImGui::Checkbox("##Billboard", &bBillboard))
+		{
+			RenderSettings.ToggleShowFlag(EEngineShowFlags::SF_Billboard);
+		}
+		ImGui::SameLine();
+		if (IconBillboard && IconBillboard->GetShaderResourceView())
+		{
+			ImGui::Image((void*)IconBillboard->GetShaderResourceView(), IconSize);
+			ImGui::SameLine(0, 4);
+		}
+		ImGui::Text(" 빌보드");
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("빌보드 텍스트를 표시합니다.");
+		}
+
+		// Fog
+		bool bFog = RenderSettings.IsShowFlagEnabled(EEngineShowFlags::SF_Fog);
+		if (ImGui::Checkbox("##Fog", &bFog))
+		{
+			RenderSettings.ToggleShowFlag(EEngineShowFlags::SF_Fog);
+		}
+		ImGui::SameLine();
+		if (IconFog && IconFog->GetShaderResourceView())
+		{
+			ImGui::Image((void*)IconFog->GetShaderResourceView(), IconSize);
+			ImGui::SameLine(0, 4);
+		}
+		ImGui::Text(" 포그");
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("포그 효과를 표시합니다.");
+		}
+
+		// Bounds
+		bool bBounds = RenderSettings.IsShowFlagEnabled(EEngineShowFlags::SF_BoundingBoxes);
+		if (ImGui::Checkbox("##Bounds", &bBounds))
+		{
+			RenderSettings.ToggleShowFlag(EEngineShowFlags::SF_BoundingBoxes);
+		}
+		ImGui::SameLine();
+		if (IconCollision && IconCollision->GetShaderResourceView())
+		{
+			ImGui::Image((void*)IconCollision->GetShaderResourceView(), IconSize);
+			ImGui::SameLine(0, 4);
+		}
+		ImGui::Text(" 바운딩 박스");
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("바운딩 박스를 표시합니다.");
+		}
+
+		// --- 섹션: 그래픽스 기능 ---
+		ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "그래픽스 기능");
+		ImGui::Separator();
+
+		// FXAA (Anti-Aliasing)
+		bool bFXAA = RenderSettings.IsShowFlagEnabled(EEngineShowFlags::SF_FXAA);
+		if (ImGui::Checkbox("##FXAA", &bFXAA))
+		{
+			RenderSettings.ToggleShowFlag(EEngineShowFlags::SF_FXAA);
+		}
+		ImGui::SameLine();
+		if (IconAntiAliasing && IconAntiAliasing->GetShaderResourceView())
+		{
+			ImGui::Image((void*)IconAntiAliasing->GetShaderResourceView(), IconSize);
+			ImGui::SameLine(0, 4);
+		}
+
+		// 서브메뉴
+		if (ImGui::BeginMenu(" 안티 에일리어싱"))
+		{
+			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "안티 에일리어싱");
+			ImGui::Separator();
+
+			// EdgeThresholdMin 슬라이더
+			float edgeMin = RenderSettings.GetFXAAEdgeThresholdMin();
+			ImGui::Text("엣지 감지 최소값");
+			if (ImGui::SliderFloat("##EdgeMin", &edgeMin, 0.01f, 0.2f, "%.4f"))
+			{
+				RenderSettings.SetFXAAEdgeThresholdMin(edgeMin);
+			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("낮을수록 더 많은 엣지를 감지합니다. (권장: 0.0833)");
+			}
+
+			// EdgeThresholdMax 슬라이더
+			float edgeMax = RenderSettings.GetFXAAEdgeThresholdMax();
+			ImGui::Text("엣지 감지 최대값");
+			if (ImGui::SliderFloat("##EdgeMax", &edgeMax, 0.05f, 0.3f, "%.4f"))
+			{
+				RenderSettings.SetFXAAEdgeThresholdMax(edgeMax);
+			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("높을수록 선명한 엣지만 감지합니다. (권장: 0.166)");
+			}
+
+			// QualitySubPix 슬라이더
+			float subPix = RenderSettings.GetFXAAQualitySubPix();
+			ImGui::Text("서브픽셀 품질");
+			if (ImGui::SliderFloat("##SubPix", &subPix, 0.0f, 1.0f, "%.2f"))
+			{
+				RenderSettings.SetFXAAQualitySubPix(subPix);
+			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("낮을수록 부드러워집니다. (권장: 0.75)");
+			}
+
+			// QualityIterations 슬라이더
+			int iterations = RenderSettings.GetFXAAQualityIterations();
+			ImGui::Text("탐색 반복 횟수");
+			if (ImGui::SliderInt("##Iterations", &iterations, 4, 24))
+			{
+				RenderSettings.SetFXAAQualityIterations(iterations);
+			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("높을수록 품질이 좋지만 성능이 떨어집니다. (권장: 12)");
+			}
+
+			ImGui::Separator();
+
+			// 품질 프리셋 버튼
+			ImGui::Text("품질 프리셋");
+
+			// 고품질 버튼
+			if (ImGui::Button("고품질", ImVec2(60, 0)))
+			{
+				RenderSettings.SetFXAAEdgeThresholdMin(0.0625f);
+				RenderSettings.SetFXAAEdgeThresholdMax(0.125f);
+				RenderSettings.SetFXAAQualitySubPix(0.75f);
+				RenderSettings.SetFXAAQualityIterations(16);
+			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("최고 품질 설정 (성능 낮음)\nEdgeMin: 0.0625, EdgeMax: 0.125, SubPix: 0.75, Iterations: 16");
+			}
+
+			ImGui::SameLine();
+
+			// 중품질 버튼
+			if (ImGui::Button("중품질", ImVec2(60, 0)))
+			{
+				RenderSettings.SetFXAAEdgeThresholdMin(0.0833f);
+				RenderSettings.SetFXAAEdgeThresholdMax(0.166f);
+				RenderSettings.SetFXAAQualitySubPix(0.75f);
+				RenderSettings.SetFXAAQualityIterations(12);
+			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("균형잡힌 설정 (기본값)\nEdgeMin: 0.0833, EdgeMax: 0.166, SubPix: 0.75, Iterations: 12");
+			}
+
+			ImGui::SameLine();
+
+			// 저품질 버튼
+			if (ImGui::Button("저품질", ImVec2(60, 0)))
+			{
+				RenderSettings.SetFXAAEdgeThresholdMin(0.125f);
+				RenderSettings.SetFXAAEdgeThresholdMax(0.25f);
+				RenderSettings.SetFXAAQualitySubPix(1.0f);
+				RenderSettings.SetFXAAQualityIterations(8);
+			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("빠른 처리 설정 (성능 높음)\nEdgeMin: 0.125, EdgeMax: 0.25, SubPix: 1.0, Iterations: 8");
+			}
+
+			ImGui::EndMenu();
+		}
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("FXAA 상세 설정");
+		}
+
+		// Tile-Based Light Culling
+		bool bTileCulling = RenderSettings.IsShowFlagEnabled(EEngineShowFlags::SF_TileCulling);
+		if (ImGui::Checkbox("##TileCulling", &bTileCulling))
+		{
+			RenderSettings.ToggleShowFlag(EEngineShowFlags::SF_TileCulling);
+		}
+		ImGui::SameLine();
+		if (IconTile && IconTile->GetShaderResourceView())
+		{
+			ImGui::Image((void*)IconTile->GetShaderResourceView(), IconSize);
+			ImGui::SameLine(0, 4);
+		}
+
+		// 서브메뉴
+		if (ImGui::BeginMenu(" 타일 기반 라이트 컬링"))
+		{
+			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "타일 기반 라이트 컬링");
+			ImGui::Separator();
+
+			// 디버그 시각화 체크박스
+			bool bDebugVis = RenderSettings.IsShowFlagEnabled(EEngineShowFlags::SF_TileCullingDebug);
+			if (ImGui::Checkbox(" 디버그 시각화", &bDebugVis))
+			{
+				RenderSettings.ToggleShowFlag(EEngineShowFlags::SF_TileCullingDebug);
+			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("타일 컬링 결과를 화면에 색상으로 시각화합니다.");
+			}
+
+			ImGui::Separator();
+
+			// 타일 크기 입력
+			static int tempTileSize = RenderSettings.GetTileSize();
+			ImGui::Text("타일 크기 (픽셀)");
+			ImGui::SetNextItemWidth(100);
+			ImGui::InputInt("##TileSize", &tempTileSize, 1, 8);
+
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("타일의 크기를 픽셀 단위로 설정합니다. (일반적: 8, 16, 32)");
+			}
+
+			// 적용 버튼
+			ImGui::SameLine();
+			if (ImGui::Button("적용"))
+			{
+				if (tempTileSize >= 4 && tempTileSize <= 64)
+				{
+					RenderSettings.SetTileSize(tempTileSize);
+					// TileLightCuller는 매 프레임 생성되므로 다음 프레임에 자동 적용됨
+				}
+			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("타일 크기를 적용합니다. (4~64 사이 값)");
+			}
+
+			// 현재 설정값 표시
+			ImGui::Text("현재 타일 크기: %d x %d", RenderSettings.GetTileSize(), RenderSettings.GetTileSize());
+
+			ImGui::EndMenu();
+		}
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("타일 기반 라이트 컬링 설정");
+		}
+
+		ImGui::PopStyleColor(3);
+		ImGui::PopStyleVar(2);
+		ImGui::EndPopup();
+	}
+}
+
+void SViewportWindow::RenderViewportLayoutSwitchButton()
+{
+	ImVec2 switchCursorPos = ImGui::GetCursorPos();
+	ImGui::SetCursorPosY(switchCursorPos.y - 0.7f);
+
+	const ImVec2 IconSize(17, 17);
+
+	// 현재 레이아웃 모드에 따라 아이콘 선택
+	// FourSplit일 때 → SingleViewport 아이콘 표시 (클릭하면 단일로 전환)
+	// SingleMain일 때 → MultiViewport 아이콘 표시 (클릭하면 멀티로 전환)
+	EViewportLayoutMode CurrentMode = SLATE.GetCurrentLayoutMode();
+	UTexture* SwitchIcon = (CurrentMode == EViewportLayoutMode::FourSplit) ? IconMultiToSingleViewport : IconSingleToMultiViewport;
+	const char* TooltipText = (CurrentMode == EViewportLayoutMode::FourSplit) ? "단일 뷰포트로 전환" : "멀티 뷰포트로 전환";
+
+	// 버튼 너비 계산 (아이콘 + 패딩)
+	const float Padding = 8.0f;
+	const float ButtonWidth = IconSize.x + Padding * 2.0f;
+
+	// 스타일 적용
+	ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.5f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.4f, 0.4f, 0.6f));
+
+	// 버튼
+	ImVec2 ButtonSize(ButtonWidth, ImGui::GetFrameHeight());
+	ImVec2 ButtonCursorPos = ImGui::GetCursorPos();
+
+	if (ImGui::Button("##SwitchLayout", ButtonSize))
+	{
+		SLATE.SwitchPanel(this);
+	}
+
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::SetTooltip(TooltipText);
+	}
+
+	// 버튼 위에 아이콘 렌더링 (중앙 정렬)
+	float ButtonContentStartX = ButtonCursorPos.x + (ButtonSize.x - IconSize.x) * 0.5f;
+	ImVec2 ButtonContentCursorPos = ImVec2(ButtonContentStartX, ButtonCursorPos.y + (ButtonSize.y - IconSize.y) * 0.5f);
+	ImGui::SetCursorPos(ButtonContentCursorPos);
+
+	// 아이콘 표시
+	if (SwitchIcon && SwitchIcon->GetShaderResourceView())
+	{
+		ImGui::Image((void*)SwitchIcon->GetShaderResourceView(), IconSize);
+	}
+
+	ImGui::PopStyleColor(3);
+	ImGui::PopStyleVar(1);
 }

@@ -169,9 +169,11 @@ void USlateManager::SwitchPanel(SWindow* SwitchPanel)
 {
     if (TopPanel->SideLT != SwitchPanel) {
         TopPanel->SideLT = SwitchPanel;
+        CurrentMode = EViewportLayoutMode::SingleMain;
     }
     else {
         TopPanel->SideLT = LeftPanel;
+        CurrentMode = EViewportLayoutMode::FourSplit;
     }
 }
 

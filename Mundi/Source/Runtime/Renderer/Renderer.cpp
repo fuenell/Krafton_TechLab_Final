@@ -364,7 +364,7 @@ void URenderer::AddLines(const TArray<FVector>& StartPoints, const TArray<FVecto
 	}
 }
 
-void URenderer::EndLineBatch(const FMatrix& ModelMatrix, const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix)
+void URenderer::EndLineBatch(const FMatrix& ModelMatrix)
 {
 	if (!bLineBatchActive || !LineBatchData || !DynamicLineMesh || LineBatchData->Vertices.empty())
 	{
@@ -394,7 +394,6 @@ void URenderer::EndLineBatch(const FMatrix& ModelMatrix, const FMatrix& ViewMatr
 	// Set up rendering state
 	FMatrix ModelInvTranspose = ModelMatrix.InverseAffine().Transpose();
 	RHIDevice->SetAndUpdateConstantBuffer(ModelBufferType(ModelMatrix, ModelInvTranspose));
-	RHIDevice->SetAndUpdateConstantBuffer(ViewProjBufferType(ViewMatrix, ProjectionMatrix));
 	RHIDevice->PrepareShader(LineShader);
 
 	// Render using dynamic mesh

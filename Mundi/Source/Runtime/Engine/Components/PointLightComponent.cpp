@@ -59,7 +59,7 @@ void UPointLightComponent::OnUnregister()
 	GWorld->GetLightManager()->DeRegisterLight(this);
 }
 
-void UPointLightComponent::RenderDebugVolume(URenderer* Renderer, const FMatrix& View, const FMatrix& Proj) const
+void UPointLightComponent::RenderDebugVolume(URenderer* Renderer) const
 {
 	// PointLight의 구형 볼륨을 3개의 원으로 렌더링 (XY, XZ, YZ 평면)
 	const FVector4 CircleColor(1.0f, 0.8f, 0.2f, 1.0f); // 노란색-주황색

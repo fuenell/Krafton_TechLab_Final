@@ -3,10 +3,18 @@
 #include "Color.h"
 #include "LightManager.h"
 
-struct ModelBufferType
+struct ModelBufferType // b0
 {
     FMatrix Model;
     FMatrix ModelInverseTranspose;  // For correct normal transformation with non-uniform scale
+};
+
+struct ViewProjBufferType // b1 고유번호 고정
+{
+    FMatrix View;
+    FMatrix Proj;
+    FMatrix InvView;
+    FMatrix InvProj;
 };
 
 struct DecalBufferType
@@ -23,16 +31,6 @@ struct PostProcessBufferType // b0
     float Padding; // 16바이트 정렬을 위한 패딩
 };
 
-static_assert(sizeof(PostProcessBufferType) % 16 == 0, "PostProcessBufferType size must be multiple of 16!");
-
-struct InvViewProjBufferType // b1
-{
-    FMatrix InvView;
-    FMatrix InvProj;
-};
-
-static_assert(sizeof(InvViewProjBufferType) % 16 == 0, "InvViewProjBufferType size must be multiple of 16!");
-
 struct FogBufferType // b2
 {
     float FogDensity;
@@ -46,8 +44,6 @@ struct FogBufferType // b2
     float FogHeight; // fog base height
     float Padding[2]; // 16바이트 정렬을 위한 패딩
 };
-static_assert(sizeof(FogBufferType) % 16 == 0, "FogBufferType size must be multiple of 16!");
-
 
 struct FXAABufferType // b2
 {
@@ -59,8 +55,6 @@ struct FXAABufferType // b2
     float QualitySubPix; // 서브픽셀 품질 (낮을수록 부드러움, 0.75 권장)
     int32_t QualityIterations; // 엣지 탐색 반복 횟수 (12 권장)
 };
-static_assert(sizeof(FXAABufferType) % 16 == 0, "FXAABufferType size must be multiple of 16!");
-
 
 // b0 in PS
 struct FMaterialInPs
@@ -106,16 +100,6 @@ struct FPixelConstBufferType
 	float Padding; // 16바이트 정렬을 위한 패딩
 };
 
-static_assert(sizeof(FPixelConstBufferType) % 16 == 0, "PixelConstData size mismatch!");
-
-// b1
-struct ViewProjBufferType
-{
-    FMatrix View;
-    FMatrix Proj;
-};
-
-
 // b2: Gizmo rendering constant buffer
 struct GizmoBufferType
 {
@@ -129,17 +113,6 @@ struct ColorBufferType
     FLinearColor Color;
     uint32 UUID;
     FVector Padding;
-};
-
-
-struct BillboardBufferType
-{
-    FVector pos;
-    FMatrix View;
-    FMatrix Proj;
-    FMatrix InverseViewMat;
-    /*FVector cameraRight;
-    FVector cameraUp;*/
 };
 
 struct FireBallBufferType
@@ -178,13 +151,11 @@ struct FViewportConstants
     FVector4 ScreenSize;
 };
 
-struct CameraBufferType
+struct CameraBufferType // b7
 {
     FVector CameraPosition;
     float Padding;
 };
-
-static_assert(sizeof(CameraBufferType) % 16 == 0, "CameraBufferType size must be multiple of 16!");
 
 // b11: 타일 기반 라이트 컬링 상수 버퍼
 struct FTileCullingBufferType
@@ -194,8 +165,6 @@ struct FTileCullingBufferType
     uint32 TileCountY;        // 세로 타일 개수
     uint32 bUseTileCulling;   // 타일 컬링 활성화 여부 (0=비활성화, 1=활성화)
 };
-
-static_assert(sizeof(FTileCullingBufferType) % 16 == 0, "FTileCullingBufferType size must be multiple of 16!");
 
 #define CONSTANT_BUFFER_INFO(TYPE, SLOT, VS, PS) \
 constexpr uint32 TYPE##Slot = SLOT;\
@@ -207,32 +176,33 @@ constexpr bool TYPE##IsPS = PS;
 MACRO(ModelBufferType)              \
 MACRO(DecalBufferType)              \
 MACRO(PostProcessBufferType)        \
-MACRO(InvViewProjBufferType)        \
 MACRO(FogBufferType)                \
 MACRO(FXAABufferType)               \
 MACRO(FPixelConstBufferType)        \
 MACRO(ViewProjBufferType)           \
 MACRO(GizmoBufferType)              \
 MACRO(ColorBufferType)              \
-MACRO(BillboardBufferType)          \
 MACRO(FireBallBufferType)           \
 MACRO(CameraBufferType)             \
 MACRO(FLightBufferType)             \
 MACRO(FViewportConstants)           \
 MACRO(FTileCullingBufferType)
 
+// 16 바이트 패딩 어썰트
+#define STATIC_ASSERT_CBUFFER_ALIGNMENT(Type) \
+    static_assert(sizeof(Type) % 16 == 0, "[ " #Type " ] Bad Size. Needs 16-Byte Padding.");
+CONSTANT_BUFFER_LIST(STATIC_ASSERT_CBUFFER_ALIGNMENT)
+
 //VS, PS 세팅은 함수 파라미터로 결정하게 하는게 훨씬 나을듯 나중에 수정 필요
 //그리고 UV Scroll 상수버퍼도 처리해줘야함
 CONSTANT_BUFFER_INFO(ModelBufferType, 0, true, false)
 CONSTANT_BUFFER_INFO(PostProcessBufferType, 0, false, true)
-CONSTANT_BUFFER_INFO(InvViewProjBufferType, 0, false, true)
-CONSTANT_BUFFER_INFO(ViewProjBufferType, 1, true, false)
+CONSTANT_BUFFER_INFO(ViewProjBufferType, 1, true, true) // b1 카메라 행렬 고정
 CONSTANT_BUFFER_INFO(FogBufferType, 2, false, true)
 CONSTANT_BUFFER_INFO(FXAABufferType, 2, false, true)
 CONSTANT_BUFFER_INFO(GizmoBufferType, 2, true, false)  // b2, VS only (Gizmo.hlsl)
 CONSTANT_BUFFER_INFO(ColorBufferType, 3, false, true)
 CONSTANT_BUFFER_INFO(FPixelConstBufferType, 4, true, true) // GOURAUD에도 사용되므로 VS도 true
-CONSTANT_BUFFER_INFO(BillboardBufferType, 5, true, false)
 CONSTANT_BUFFER_INFO(DecalBufferType, 6, true, true)
 CONSTANT_BUFFER_INFO(FireBallBufferType, 7, false, true)
 CONSTANT_BUFFER_INFO(CameraBufferType, 7, true, true)  // b7, VS+PS (UberLit.hlsl과 일치)

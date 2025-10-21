@@ -61,7 +61,7 @@ void UFireBallComponent::EndPlay(EEndPlayReason Reason)
 #pragma endregion
 
 #pragma region Rendering (WIP)
-void UFireBallComponent::RenderAffectedPrimitives(URenderer* Renderer, UPrimitiveComponent* Target, const FMatrix& View, const FMatrix& Proj)
+void UFireBallComponent::RenderAffectedPrimitives(URenderer* Renderer, UPrimitiveComponent* Target)
 {
 	if (!Renderer || !Target)
 	{
@@ -99,7 +99,6 @@ void UFireBallComponent::RenderAffectedPrimitives(URenderer* Renderer, UPrimitiv
 	FMatrix SMCWorld = SMC->GetWorldMatrix();
 	FMatrix SMCWorldInvTranspose = SMCWorld.InverseAffine().Transpose();
 	RHIDevice->SetAndUpdateConstantBuffer(ModelBufferType(SMCWorld, SMCWorldInvTranspose));
-	RHIDevice->SetAndUpdateConstantBuffer(ViewProjBufferType(View, Proj));
 
 	const FVector Center = GetWorldLocation();
 	const float SafeRadius = Radius > KINDA_SMALL_NUMBER ? Radius : KINDA_SMALL_NUMBER;
@@ -130,7 +129,7 @@ void UFireBallComponent::RenderAffectedPrimitives(URenderer* Renderer, UPrimitiv
 	RHIDevice->GetDeviceContext()->DrawIndexed(StaticMesh->GetIndexCount(), 0, 0);
 }
 
-void UFireBallComponent::RenderDebugVolume(URenderer* Renderer, const FMatrix& View, const FMatrix& Proj) const
+void UFireBallComponent::RenderDebugVolume(URenderer* Renderer) const
 {
 }
 #pragma endregion

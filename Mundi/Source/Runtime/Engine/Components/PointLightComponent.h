@@ -27,7 +27,7 @@ public:
 	void OnUnregister()	override;
 
 	// Debug Rendering
-	virtual void RenderDebugVolume(class URenderer* Renderer, const FMatrix& View, const FMatrix& Proj) const override;
+	virtual void RenderDebugVolume(class URenderer* Renderer) const override;
 
 	// Serialization & Duplication
 	virtual void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;

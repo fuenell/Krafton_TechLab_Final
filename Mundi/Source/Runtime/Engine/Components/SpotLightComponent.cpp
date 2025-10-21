@@ -172,7 +172,7 @@ void USpotLightComponent::UpdateDirectionGizmo()
 	DirectionGizmo->SetColor(FVector(BaseColor.R, BaseColor.G, BaseColor.B));
 }
 
-void USpotLightComponent::RenderDebugVolume(URenderer* Renderer, const FMatrix& View, const FMatrix& Proj) const
+void USpotLightComponent::RenderDebugVolume(URenderer* Renderer) const
 {
 	// Cone 각도 유효성 검사 (const 메서드이므로 const_cast 사용)
 	const_cast<USpotLightComponent*>(this)->ValidateConeAngles();
