@@ -294,6 +294,10 @@ void UEditorEngine::MainLoop()
 
         Tick(DeltaSeconds);
         Render();
+        
+        // Shader Hot Reloading - Call AFTER render to avoid mid-frame resource conflicts
+        // This ensures all GPU commands are submitted before we check for shader updates
+        UResourceManager::GetInstance().CheckAndReloadShaders(DeltaSeconds);
     }
 }
 

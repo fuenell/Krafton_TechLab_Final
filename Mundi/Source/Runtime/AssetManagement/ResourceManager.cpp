@@ -555,6 +555,74 @@ void UResourceManager::CreateTextBillboardTexture()
     Add<UTexture>("TextBillboard.dds", TextBillboardTexture);
 }
 
+void UResourceManager::CheckAndReloadShaders(float DeltaTime)
+{
+    // Throttle check frequency to reduce file system overhead
+    ShaderCheckTimer += DeltaTime;
+    if (ShaderCheckTimer < ShaderCheckInterval)
+    {
+        return;
+    }
+    ShaderCheckTimer = 0.0f;
+
+    // Get all shader resources
+    uint8 ShaderTypeIndex = static_cast<uint8>(ResourceType::Shader);
+    if (ShaderTypeIndex >= Resources.size())
+    {
+        return;
+    }
+
+    // Check each shader for modifications
+    TArray<UShader*> ShadersToReload;
+    for (auto& Pair : Resources[ShaderTypeIndex])
+    {
+        UShader* Shader = static_cast<UShader*>(Pair.second);
+        if (Shader && Shader->IsOutdated())
+        {
+            ShadersToReload.push_back(Shader);
+        }
+    }
+
+    // Early exit if no shaders need reloading
+    if (ShadersToReload.empty())
+    {
+        return;
+    }
+
+    // Ensure device context flushes before reloading
+    if (Context)
+    {
+        Context->Flush();
+    }
+
+    // Reload outdated shaders
+    for (UShader* Shader : ShadersToReload)
+    {
+        // Store old state to check if reload was successful
+        bool bHadVertexShader = (Shader->GetVertexShader() != nullptr);
+        bool bHadPixelShader = (Shader->GetPixelShader() != nullptr);
+
+        if (Shader->Reload(Device))
+        {
+            // Verify the reload actually created the expected shader stages
+            bool bHasVertexShader = (Shader->GetVertexShader() != nullptr);
+            bool bHasPixelShader = (Shader->GetPixelShader() != nullptr);
+            
+            if ((bHadVertexShader && !bHasVertexShader) || (bHadPixelShader && !bHasPixelShader))
+            {
+                UE_LOG("Shader Hot Reload Warning: Some stages failed for %s", Shader->GetFilePath().c_str());
+            }
+            else
+            {
+                UE_LOG("Shader Hot Reload Successful: %s", Shader->GetFilePath().c_str());
+            }
+        }
+        else
+        {
+            UE_LOG("Shader Hot Reload Failed: %s (keeping old shader)", Shader->GetFilePath().c_str());
+        }
+    }
+}
 
 void UResourceManager::UpdateDynamicVertexBuffer(const FString& Name, TArray<FBillboardVertexInfo_GPU>& vertices)
 {

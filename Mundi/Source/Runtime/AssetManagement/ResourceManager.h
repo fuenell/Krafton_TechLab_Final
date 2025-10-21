@@ -66,6 +66,9 @@ public:
 	TArray<D3D11_INPUT_ELEMENT_DESC>& GetProperInputLayout(const FString& InShaderName);
 	FString& GetProperShader(const FString& InTextureName);
 
+	// --- Shader Hot Reload ---
+	void CheckAndReloadShaders(float DeltaTime);
+
 	// --- 리소스 생성 및 관리 ---
 	FTextureData* CreateOrGetTextureData(const FWideString& FilePath);
 	void UpdateDynamicVertexBuffer(const FString& name, TArray<FBillboardVertexInfo_GPU>& vertices);
@@ -128,6 +131,10 @@ private:
 	TMap<FString, FMeshBVH*> MeshBVHCache;
 
 	UMaterial* DefaultMaterialInstance;
+
+	// Shader Hot Reload
+	float ShaderCheckTimer = 0.0f;
+	const float ShaderCheckInterval = 0.5f; // Check every 0.5 seconds
 };
 
 //-----definition

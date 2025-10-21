@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "ResourceBase.h"
+#include <filesystem>
 
 struct FShaderMacro
 {
@@ -18,6 +19,14 @@ public:
 	ID3D11VertexShader* GetVertexShader() const { return VertexShader; }
 	ID3D11PixelShader* GetPixelShader() const { return PixelShader; }
 
+	// Hot Reload Support
+	bool IsOutdated() const;
+	bool Reload(ID3D11Device* InDevice);
+	const TArray<FShaderMacro>& GetMacros() const { return Macros; }
+	
+	// Get the actual shader file path (without macro suffix)
+	const FString& GetActualFilePath() const { return ActualFilePath; }
+
 protected:
 	virtual ~UShader();
 
@@ -28,6 +37,13 @@ private:
 	ID3D11InputLayout* InputLayout = nullptr;
 	ID3D11VertexShader* VertexShader = nullptr;
 	ID3D11PixelShader* PixelShader = nullptr;
+
+	// Store macros for hot reload
+	TArray<FShaderMacro> Macros;
+	
+	// Store actual file path (e.g., "Shaders/Materials/UberLit.hlsl")
+	// FilePath (from base class) stores the unique key with macros
+	FString ActualFilePath;
 
 	void CreateInputLayout(ID3D11Device* Device, const FString& InShaderPath);
 	void ReleaseResources();
