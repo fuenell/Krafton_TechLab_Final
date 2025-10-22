@@ -21,10 +21,16 @@ public:
 	DXGI_FORMAT GetFormat() const { return Format; }
 	void SetTextureName(const FString& InTextureName) { TextureName = InTextureName; }
 	const FString& GetTextureName() { return  TextureName; }
+
+	// 원본 소스 파일 경로 (DDS 캐시가 아닌 원본 경로)
+	void SetSourceFilePath(const FString& InSourcePath) { SourceFilePath = InSourcePath; }
+	const FString& GetSourceFilePath() const { return SourceFilePath.empty() ? TextureName : SourceFilePath; }
+
 	void ReleaseResources();
 
 private:
 	FString TextureName;
+	FString SourceFilePath;  // 원본 소스 경로 (예: Data/cube_texture.png)
 	ID3D11Texture2D* Texture2D;
 	ID3D11ShaderResourceView* ShaderResourceView;
 

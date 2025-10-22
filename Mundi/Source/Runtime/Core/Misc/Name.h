@@ -63,3 +63,21 @@ struct FName
         return FName(A + B.ToString());
     }
 };
+
+// ============================================================================
+// 경로 정규화 유틸리티 함수
+// ============================================================================
+
+/**
+ * @brief 경로 문자열의 디렉토리 구분자를 모두 '/'로 통일합니다.
+ * @details Windows/Unix 간 경로 구분자 차이로 인한 중복 리소스 로드를 방지합니다.
+ *          예: "Data\\Textures\\image.png" -> "Data/Textures/image.png"
+ * @param InPath 정규화할 경로 문자열
+ * @return 정규화된 경로 문자열 ('/' 구분자 사용)
+ */
+inline FString NormalizePath(const FString& InPath)
+{
+	FString Result = InPath;
+	std::replace(Result.begin(), Result.end(), '\\', '/');
+	return Result;
+}

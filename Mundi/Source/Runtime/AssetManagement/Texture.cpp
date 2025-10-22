@@ -167,10 +167,15 @@ FString UTexture::Load(const FString& InFilePath, ID3D11Device* InDevice)
 		       ActualLoadPath.c_str(), hr);
 	}
 
-	TextureName = ActualLoadPath; // 실제 로드된 경로 저장 (DDS 캐시 사용 시 DDS 경로)
+	// 경로 정규화: 모든 백슬래시를 슬래시로 변환하여 일관성 유지
+	FString NormalizedActualPath = NormalizePath(ActualLoadPath);
+	FString NormalizedSourcePath = NormalizePath(InFilePath);
 
-	// 실제 로드된 경로 반환 (ResourceManager가 올바른 키로 등록하도록)
-	return ActualLoadPath;
+	TextureName = NormalizedActualPath;   // 실제 로드된 경로 저장 (DDS 캐시 사용 시 DDS 경로, 정규화됨)
+	SourceFilePath = NormalizedSourcePath; // 원본 소스 경로 저장 (DDS 캐시가 아닌 원본 경로, 정규화됨)
+
+	// 실제 로드된 경로 반환 (ResourceManager가 올바른 키로 등록하도록, 정규화됨)
+	return NormalizedActualPath;
 }
 
 void UTexture::ReleaseResources()

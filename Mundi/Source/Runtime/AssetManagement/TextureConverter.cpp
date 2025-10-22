@@ -215,6 +215,15 @@ FString FTextureConverter::GetDDSCachePath(const FString& SourcePath)
 	fs::path SourceFile(WSourcePath);
 	fs::path RelativePath;
 
+	// 이미 DDS 캐시 경로인지 확인 (TextureCache 포함 여부)
+	std::string GenericSourcePath = SourceFile.generic_string();
+	if (GenericSourcePath.find("TextureCache") != std::string::npos &&
+	    GenericSourcePath.find(".dds") != std::string::npos)
+	{
+		// 이미 DDS 캐시 경로면 그대로 반환
+		return SourcePath;
+	}
+
 	// Data 디렉토리 경로 (상대 경로 방식)
 	fs::path DataDir("Data");
 
@@ -238,11 +247,26 @@ FString FTextureConverter::GetDDSCachePath(const FString& SourcePath)
 		// 이미 상대 경로인 경우
 		RelativePath = SourceFile;
 
-		// "Data/"로 시작하면 제거
-		std::wstring RelStr = RelativePath.wstring();
-		if (RelStr.find(L"Data/") == 0 || RelStr.find(L"Data\\") == 0)
+		// "Data/" 또는 "Data\\" 로 시작하면 제거
+		// fs::path는 내부적으로 경로 구분자를 정규화하므로 generic_string() 사용
+		std::string GenericPath = RelativePath.generic_string();
+
+		if (GenericPath.find("Data/") == 0)
 		{
-			RelativePath = fs::path(RelStr.substr(5)); // "Data/" 제거 (5글자)
+			// "Data/" 제거 (5글자) - UTF-8 인코딩 보존
+			std::string SubPath = GenericPath.substr(5);
+			RelativePath = fs::path(UTF8ToWide(SubPath));
+		}
+		else if (GenericPath.size() >= 5 &&
+		         (GenericPath[0] == 'D' || GenericPath[0] == 'd') &&
+		         (GenericPath[1] == 'a' || GenericPath[1] == 'A') &&
+		         (GenericPath[2] == 't' || GenericPath[2] == 'T') &&
+		         (GenericPath[3] == 'a' || GenericPath[3] == 'A') &&
+		         (GenericPath[4] == '/' || GenericPath[4] == '\\'))
+		{
+			// 대소문자 구분 없이 "Data/" 제거 - UTF-8 인코딩 보존
+			std::string SubPath = GenericPath.substr(5);
+			RelativePath = fs::path(UTF8ToWide(SubPath));
 		}
 	}
 
@@ -250,8 +274,13 @@ FString FTextureConverter::GetDDSCachePath(const FString& SourcePath)
 	fs::path CachePath = DataDir / "TextureCache" / RelativePath;
 	CachePath.replace_extension(".dds");
 
-	// 와이드 문자열을 UTF-8로 변환하여 반환 (한글 경로 지원)
-	return WideToUTF8(CachePath.wstring());
+	// 와이드 문자열을 UTF-8로 변환 (한글 경로 지원)
+	FString Result = WideToUTF8(CachePath.wstring());
+
+	// 경로 정규화: 모든 백슬래시를 슬래시로 변환하여 일관성 유지
+	std::replace(Result.begin(), Result.end(), '\\', '/');
+
+	return Result;
 }
 
 bool FTextureConverter::IsSupportedFormat(const FString& Extension)

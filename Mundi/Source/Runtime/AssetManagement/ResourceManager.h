@@ -5,6 +5,7 @@
 #include "StaticMesh.h"
 #include "Material.h"
 #include "Texture.h"
+#include "TextureConverter.h"
 #include "DynamicMesh.h"
 #include "Quad.h"
 #include "LineDynamicMesh.h"
@@ -138,17 +139,20 @@ private:
 };
 
 //-----definition
-// 리소스 매니저에 새로운 리소스 등록하는 함수이다. 
+// 리소스 매니저에 새로운 리소스 등록하는 함수이다.
 template<typename T>
 bool UResourceManager::Add(const FString& InFilePath, UObject* InObject)
 {
+	// 경로 정규화: 모든 백슬래시를 슬래시로 변환하여 일관성 유지
+	FString NormalizedPath = NormalizePath(InFilePath);
+
 	uint8 typeIndex = static_cast<uint8>(GetResourceType<T>());
-	auto iter = Resources[typeIndex].find(InFilePath);
+	auto iter = Resources[typeIndex].find(NormalizedPath);
 	if (iter == Resources[typeIndex].end())
 	{
-		Resources[typeIndex][InFilePath] = static_cast<T*>(InObject);
-		// 경로 저장 
-		Resources[typeIndex][InFilePath]->SetFilePath(InFilePath);
+		Resources[typeIndex][NormalizedPath] = static_cast<T*>(InObject);
+		// 경로 저장
+		Resources[typeIndex][NormalizedPath]->SetFilePath(NormalizedPath);
 		return true;
 	}
 	return false;
@@ -157,8 +161,11 @@ bool UResourceManager::Add(const FString& InFilePath, UObject* InObject)
 template<typename T>
 T* UResourceManager::Get(const FString& InFilePath)
 {
+	// 경로 정규화: 모든 백슬래시를 슬래시로 변환하여 일관성 유지
+	FString NormalizedPath = NormalizePath(InFilePath);
+
 	uint8 typeIndex = static_cast<uint8>(GetResourceType<T>());
-	auto iter = Resources[typeIndex].find(InFilePath);
+	auto iter = Resources[typeIndex].find(NormalizedPath);
 	if (iter != Resources[typeIndex].end())
 	{
 		return static_cast<T*>(iter->second);
@@ -170,8 +177,11 @@ T* UResourceManager::Get(const FString& InFilePath)
 template<typename T, typename ...Args>
 inline T* UResourceManager::Load(const FString& InFilePath, Args && ...InArgs)
 {
+	// 경로 정규화: 모든 백슬래시를 슬래시로 변환하여 일관성 유지
+	FString NormalizedPath = NormalizePath(InFilePath);
+
 	uint8 typeIndex = static_cast<uint8>(GetResourceType<T>());
-	auto iter = Resources[typeIndex].find(InFilePath);
+	auto iter = Resources[typeIndex].find(NormalizedPath);
 	if (iter != Resources[typeIndex].end())
 	{
 		return static_cast<T*>((*iter).second);
@@ -179,9 +189,9 @@ inline T* UResourceManager::Load(const FString& InFilePath, Args && ...InArgs)
 	else//없으면 해당 리소스의 Load실행
 	{
 		T* Resource = NewObject<T>();
-		Resource->Load(InFilePath, Device);
-		Resource->SetFilePath(InFilePath);
-		Resources[typeIndex][InFilePath] = Resource;
+		Resource->Load(NormalizedPath, Device);
+		Resource->SetFilePath(NormalizedPath);
+		Resources[typeIndex][NormalizedPath] = Resource;
 		return Resource;
 	}
 }
@@ -190,20 +200,37 @@ inline T* UResourceManager::Load(const FString& InFilePath, Args && ...InArgs)
 template<>
 inline UTexture* UResourceManager::Load(const FString& InFilePath)
 {
+	// 경로 정규화: 모든 백슬래시를 슬래시로 변환하여 일관성 유지
+	FString NormalizedPath = NormalizePath(InFilePath);
+
 	uint8 typeIndex = static_cast<uint8>(ResourceType::Texture);
 
 	// 먼저 원본 경로로 검색
-	auto iter = Resources[typeIndex].find(InFilePath);
+	auto iter = Resources[typeIndex].find(NormalizedPath);
 	if (iter != Resources[typeIndex].end())
 	{
 		return static_cast<UTexture*>((*iter).second);
 	}
 
+#ifdef USE_DDS_CACHE
+	// DDS 캐시 사용 시: DDS 캐시 경로로도 검색 시도
+	FString PotentialDDSPath = FTextureConverter::GetDDSCachePath(NormalizedPath);
+	if (PotentialDDSPath != NormalizedPath) // 경로가 변환되었으면
+	{
+		auto ddsIter = Resources[typeIndex].find(PotentialDDSPath);
+		if (ddsIter != Resources[typeIndex].end())
+		{
+			// 이미 DDS 캐시로 로드된 텍스처가 있으면 반환
+			return static_cast<UTexture*>((*ddsIter).second);
+		}
+	}
+#endif
+
 	// 없으면 새로 로드
 	UTexture* Resource = NewObject<UTexture>();
-	FString ActualLoadPath = Resource->Load(InFilePath, Device); // 실제 로드된 경로 반환
+	FString ActualLoadPath = Resource->Load(NormalizedPath, Device); // 실제 로드된 경로 반환 (이미 정규화됨)
 
-	// 실제 로드된 경로로 등록 (DDS 캐시 사용 시 DDS 경로)
+	// 실제 로드된 경로로 등록 (DDS 캐시 사용 시 DDS 경로, 이미 정규화되어 있음)
 	Resource->SetFilePath(ActualLoadPath);
 	Resources[typeIndex][ActualLoadPath] = Resource;
 
@@ -213,8 +240,11 @@ inline UTexture* UResourceManager::Load(const FString& InFilePath)
 template<>
 inline UShader* UResourceManager::Load(const FString& InFilePath, TArray<FShaderMacro>& InMacros)
 {
+	// 경로 정규화: 모든 백슬래시를 슬래시로 변환하여 일관성 유지
+	FString NormalizedPath = NormalizePath(InFilePath);
+
 	// 1. 파일 경로와 매크로를 조합하여 고유 키 생성
-	FString UniqueKey = GenerateShaderKey(InFilePath, InMacros);
+	FString UniqueKey = GenerateShaderKey(NormalizedPath, InMacros);
 
 	// 2. 고유 키로 리소스 맵 검색
 	uint8 typeIndex = static_cast<uint8>(ResourceType::Shader);
@@ -228,7 +258,7 @@ inline UShader* UResourceManager::Load(const FString& InFilePath, TArray<FShader
 		// 3. 캐시에 없으면 새로 생성하여 로드
 		UShader* Resource = NewObject<UShader>();
 		// UShader::Load는 이제 매크로 인자를 받도록 수정되어야 함
-		Resource->Load(InFilePath, Device, InMacros);
+		Resource->Load(NormalizedPath, Device, InMacros);
 		Resource->SetFilePath(UniqueKey); // 이름 저장
 
 		// 4. 고유 키로 리소스 맵에 저장
