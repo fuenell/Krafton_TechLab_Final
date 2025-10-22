@@ -158,7 +158,13 @@ PS_INPUT mainVS(VS_INPUT Input)
     }
 
     // Ambient light (OBJ/MTL 표준: La × Ka)
+    // 하이브리드 접근: Ka가 (0,0,0) 또는 (1,1,1)이면 Kd(baseColor) 사용
     float3 Ka = bHasMaterial ? Material.AmbientColor : baseColor.rgb;
+    bool bIsDefaultKa = all(abs(Ka) < 0.01f) || all(abs(Ka - 1.0f) < 0.01f);
+    if (bIsDefaultKa)
+    {
+        Ka = baseColor.rgb;
+    }
     finalColor += CalculateAmbientLight(AmbientLight, Ka);
 
     // Directional light (diffuse + specular)
@@ -282,7 +288,13 @@ PS_OUTPUT mainPS(PS_INPUT Input)
     float3 litColor = float3(0.0f, 0.0f, 0.0f);
 
     // Ambient light (OBJ/MTL 표준: La × Ka)
+    // 하이브리드 접근: Ka가 (0,0,0) 또는 (1,1,1)이면 Kd(baseColor) 사용
     float3 Ka = bHasMaterial ? Material.AmbientColor : baseColor.rgb;
+    bool bIsDefaultKa = all(abs(Ka) < 0.01f) || all(abs(Ka - 1.0f) < 0.01f);
+    if (bIsDefaultKa)
+    {
+        Ka = baseColor.rgb;
+    }
     litColor += CalculateAmbientLight(AmbientLight, Ka);
 
     // Directional light (diffuse만)
@@ -378,7 +390,13 @@ PS_OUTPUT mainPS(PS_INPUT Input)
     float3 litColor = float3(0.0f, 0.0f, 0.0f);
 
     // Ambient light (OBJ/MTL 표준: La × Ka)
+    // 하이브리드 접근: Ka가 (0,0,0) 또는 (1,1,1)이면 Kd(baseColor) 사용
     float3 Ka = bHasMaterial ? Material.AmbientColor : baseColor.rgb;
+    bool bIsDefaultKa = all(abs(Ka) < 0.01f) || all(abs(Ka - 1.0f) < 0.01f);
+    if (bIsDefaultKa)
+    {
+        Ka = baseColor.rgb;
+    }
     litColor += CalculateAmbientLight(AmbientLight, Ka);
 
     // Directional light (diffuse + specular)

@@ -205,13 +205,14 @@ float3 CalculateSpotLight(FSpotLightInfo light, float3 worldPos, float3 normal, 
     float3 lightDir = lightVec / distance;
     float3 spotDir = normalize(light.Direction);
 
-    // Spot 원뿔 감쇠
+    // Spot 원뿔 감쇠 (각도 공간에서 보간하여 중간에서 급격하게 변함)
     float cosAngle = dot(-lightDir, spotDir);
-    float innerCos = cos(radians(light.InnerConeAngle));
-    float outerCos = cos(radians(light.OuterConeAngle));
 
-    // 내부와 외부 원뿔 사이의 부드러운 감쇠 (원뿔 밖이면 0 반환)
-    float spotAttenuation = smoothstep(outerCos, innerCos, cosAngle);
+    // cosine 공간 대신 각도 공간에서 보간 (균등한 감쇠를 위해)
+    float angle = degrees(acos(saturate(cosAngle)));  // 현재 각도 (도 단위)
+
+    // inner cone에서 1, outer cone에서 0, 중간에서 급격하게 변함
+    float spotAttenuation = 1.0 - smoothstep(light.InnerConeAngle, light.OuterConeAngle, angle);
 
     // Falloff 모드에 따라 거리 감쇠 계산
     float distanceAttenuation;
