@@ -125,13 +125,16 @@ PS_INPUT mainVS(VS_INPUT input)
 //================================================================================================
 float4 mainPS(PS_INPUT input) : SV_TARGET
 {
+    // 부동 소수점 오차 무시를 위해 Epsilon 사용
+    static const float Epsilon = 1e-6f; // 0.000001f
+    
     // 1. Decal projection 범위 체크
     float3 ndc = input.decalPos.xyz / input.decalPos.w;
 
     // decal의 forward가 +x임 -> x방향 projection
-    if (ndc.x < 0.0f || 1.0f < ndc.x ||
-        ndc.y < -1.0f || 1.0f < ndc.y ||
-        ndc.z < -1.0f || 1.0f < ndc.z)
+    if (ndc.x < 0.0f - Epsilon || 1.0f + Epsilon < ndc.x ||
+        ndc.y < -1.0f - Epsilon || 1.0f + Epsilon < ndc.y ||
+        ndc.z < -1.0f - Epsilon || 1.0f + Epsilon < ndc.z)
     {
         discard;
     }
