@@ -214,8 +214,8 @@ FMatrix USpotLightComponent::GetViewMatrix() const
 
 FMatrix USpotLightComponent::GetProjectionMatrix() const
 {
-	float Fovy = DegreesToRadians(OuterConeAngle);
-	return FMatrix::PerspectiveFovLH(Fovy, 1.0f, 0.1f, GetAttenuationRadius());
+	float Fovy = DegreesToRadians(OuterConeAngle * 2.0f);
+	return FMatrix::PerspectiveFovLH(Fovy, 1.0f, 1.0f, GetAttenuationRadius());
 }
 
 void USpotLightComponent::RenderDebugFrustum(TArray<FVector>& StartPoints, TArray<FVector>& EndPoints, TArray<FVector4>& Colors) const

@@ -251,6 +251,19 @@ void D3D11RHI::CreateSamplerState()
 	PointClampDesc.MaxLOD = D3D11_FLOAT32_MAX;
 
 	HR = Device->CreateSamplerState(&PointClampDesc, &PointClampSamplerState);
+
+    D3D11_SAMPLER_DESC ShadowSamplerDesc = {};
+    ShadowSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+    ShadowSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+    ShadowSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+    ShadowSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+    ShadowSamplerDesc.BorderColor[0] = 1.0f;
+    ShadowSamplerDesc.BorderColor[1] = 1.0f;
+    ShadowSamplerDesc.BorderColor[2] = 1.0f;
+    ShadowSamplerDesc.BorderColor[3] = 1.0f;
+    ShadowSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+
+    HR = Device->CreateSamplerState(&ShadowSamplerDesc, &ShadowSamplerState);
 }
 
 HRESULT D3D11RHI::CreateIndexBuffer(ID3D11Device* device, const FMeshData* meshData, ID3D11Buffer** outBuffer)
@@ -1053,6 +1066,9 @@ ID3D11SamplerState* D3D11RHI::GetSamplerState(RHI_Sampler_Index SamplerIndex) co
         break;
     case RHI_Sampler_Index::PointClamp:
 		TempSamplerState = PointClampSamplerState;
+        break;
+    case RHI_Sampler_Index::Shadow:
+        TempSamplerState = ShadowSamplerState;
         break;
     default:
         TempSamplerState = nullptr;

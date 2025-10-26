@@ -79,6 +79,7 @@ TextureCubeArray g_ShadowAtlasCube : register(t8);
 Texture2D g_ShadowAtlas2D : register(t9);
 SamplerState g_Sample : register(s0);
 SamplerState g_Sample2 : register(s1);
+SamplerState g_ShadowSample : register(s2);
 
 // --- 셰이더 입출력 구조체 ---
 struct VS_INPUT
@@ -322,6 +323,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
         uint lightCount = g_TileLightIndices[tileDataOffset];
 
         // 타일 내 라이트만 순회
+        [loop]
         for (uint i = 0; i < lightCount; i++)
         {
             uint packedIndex = g_TileLightIndices[tileDataOffset + 1 + i];
@@ -334,7 +336,9 @@ PS_OUTPUT mainPS(PS_INPUT Input)
             }
             else if (lightType == 1)  // Spot Light
             {
-                litColor += CalculateSpotLight(g_SpotLightList[lightIdx], Input.WorldPos, normal, float3(0, 0, 0), baseColor, false, 0.0f);
+                float3 SpotLightColor = CalculateSpotLight(g_SpotLightList[lightIdx], Input.WorldPos, normal, float3(0, 0, 0), baseColor, false, 0.0f);
+                float ShadowFactor = CalculateSpotLightShadowFactor(Input.WorldPos, g_SpotLightList[lightIdx].ShadowData, g_ShadowAtlas2D, g_ShadowSample);
+                litColor += (SpotLightColor * ShadowFactor);
             }
         }
     }
@@ -346,9 +350,12 @@ PS_OUTPUT mainPS(PS_INPUT Input)
             litColor += CalculatePointLight(g_PointLightList[i], Input.WorldPos, normal, float3(0, 0, 0), baseColor, false, 0.0f);
         }
 
+        [loop]
         for (int j = 0; j < SpotLightCount; j++)
         {
-            litColor += CalculateSpotLight(g_SpotLightList[j], Input.WorldPos, normal, float3(0, 0, 0), baseColor, false, 0.0f);
+            float3 SpotLightColor = CalculateSpotLight(g_SpotLightList[j], Input.WorldPos, normal, viewDir, baseColor, true, specPower);
+            float ShadowFactor = CalculateSpotLightShadowFactor(Input.WorldPos, g_SpotLightList[j].ShadowData, g_ShadowAtlas2D, g_ShadowSample);
+            litColor += (SpotLightColor * ShadowFactor);
         }
     }
 
@@ -424,6 +431,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
         uint lightCount = g_TileLightIndices[tileDataOffset];
 
         // 타일 내 라이트만 순회
+        [loop]
         for (uint i = 0; i < lightCount; i++)
         {
             uint packedIndex = g_TileLightIndices[tileDataOffset + 1 + i];
@@ -436,7 +444,9 @@ PS_OUTPUT mainPS(PS_INPUT Input)
             }
             else if (lightType == 1)  // Spot Light
             {
-                litColor += CalculateSpotLight(g_SpotLightList[lightIdx], Input.WorldPos, normal, viewDir, baseColor, true, specPower);
+                float3 SpotLightColor = CalculateSpotLight(g_SpotLightList[lightIdx], Input.WorldPos, normal, viewDir, baseColor, true, specPower);
+                float ShadowFactor = CalculateSpotLightShadowFactor(Input.WorldPos, g_SpotLightList[lightIdx].ShadowData, g_ShadowAtlas2D, g_ShadowSample);
+                litColor += (SpotLightColor * ShadowFactor);
             }
         }
     }
@@ -447,10 +457,13 @@ PS_OUTPUT mainPS(PS_INPUT Input)
         {
             litColor += CalculatePointLight(g_PointLightList[i], Input.WorldPos, normal, viewDir, baseColor, true, specPower);
         }
-
+        
+        [loop]
         for (int j = 0; j < SpotLightCount; j++)
         {
-            litColor += CalculateSpotLight(g_SpotLightList[j], Input.WorldPos, normal, viewDir, baseColor, true, specPower);
+            float3 SpotLightColor = CalculateSpotLight(g_SpotLightList[j], Input.WorldPos, normal, viewDir, baseColor, true, specPower);
+            float ShadowFactor = CalculateSpotLightShadowFactor(Input.WorldPos, g_SpotLightList[j].ShadowData, g_ShadowAtlas2D, g_ShadowSample);
+            litColor += (SpotLightColor * ShadowFactor);
         }
     }
 
@@ -500,12 +513,6 @@ PS_OUTPUT mainPS(PS_INPUT Input)
         finalPixel.a *= (1.0f - Material.Transparency);
     }
     
-    for (int i = 0; i < SpotLightCount; i++)
-    {        
-        float ShadowFactor = CalculateSpotLightShadowFactor(Input.Position, g_SpotLightList[i].ShadowData, g_ShadowAtlas2D, g_Sample);
-        finalPixel *= ShadowFactor;
-    }
-
     Output.Color = finalPixel;
     return Output;
 #endif

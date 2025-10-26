@@ -176,7 +176,7 @@ void FLightManager::UpdateLightBuffer(D3D11RHI* RHIDevice)
 	}
 
 	// 2. 초기화 확인
-	if (!PointLightBuffer)
+	if (!PointLightBuffer || !SpotLightBuffer)
 	{
 		Initialize(RHIDevice);
 	}

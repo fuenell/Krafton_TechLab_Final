@@ -377,6 +377,8 @@ void FSceneRenderer::RenderShadowMaps()
 
 	// --- 3. RHI 상태 복구 ---
 	RHIDevice->RSSetState(ERasterizerMode::Solid);
+	ID3D11RenderTargetView* nullRTV = nullptr;
+	RHIDevice->OMSetCustomRenderTargets(1, &nullRTV, nullptr);
 	//RHIDevice->RSSetViewport(); // 메인 뷰포트로 복구
 	// 4. 저장해둔 'OriginVP'로 뷰포트를 복구합니다. (이때는 주소(&)가 필요 없음)
 	RHIDevice->GetDeviceContext()->RSSetViewports(1, &OriginVP);
@@ -1191,6 +1193,8 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 
 	// 기본 샘플러 미리 가져오기 (루프 내 반복 호출 방지)
 	ID3D11SamplerState* DefaultSampler = RHIDevice->GetSamplerState(RHI_Sampler_Index::Default);
+	// Shadow PCF용 샘플러 추가
+	ID3D11SamplerState* ShadowSampler = RHIDevice->GetSamplerState(RHI_Sampler_Index::Shadow);
 
 	// 정렬된 리스트 순회
 	for (const FMeshBatchElement& Batch : InMeshBatches)
@@ -1272,8 +1276,8 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 			RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 2, Srvs);
 
 			// 2. 샘플러 바인딩
-			ID3D11SamplerState* Samplers[2] = { DefaultSampler, DefaultSampler };
-			RHIDevice->GetDeviceContext()->PSSetSamplers(0, 2, Samplers);			
+			ID3D11SamplerState* Samplers[3] = { DefaultSampler, DefaultSampler, ShadowSampler };
+			RHIDevice->GetDeviceContext()->PSSetSamplers(0, 3, Samplers);			
 
 			// 3. 재질 CBuffer 바인딩
 			RHIDevice->SetAndUpdateConstantBuffer(PixelConst);

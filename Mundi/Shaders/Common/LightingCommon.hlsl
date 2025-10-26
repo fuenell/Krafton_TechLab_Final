@@ -367,13 +367,13 @@ float3 CalculateAllLights(
 }
 
 float CalculateSpotLightShadowFactor(
-    float4 WorldPos, FShadowMapData ShadowMapData, Texture2D ShadowMap, SamplerState ShadowSampler)
+    float3 WorldPos, FShadowMapData ShadowMapData, Texture2D ShadowMap, SamplerState ShadowSampler)
 {
     // 빛 적용 가정
     float ShadowFactor = 1.0f;
     
     // 월드 -> 광원좌표 -> 텍스처 uv좌표
-    float4 ShadowTexCoord = mul(WorldPos, ShadowMapData.ShadowViewProjMatrix);
+    float4 ShadowTexCoord = mul(float4(WorldPos, 1.0f), ShadowMapData.ShadowViewProjMatrix);
 
     // 원근 나눗셈
     ShadowTexCoord.xyz /= ShadowTexCoord.w;
@@ -381,21 +381,66 @@ float CalculateSpotLightShadowFactor(
     // 아틀라스 uv좌표로 변환
     float2 AtlasUV = ShadowTexCoord.xy;
     AtlasUV.x = AtlasUV.x * ShadowMapData.AtlasScaleOffset.x + ShadowMapData.AtlasScaleOffset.z;
-    AtlasUV.y = AtlasUV.y * ShadowMapData.AtlasScaleOffset.y + ShadowMapData.AtlasScaleOffset.w;
+    AtlasUV.y = AtlasUV.y * ShadowMapData.AtlasScaleOffset.y + ShadowMapData.AtlasScaleOffset.w;    
 
     if (saturate(AtlasUV.x) == AtlasUV.x && saturate(AtlasUV.y) == AtlasUV.y)
     {
         // 텍스처 상에서 현재 픽셀의 깊이
-        float PixelDepth = ShadowTexCoord.z;
-        
-        // 텍스처에서 깊이 추출, R24G8 포맷이라 r값이 깊이
-        float TextureDepth = ShadowMap.Sample(ShadowSampler, AtlasUV).r;
+        float PixelDepth = ShadowTexCoord.z;        
 
-        // 현재 픽셀의 깊이가 텍스처 깊이보다 크면 그림자
-        if (PixelDepth > TextureDepth)
+        // PCF
+        float Width, Height;
+        ShadowMap.GetDimensions(Width, Height);
+        float2 AtlasTexelSize = float2(1.0f / Width, 1.0f / Height);
+
+        // 2x2 PCF
+        // float2 TexelCoord = AtlasUV / AtlasTexelSize;
+        // float2 LerpFactor = frac(TexelCoord - 0.5f);
+        //
+        // // 텍셀 중앙 좌표
+        // float2 UV0 = (floor(TexelCoord - 0.5f) + 0.5f) * AtlasTexelSize;
+        // float2 UV1 = UV0 + float2(AtlasTexelSize.x, 0.0f);
+        // float2 UV2 = UV0 + float2(0.0f, AtlasTexelSize.y);
+        // float2 UV3 = UV0 + AtlasTexelSize.xy;
+        //
+        // // PCF 적용
+        // float s0 = ShadowMap.SampleLevel(ShadowSampler, UV0, 0.0f).r;
+        // float s1 = ShadowMap.SampleLevel(ShadowSampler, UV1, 0.0f).r;
+        // float s2 = ShadowMap.SampleLevel(ShadowSampler, UV2, 0.0f).r;
+        // float s3 = ShadowMap.SampleLevel(ShadowSampler, UV3, 0.0f).r;
+        //
+        // float Result0 = PixelDepth <= s0;
+        // float Result1 = PixelDepth <= s1;
+        // float Result2 = PixelDepth <= s2;
+        // float Result3 = PixelDepth <= s3;
+        //
+        // ShadowFactor = lerp(lerp(Result0, Result1, LerpFactor.x),
+        //                     lerp(Result2, Result3, LerpFactor.x), LerpFactor.y);
+
+        // 3x3 PCF
+        float ShadowFactorSum = 0.0f;
+        for (int y = -1; y <= 1; y++)
         {
-            ShadowFactor = 0.0f;
+            for (int x = -1; x <= 1; x++)
+            {
+                float2 Offset = float2(x, y) * AtlasTexelSize;
+                float2 SampleUV = AtlasUV + Offset;
+
+                float TextureDepth = ShadowMap.SampleLevel(ShadowSampler, SampleUV, 0.0f).r;
+
+                ShadowFactorSum += (PixelDepth <= TextureDepth) ? 1.0f : 0.0f;
+            }
         }
+        ShadowFactor = ShadowFactorSum / 9.0f;
+
+        // 텍스처에서 깊이 추출, R24G8 포맷이라 r값이 깊이
+        // float TextureDepth = ShadowMap.SampleLevel(ShadowSampler, AtlasUV.xy, 0.0f).r;
+        //
+        // // 현재 픽셀의 깊이가 텍스처 깊이보다 크면 그림자
+        // if (PixelDepth > TextureDepth)
+        // {
+        //     ShadowFactor = 0.0f;
+        // }
     }
 
     return ShadowFactor;
