@@ -258,6 +258,7 @@ void FSceneRenderer::RenderShadowMaps()
 	}
 	for (USpotLightComponent* Light : LightManager->GetSpotLightList())
 	{
+		//Light->CalculateWarpMatrix(OwnerRenderer, View->Camera, View->Viewport);
 		Light->GetShadowRenderRequests(View, Requests2D);
 		// IsOverrideCameraLightPerspective 임시 구현
 		if (Light->IsOverrideCameraLightPerspective())

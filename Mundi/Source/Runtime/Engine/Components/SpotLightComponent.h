@@ -77,7 +77,6 @@ public:
 	FMatrix GetProjectionMatrix() const;
 	FMatrix GetWarpMatrix() const { return WarpMatrix; }
 	void RenderDebugFrustum(TArray<FVector>& StartPoints, TArray<FVector>& EndPoints, TArray<FVector4>& Colors) const;
-	void CreateShadowMap(D3D11RHI* RHIDevice);
 	void CalculateWarpMatrix(URenderer* Renderer, UCameraComponent* Camera, FViewport* Viewport);
 
 	bool IsOverrideCameraLightPerspective() { return bOverrideCameraLightPerspective; }
