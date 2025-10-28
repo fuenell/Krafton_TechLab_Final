@@ -10,7 +10,6 @@ void D3D11RHI::Initialize(HWND hWindow)
     CreateIdBuffer();
     CreateRasterizerState();
     CreateBlendState();
-    
     CONSTANT_BUFFER_LIST(CREATE_CONSTANT_BUFFER);
 
 	CreateDepthStencilState();

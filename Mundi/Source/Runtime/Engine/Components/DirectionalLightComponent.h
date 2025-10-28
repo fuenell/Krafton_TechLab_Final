@@ -42,8 +42,10 @@ protected:
 	class UGizmoArrowComponent* DirectionGizmo = nullptr;
 	ID3D11ShaderResourceView* ShadowMapSRV = nullptr;
 private:
-	float Angle = 45;
-	float Near = 0.1f;
-	float Far = 100.0f;
+	bool bCascaded = true;
+	int CascadedCount = 4;
+	float CascadedLinearBlendingValue = 0.5f;
+	float CascadedOverlapValue = 0.2f;
 	bool bOverrideCameraLightPerspective = false;
+	TArray<float> CascadedSliceDepth;
 };
