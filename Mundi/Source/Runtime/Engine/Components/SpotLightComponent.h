@@ -79,8 +79,6 @@ public:
 	void RenderDebugFrustum(TArray<FVector>& StartPoints, TArray<FVector>& EndPoints, TArray<FVector4>& Colors) const;
 	void CalculateWarpMatrix(URenderer* Renderer, UCameraComponent* Camera, FViewport* Viewport);
 
-	bool IsOverrideCameraLightPerspective() { return bOverrideCameraLightPerspective; }
-
 protected:
 	float InnerConeAngle = 30.0f; // 내부 원뿔 각도
 	float OuterConeAngle = 45.0f; // 외부 원뿔 각도
@@ -89,8 +87,6 @@ protected:
 	float PreviousInnerConeAngle = 30.0f;
 	float PreviousOuterConeAngle = 45.0f;
 
-	// NOTE: 실제로는 사용하지 않지만 프로퍼티 양식 때문에 어쩔 수 없이 임시로 선언
-	ID3D11ShaderResourceView* ShadowMapSRV = nullptr;
 	int32 SampleCount = 4;
 	FMatrix WarpMatrix = FMatrix::Identity();
 
@@ -98,5 +94,4 @@ protected:
 	// Direction Gizmo (shows light direction)
 	class UGizmoArrowComponent* DirectionGizmo = nullptr;
 
-	bool bOverrideCameraLightPerspective;
 };

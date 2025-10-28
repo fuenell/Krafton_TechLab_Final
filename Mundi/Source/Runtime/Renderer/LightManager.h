@@ -78,11 +78,10 @@ struct FPointLightInfo
 {
     FLinearColor Color;      // 16 bytes
     FVector Position;        // 12 bytes
-    uint32 bCastShadows;     // 4 bytes (0 or 1)
-
     float AttenuationRadius; // 4 bytes
     float FalloffExponent;   // 4 bytes
     uint32 bUseInverseSquareFalloff; // 4 bytes
+    uint32 bCastShadows;     // 4 bytes (0 or 1)
     int32 ShadowArrayIndex;  // 4 bytes (t8 TextureCubeArray의 슬라이스 인덱스, -1=섀도우 없음)
     // Total: 48 bytes
 };
@@ -132,6 +131,8 @@ public:
     uint32 GetShadowCubeArrayCount() const { return CubeArrayCount; }
     ID3D11DepthStencilView* GetShadowCubeFaceDSV(UINT SliceIndex, UINT FaceIndex) const; // (구현 필요)
     bool GetCachedShadowData(ULightComponent* Light, int32 SubViewIndex, FShadowMapData& OutData) const;
+    bool GetCachedShadowCubeSliceIndex(ULightComponent* Light, int32& OutSliceIndex) const;
+    ID3D11ShaderResourceView* GetShadowAtlasSRVCube() const { return ShadowAtlasSRVCube; }
 
     void AllocateAtlasRegions2D(TArray<FShadowRenderRequest>& InOutRequests2D);
     void AllocateAtlasCubeSlices(TArray<FShadowRenderRequest>& InOutRequestsCube);

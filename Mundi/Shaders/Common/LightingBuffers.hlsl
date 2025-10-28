@@ -38,4 +38,9 @@ cbuffer TileCullingBuffer : register(b11)
     uint TileCountX;        // 가로 타일 개수
     uint TileCountY;        // 세로 타일 개수
     uint bUseTileCulling;   // 타일 컬링 활성화 여부 (0=비활성화, 1=활성화)
+    uint ViewportStartX;    // 뷰포트 시작 X 좌표
+    uint ViewportStartY;    // 뷰포트 시작 Y 좌표
+    uint2 Padding;          // 16바이트 정렬을 위한 패딩
 };
+
+TextureCubeArray g_PointShadowMapArray : register(t10);

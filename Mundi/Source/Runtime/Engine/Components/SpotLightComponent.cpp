@@ -14,8 +14,6 @@ BEGIN_PROPERTIES(USpotLightComponent)
 	ADD_PROPERTY_RANGE(float, InnerConeAngle, "Light", 0.0f, 90.0f, true, "원뿔 내부 각도입니다. 이 각도 안에서는 빛이 최대 밝기로 표시됩니다.")
 	ADD_PROPERTY_RANGE(float, OuterConeAngle, "Light", 0.0f, 90.0f, true, "원뿔 외부 각도입니다. 이 각도 밖에서는 빛이 보이지 않습니다.")
 	ADD_PROPERTY_RANGE(int, SampleCount, "Light", 0, 16, "PCF 샘플 횟수")
-	ADD_PROPERTY_SRV(ID3D11ShaderResourceView*, ShadowMapSRV, "ShadowMap", true, "쉐도우 맵 Far Plane")
-	ADD_PROPERTY(bool, bOverrideCameraLightPerspective, "ShadowMap", true, "Override Camera Light Perspective")
 END_PROPERTIES()
 
 USpotLightComponent::USpotLightComponent()
@@ -62,8 +60,6 @@ USpotLightComponent::~USpotLightComponent()
 
 void USpotLightComponent::GetShadowRenderRequests(FSceneView* View, TArray<FShadowRenderRequest>& OutRequests)
 {
-	// Todo: 이곳에서 실제로 구현
-
 	FShadowRenderRequest ShadowRenderRequest;
 	ShadowRenderRequest.LightOwner = this;
 	ShadowRenderRequest.ViewMatrix = GetViewMatrix();
@@ -127,6 +123,7 @@ FSpotLightInfo USpotLightComponent::GetLightInfo() const
 	Info.bUseInverseSquareFalloff = IsUsingInverseSquareFalloff() ? 1u : 0u;
 	// Info.ShadowData.ShadowViewProjMatrix = GetViewMatrix() * GetProjectionMatrix() * GetWarpMatrix();
 	Info.ShadowData.ShadowViewProjMatrix = GetViewMatrix() * GetProjectionMatrix();
+	Info.bCastShadows = 0u;		// UpdateLightBuffer 에서 초기화 해줌
 	Info.ShadowData.SampleCount = SampleCount;
 	
 	return Info;

@@ -82,7 +82,6 @@ void FSceneRenderer::Render()
 		View->ViewMode == EViewModeIndex::VMI_Lit_Lambert ||
 		View->ViewMode == EViewModeIndex::VMI_Lit_Phong)
 	{
-
 		GWorld->GetLightManager()->UpdateLightBuffer(RHIDevice);	//라이트 구조체 버퍼 업데이트, 바인딩
 		PerformTileLightCulling();	// 타일 기반 라이트 컬링 수행
 		RenderLitPath();
@@ -272,6 +271,15 @@ void FSceneRenderer::RenderShadowMaps()
 	for (UPointLightComponent* Light : LightManager->GetPointLightList())
 	{
 		Light->GetShadowRenderRequests(View, RequestsCube); // OriginalSubViewIndex(0~5) 채워짐
+		// IsOverrideCameraLightPerspective 임시 구현
+		if (Light->IsOverrideCameraLightPerspective())
+		{
+			int32 CamNum = std::clamp((int)Light->GetOverrideCameraLightNum(), 0, 5);
+			OriginViewProjBuffer.View = RequestsCube[RequestsCube.Num() - 6 + CamNum].ViewMatrix;
+			OriginViewProjBuffer.Proj = RequestsCube[RequestsCube.Num() - 6 + CamNum].ProjectionMatrix;
+			OriginViewProjBuffer.InvView = OriginViewProjBuffer.View.Inverse();
+			OriginViewProjBuffer.InvProj = OriginViewProjBuffer.Proj.Inverse();
+		}
 	}
 
 	// 2D 아틀라스 할당
@@ -322,6 +330,7 @@ void FSceneRenderer::RenderShadowMaps()
 		if (AtlasSizeCube > 0 && MaxCubeSlices > 0)
 		{
 			// 2.1. RHI 상태 설정 (큐브맵)
+			RHIDevice->ClearDepthBuffer(1.0f, 0);
 			RHIDevice->RSSetState(ERasterizerMode::Shadows);
 			RHIDevice->OMSetDepthStencilState(EComparisonFunc::LessEqual); // 상태 설정 추가
 
@@ -339,6 +348,11 @@ void FSceneRenderer::RenderShadowMaps()
 					LightManager->SetShadowCubeMapData(Request.LightOwner, -1);
 					continue;
 				}
+				else
+				{
+					//Data.ShadowViewProjMatrix = Request.ViewMatrix * Request.ProjectionMatrix * BiasMatrix;
+					LightManager->SetShadowCubeMapData(Request.LightOwner, Request.AssignedSliceIndex);
+				}
 
 				// 할당된 슬라이스 인덱스와 원본 면 인덱스 사용
 				int32 SliceIndex = Request.AssignedSliceIndex;   // FLightManager가 할당한 값
@@ -349,7 +363,7 @@ void FSceneRenderer::RenderShadowMaps()
 				if (FaceDSV)
 				{
 					RHIDevice->OMSetCustomRenderTargets(0, nullptr, FaceDSV);
-					RHIDevice->ClearDepthBuffer(1.0f, 0); // 각 면을 클리어
+					RHIDevice->GetDeviceContext()->ClearDepthStencilView(FaceDSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1, 0);
 					RenderShadowDepthPass(Request.ViewMatrix, Request.ProjectionMatrix, ShadowMeshBatches);
 				}
 			}
@@ -652,6 +666,8 @@ void FSceneRenderer::PerformTileLightCulling()
 	TileCullingBuffer.TileCountX = (ViewportWidth + TileSize - 1) / TileSize;
 	TileCullingBuffer.TileCountY = (ViewportHeight + TileSize - 1) / TileSize;
 	TileCullingBuffer.bUseTileCulling = bTileCullingEnabled ? 1 : 0;  // ShowFlag에 따라 설정
+	TileCullingBuffer.ViewportStartX = View->ViewRect.MinX;  // ShowFlag에 따라 설정
+	TileCullingBuffer.ViewportStartY = View->ViewRect.MinY;  // ShowFlag에 따라 설정
 
 	RHIDevice->SetAndUpdateConstantBuffer(TileCullingBuffer);
 
@@ -1177,7 +1193,7 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 		if (!Batch.VertexShader || !Batch.PixelShader || !Batch.VertexBuffer || !Batch.IndexBuffer || Batch.VertexStride == 0)
 		{
 			// 셰이더나 버퍼, 스트라이드 정보가 없으면 그릴 수 없음
-			UE_LOG("셰이더가 없는 컴포넌트가 있습니다!");
+			//UE_LOG("[%s] 머티리얼에 셰이더가 컴파일에 실패했거나 없습니다!", Batch.Material->GetFilePath().c_str());	// NOTE: 로그가 매 프레임 떠서 셰이더 컴파일 에러 로그를 볼 수 없어서 주석 처리
 			continue;
 		}
 

@@ -146,6 +146,18 @@ struct FTileCullingBufferType
     uint32 TileCountX;        // 가로 타일 개수
     uint32 TileCountY;        // 세로 타일 개수
     uint32 bUseTileCulling;   // 타일 컬링 활성화 여부 (0=비활성화, 1=활성화)
+    uint32 ViewportStartX;    // 뷰포트 시작 X 좌표
+    uint32 ViewportStartY;    // 뷰포트 시작 Y 좌표
+    uint32 Padding[2];
+};
+
+struct FPointLightShadowBufferType
+{
+    FMatrix LightViewProjection[6]; // 각 큐브맵 면에 대한 뷰-프로젝션 행렬 (6개)
+    FVector LightPosition;          // 라이트의 월드 공간 위치
+    float FarPlane;                 // 섀도우 맵의 원거리 평면 (깊이 범위 계산용)
+    uint32 LightIndex;              // 현재 렌더링 중인 라이트 인덱스
+    FVector Padding;                // 16바이트 정렬
 };
 
 #define CONSTANT_BUFFER_INFO(TYPE, SLOT, VS, PS) \
@@ -166,7 +178,8 @@ MACRO(ColorBufferType)              \
 MACRO(CameraBufferType)             \
 MACRO(FLightBufferType)             \
 MACRO(FViewportConstants)           \
-MACRO(FTileCullingBufferType)
+MACRO(FTileCullingBufferType)       \
+MACRO(FPointLightShadowBufferType)
 
 // 16 바이트 패딩 어썰트
 #define STATIC_ASSERT_CBUFFER_ALIGNMENT(Type) \
@@ -187,3 +200,4 @@ CONSTANT_BUFFER_INFO(CameraBufferType, 7, true, true)  // b7, VS+PS (UberLit.hls
 CONSTANT_BUFFER_INFO(FLightBufferType, 8, true, true)
 CONSTANT_BUFFER_INFO(FViewportConstants, 10, true, false)   // 뷰 포트 크기에 따라 전체 화면 복사를 보정하기 위해 설정 (10번 고유번호로 사용)
 CONSTANT_BUFFER_INFO(FTileCullingBufferType, 11, false, true)  // b11, PS only (UberLit.hlsl과 일치)
+CONSTANT_BUFFER_INFO(FPointLightShadowBufferType, 12, true, true)  // b11, VS only

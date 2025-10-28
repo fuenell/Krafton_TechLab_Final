@@ -316,7 +316,7 @@ void FLightManager::SetShadowMapData(ULightComponent* Light, int32 SubViewIndex,
 void FLightManager::SetShadowCubeMapData(ULightComponent* Light, int32 SliceIndex)
 {
 	if (!Light) return;
-	if (SliceIndex < 0 || ShadowDataCacheCube.Num() <= SliceIndex) return;
+	if (SliceIndex < 0 || CubeArrayCount <= SliceIndex) return;
 
 	// TMap에 슬라이스 인덱스 저장
 	ShadowDataCacheCube[Light] = SliceIndex;
@@ -360,6 +360,29 @@ bool FLightManager::GetCachedShadowData(ULightComponent* Light, int32 SubViewInd
 
 	// 4. 데이터 복사 및 성공 반환
 	OutData = (*FoundDataArray)[SubViewIndex];
+	return true;
+}
+
+bool FLightManager::GetCachedShadowCubeSliceIndex(ULightComponent* Light, int32& OutSliceIndex) const
+{
+	// 1. 유효성 검사
+	if (!Light)
+	{
+		OutSliceIndex = -1;
+		return false;
+	}
+
+	// 2. 해당 라이트에 대한 캐시 데이터(int32) 찾기
+	const int32* FoundIndex = ShadowDataCacheCube.Find(Light);
+	if (!FoundIndex)
+	{
+		// 이 라이트에 대한 캐시 데이터가 없음
+		OutSliceIndex = -1;
+		return false;
+	}
+
+	// 3. 데이터 복사 및 성공 반환
+	OutSliceIndex = *FoundIndex;
 	return true;
 }
 

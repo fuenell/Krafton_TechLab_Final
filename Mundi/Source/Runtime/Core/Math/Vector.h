@@ -1255,20 +1255,30 @@ inline FMatrix FQuat::ToMatrix() const
 	).Transpose();
 }
 
-// Row-major + 행벡터(p' = p * M), Left-Handed: forward = +Z
+// Row-major + 행벡터(p' = p * M), Left-Handed: X=Forward, Y=Right, Z=Up
 inline FMatrix FMatrix::LookAtLH(const FVector& Eye, const FVector& At, const FVector& Up)
 {
-	FVector ZAxis = (At - Eye).GetNormalized();
-	FVector XAxis = FVector::Cross(Up, ZAxis).GetNormalized();
-	FVector YAxis = FVector::Cross(ZAxis, XAxis);
+	// 엔진 좌표계로 기저 벡터 생성: X=Forward, Y=Right, Z=Up
+	FVector ForwardV = (At - Eye).GetNormalized();  // Forward
+	FVector RightV = FVector::Cross(Up, ForwardV).GetNormalized();  // Right
+	FVector UpV = FVector::Cross(ForwardV, RightV);  // Up
 
+	// Row-major + 행벡터: 뷰 행렬의 회전 부분은 카메라 기저의 전치
 	FMatrix View;
-	View.Rows[0] = _mm_set_ps(0.0f, ZAxis.X, YAxis.X, XAxis.X);
-	View.Rows[1] = _mm_set_ps(0.0f, ZAxis.Y, YAxis.Y, XAxis.Y);
-	View.Rows[2] = _mm_set_ps(0.0f, ZAxis.Z, YAxis.Z, XAxis.Z);
-	View.Rows[3] = _mm_set_ps(1.0f, -FVector::Dot(Eye, ZAxis), -FVector::Dot(Eye, YAxis), -FVector::Dot(Eye, XAxis));
+	View.Rows[0] = _mm_set_ps(0.0f, UpV.X, RightV.X, ForwardV.X);
+	View.Rows[1] = _mm_set_ps(0.0f, UpV.Y, RightV.Y, ForwardV.Y);
+	View.Rows[2] = _mm_set_ps(0.0f, UpV.Z, RightV.Z, ForwardV.Z);
+	View.Rows[3] = _mm_set_ps(1.0f, -FVector::Dot(Eye, UpV), -FVector::Dot(Eye, RightV), -FVector::Dot(Eye, ForwardV));
 
-	return View.Transpose(); // Transpose to get the final row-major matrix
+	// 엔진(X=forward, Y=right, Z=up) → 쉐이더(X=right, Y=up, Z=forward)
+	static const FMatrix ToShaderCoords(
+		0, 0, 1, 0,  
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 0, 1
+	);
+
+	return View * ToShaderCoords; // 이미 row-major로 구축함
 }
 
 inline FMatrix FMatrix::PerspectiveFovLH(float FovY, float Aspect, float Zn, float Zf)

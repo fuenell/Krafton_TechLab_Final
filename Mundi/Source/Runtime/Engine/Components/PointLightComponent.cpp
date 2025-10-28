@@ -7,6 +7,9 @@ IMPLEMENT_CLASS(UPointLightComponent)
 BEGIN_PROPERTIES(UPointLightComponent)
 	MARK_AS_COMPONENT("포인트 라이트", "포인트 라이트 컴포넌트를 추가합니다.")
 	ADD_PROPERTY_RANGE(float, SourceRadius, "Light", 0.0f, 1000.0f, false, "광원의 반경입니다.")
+	ADD_PROPERTY_SRV(ID3D11ShaderResourceView*, ShadowMapSRV, "ShadowMap", true, "쉐도우 맵 Far Plane")
+	ADD_PROPERTY(bool, bOverrideCameraLightPerspective, "ShadowMap", true, "Override Camera Light Perspective")
+	ADD_PROPERTY_RANGE(int, OverrideCameraLightNum, "ShadowMap", 0, 5,true, "Override Camera Light Perspective Num")
 END_PROPERTIES()
 
 UPointLightComponent::UPointLightComponent()
@@ -18,6 +21,45 @@ UPointLightComponent::~UPointLightComponent()
 {
 }
 
+void UPointLightComponent::GetShadowRenderRequests(FSceneView* View, TArray<FShadowRenderRequest>& OutRequests)
+{
+	// 라이트의 월드 위치와 영향 반경 가져오기
+	FVector LightPosition = this->GetWorldLocation();
+	float LightRadius = this->GetAttenuationRadius();
+
+	// 큐브맵 각 면에 대한 뷰 행렬 생성 (X=Forward, Y=Right, Z=Up)
+	FMatrix LightViews[6];
+
+	// Face 0: +X
+	LightViews[0] = FMatrix::LookAtLH(LightPosition, LightPosition + FVector(0, 1, 0), FVector(0, 0, 1));
+	// Face 1: -X 
+	LightViews[1] = FMatrix::LookAtLH(LightPosition, LightPosition + FVector(0, -1, 0), FVector(0, 0, 1));
+	// Face 2: +Y 
+	LightViews[2] = FMatrix::LookAtLH(LightPosition, LightPosition + FVector(0, 0, 1), FVector(-1, 0, 0));
+	// Face 3: -Y
+	LightViews[3] = FMatrix::LookAtLH(LightPosition, LightPosition + FVector(0, 0, -1), FVector(1, 0, 0));
+	// Face 4: +Z
+	LightViews[4] = FMatrix::LookAtLH(LightPosition, LightPosition + FVector(1, 0, 0), FVector(0, 0, 1));
+	// Face 5: -Z
+	LightViews[5] = FMatrix::LookAtLH(LightPosition, LightPosition + FVector(-1, 0, 0), FVector(0, 0, 1));
+
+	// 큐브맵 프로젝션 행렬 생성 (90도 FOV)
+	const float FovRadians = HALF_PI;  // 90 degrees in radians
+	FMatrix LightProjection = FMatrix::PerspectiveFovLH(FovRadians, 1.0f, 0.1f, LightRadius);
+
+	for (uint32 i = 0; i < 6; i++)
+	{
+		FShadowRenderRequest ShadowRenderRequest;
+		ShadowRenderRequest.LightOwner = this;
+		ShadowRenderRequest.ViewMatrix = LightViews[i];
+		ShadowRenderRequest.ProjectionMatrix = LightProjection;
+		ShadowRenderRequest.Size = ShadowResolutionScale;
+		ShadowRenderRequest.SubViewIndex = i;
+		ShadowRenderRequest.AtlasScaleOffset = 0;
+		OutRequests.Add(ShadowRenderRequest);
+	}
+}
+
 FPointLightInfo UPointLightComponent::GetLightInfo() const
 {
 	FPointLightInfo Info;
@@ -27,6 +69,8 @@ FPointLightInfo UPointLightComponent::GetLightInfo() const
 	Info.AttenuationRadius = GetAttenuationRadius();
 	Info.FalloffExponent = GetFalloffExponent(); // Always pass FalloffExponent (used when bUseInverseSquareFalloff = false)
 	Info.bUseInverseSquareFalloff = IsUsingInverseSquareFalloff() ? 1u : 0u;
+	Info.bCastShadows = 0u;		// UpdateLightBuffer 에서 초기화 해줌
+	Info.ShadowArrayIndex = -1; // UpdateLightBuffer 에서 초기화 해줌
 
 	return Info;
 }

@@ -77,11 +77,6 @@ cbuffer FLightShadowmBufferType : register(b5)
 // 금속 재질의 컬러 Specular 지원
 #define SPECULAR_COLOR (bHasMaterial ? Material.SpecularColor : float3(1.0f, 1.0f, 1.0f))
 
-// --- 공통 조명 시스템 include ---
-#include "../Common/LightStructures.hlsl"
-#include "../Common/LightingBuffers.hlsl"
-#include "../Common/LightingCommon.hlsl"
-
 // --- 텍스처 및 샘플러 리소스 ---
 Texture2D g_DiffuseTexColor : register(t0);
 Texture2D g_NormalTexColor : register(t1);
@@ -91,6 +86,11 @@ Texture2D g_ShadowAtlas2D : register(t9);
 SamplerState g_Sample : register(s0);
 SamplerState g_Sample2 : register(s1);
 SamplerComparisonState g_ShadowSample : register(s2);
+
+// --- 공통 조명 시스템 include ---
+#include "../Common/LightStructures.hlsl"
+#include "../Common/LightingBuffers.hlsl"
+#include "../Common/LightingCommon.hlsl"
 
 // --- 셰이더 입출력 구조체 ---
 struct VS_INPUT
@@ -360,7 +360,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
     if (bUseTileCulling)
     {
         // 현재 픽셀이 속한 타일 계산
-        uint tileIndex = CalculateTileIndex(Input.Position);
+        uint tileIndex = CalculateTileIndex(Input.Position, ViewportStartX, ViewportStartY);
         uint tileDataOffset = GetTileDataOffset(tileIndex);
 
         // 타일에 영향을 주는 라이트 개수
@@ -474,7 +474,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
     if (bUseTileCulling)
     {
         // 현재 픽셀이 속한 타일 계산
-        uint tileIndex = CalculateTileIndex(Input.Position);
+        uint tileIndex = CalculateTileIndex(Input.Position, ViewportStartX, ViewportStartY);
         uint tileDataOffset = GetTileDataOffset(tileIndex);
 
         // 타일에 영향을 주는 라이트 개수

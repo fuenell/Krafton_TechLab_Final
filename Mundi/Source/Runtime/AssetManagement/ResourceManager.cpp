@@ -468,6 +468,7 @@ void UResourceManager::InitShaderILMap()
    
     ShaderToInputLayoutMap["Shaders/Effects/Decal.hlsl"] = layout;
 	ShaderToInputLayoutMap["Shaders/Materials/UberLit.hlsl"] = layout;
+	ShaderToInputLayoutMap["Shaders/Shadow/PointLightShadow.hlsl"] = layout;  // Shadow map rendering uses same vertex format
 	ShaderToInputLayoutMap["Shaders/Shadows/DepthOnly_VS.hlsl"] = layout;
     layout.clear();
 
