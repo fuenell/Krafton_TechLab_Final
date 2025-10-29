@@ -288,19 +288,25 @@ PS_INPUT mainVS(VS_INPUT Input)
     }
     finalColor += CalculateAmbientLight(AmbientLight, Ka);
 
-    // Directional light (diffuse + specular)
-    finalColor += CalculateDirectionalLight(DirectionalLight, worldNormal, viewDir, baseColor, true, specPower);
+    // Directional light (diffuse + specular) - 그림자 제외
+    FDirectionalLightInfo dirLightNoShadow = DirectionalLight;
+    dirLightNoShadow.bCastShadows = 0;
+    finalColor += CalculateDirectionalLight(dirLightNoShadow, Out.WorldPos, viewPos.xyz, worldNormal, viewDir, baseColor, true, specPower, g_ShadowAtlas2D, g_ShadowSample);
 
     // Point lights (diffuse + specular) - 그림자 제외
     for (int i = 0; i < PointLightCount; i++)
     {
-        finalColor += CalculatePointLightNoShadow(g_PointLightList[i], Out.WorldPos, worldNormal, viewDir, baseColor, true, specPower);
+        FPointLightInfo pointLightNoShadow = g_PointLightList[i];
+        pointLightNoShadow.bCastShadows = 0;
+        finalColor += CalculatePointLight(pointLightNoShadow, Out.WorldPos, worldNormal, viewDir, baseColor, true, specPower, g_ShadowAtlasCube, g_ShadowSample);
     }
 
     // Spot lights (diffuse + specular) - 그림자 제외
     for (int j = 0; j < SpotLightCount; j++)
     {
-        finalColor += CalculateSpotLightNoShadow(g_SpotLightList[j], Out.WorldPos, worldNormal, viewDir, baseColor, true, specPower);
+        FSpotLightInfo spotLightNoShadow = g_SpotLightList[j];
+        spotLightNoShadow.bCastShadows = 0;
+        finalColor += CalculateSpotLight(spotLightNoShadow, Out.WorldPos, worldNormal, viewDir, baseColor, true, specPower, g_ShadowAtlas2D, g_ShadowSample);
     }
 
     Out.Color = float4(finalColor, baseColor.a);
