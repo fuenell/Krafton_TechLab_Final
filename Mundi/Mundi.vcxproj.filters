@@ -50,8 +50,8 @@
     <FxCompile Include="Shaders\Shadows\DepthOnly_VS.hlsl">
       <Filter>Shaders\Shadows</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\Utility\ShadowMap.hlsl">
-      <Filter>Shaders\Utility</Filter>
+    <FxCompile Include="Shaders\Shadows\DepthOnly_PS.hlsl">
+      <Filter>Shaders\Shadows</Filter>
     </FxCompile>
   </ItemGroup>
   <!-- Root Files -->
@@ -424,6 +424,7 @@
     <ClCompile Include="Source\Editor\Clipboard\ClipboardManager.cpp">
       <Filter>Source\Editor\Clipboard</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Runtime\Core\Math\Vector.cpp" />
   </ItemGroup>
   <!-- ThirdParty/ImGui Files -->
   <!-- Source Files -->

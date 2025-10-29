@@ -264,6 +264,22 @@ void D3D11RHI::CreateSamplerState()
     ShadowSamplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
 
     HR = Device->CreateSamplerState(&ShadowSamplerDesc, &ShadowSamplerState);
+
+    D3D11_SAMPLER_DESC VSMSamplerDesc = {};
+    VSMSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    VSMSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+    VSMSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+    VSMSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+    VSMSamplerDesc.BorderColor[0] = 1.0f;
+    VSMSamplerDesc.BorderColor[1] = 1.0f;
+    VSMSamplerDesc.BorderColor[2] = 1.0f;
+    VSMSamplerDesc.BorderColor[3] = 1.0f;
+    VSMSamplerDesc.MipLODBias = 0.0f;
+    VSMSamplerDesc.MaxAnisotropy = 1;
+    VSMSamplerDesc.MinLOD = 0;
+    VSMSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+    HR = Device->CreateSamplerState(&VSMSamplerDesc, &VSMSamplerState);
 }
 
 HRESULT D3D11RHI::CreateIndexBuffer(ID3D11Device* device, const FMeshData* meshData, ID3D11Buffer** outBuffer)
@@ -1069,6 +1085,9 @@ ID3D11SamplerState* D3D11RHI::GetSamplerState(RHI_Sampler_Index SamplerIndex) co
         break;
     case RHI_Sampler_Index::Shadow:
         TempSamplerState = ShadowSamplerState;
+        break;
+    case RHI_Sampler_Index::VSM:
+        TempSamplerState = VSMSamplerState;
         break;
     default:
         TempSamplerState = nullptr;

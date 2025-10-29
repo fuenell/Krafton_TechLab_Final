@@ -360,7 +360,8 @@ enum class RHI_Sampler_Index : uint32
     Default,    // 기본 샘플러 (반복, 선형 필터링)
     LinearClamp,
 	PointClamp,
-    Shadow
+    Shadow,
+    VSM
 };
 
 enum class EPrimitiveType : uint32

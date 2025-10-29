@@ -88,9 +88,11 @@ Texture2D g_NormalTexColor : register(t1);
 Texture2D g_DirectionalShadowMap : register(t5);
 TextureCubeArray g_ShadowAtlasCube : register(t8);
 Texture2D g_ShadowAtlas2D : register(t9);
+Texture2D<float2> g_VSMShadowAtlas : register(t10);
 SamplerState g_Sample : register(s0);
 SamplerState g_Sample2 : register(s1);
 SamplerComparisonState g_ShadowSample : register(s2);
+SamplerState g_VSMSampler : register(s3);
 
 // --- 셰이더 입출력 구조체 ---
 struct VS_INPUT
@@ -382,6 +384,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
             {
                 float3 SpotLightColor = CalculateSpotLight(g_SpotLightList[lightIdx], Input.WorldPos, normal, float3(0, 0, 0), baseColor, false, 0.0f);
                 float ShadowFactor = CalculateSpotLightShadowFactor(Input.WorldPos, g_SpotLightList[lightIdx].ShadowData, g_ShadowAtlas2D, g_ShadowSample);
+                //float ShadowFactor = CalculateSpotLightShadowFactorVSM(Input.WorldPos, g_SpotLightList[lightIdx].ShadowData, g_SpotLightList[lightIdx].AttenuationRadius, g_VSMShadowAtlas, g_VSMSampler);
                 litColor += (SpotLightColor * ShadowFactor);
             }
         }
@@ -399,6 +402,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
         {
             float3 SpotLightColor = CalculateSpotLight(g_SpotLightList[j], Input.WorldPos, normal, viewDir, baseColor, true, specPower);
             float ShadowFactor = CalculateSpotLightShadowFactor(Input.WorldPos, g_SpotLightList[j].ShadowData, g_ShadowAtlas2D, g_ShadowSample);
+            //float ShadowFactor = CalculateSpotLightShadowFactorVSM(Input.WorldPos, g_SpotLightList[lightIdx].ShadowData, g_SpotLightList[j].AttenuationRadius, g_VSMShadowAtlas, g_VSMSampler);
             litColor += (SpotLightColor * ShadowFactor);
         }
     }
@@ -495,8 +499,9 @@ PS_OUTPUT mainPS(PS_INPUT Input)
             else if (lightType == 1)  // Spot Light
             {
                 float3 SpotLightColor = CalculateSpotLight(g_SpotLightList[lightIdx], Input.WorldPos, normal, viewDir, baseColor, true, specPower);
-                float ShadowFactor = CalculateSpotLightShadowFactor(Input.WorldPos, g_SpotLightList[lightIdx].ShadowData, g_ShadowAtlas2D, g_ShadowSample);
-                litColor += (SpotLightColor * ShadowFactor);
+                //float ShadowFactor = CalculateSpotLightShadowFactor(Input.WorldPos, g_SpotLightList[lightIdx].ShadowData, g_ShadowAtlas2D, g_ShadowSample);
+                float ShadowFactor = CalculateSpotLightShadowFactorVSM(Input.WorldPos, g_SpotLightList[lightIdx].ShadowData, g_SpotLightList[lightIdx].AttenuationRadius, g_VSMShadowAtlas, g_VSMSampler);
+                litColor += (SpotLightColor * ShadowFactor);                
             }
         }
     }
@@ -513,6 +518,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
         {
             float3 SpotLightColor = CalculateSpotLight(g_SpotLightList[j], Input.WorldPos, normal, viewDir, baseColor, true, specPower);
             float ShadowFactor = CalculateSpotLightShadowFactor(Input.WorldPos, g_SpotLightList[j].ShadowData, g_ShadowAtlas2D, g_ShadowSample);
+            //float ShadowFactor = CalculateSpotLightShadowFactorVSM(Input.WorldPos, g_SpotLightList[lightIdx].ShadowData, g_SpotLightList[j].AttenuationRadius, g_VSMShadowAtlas, g_VSMSampler);
             litColor += (SpotLightColor * ShadowFactor);
         }
     }

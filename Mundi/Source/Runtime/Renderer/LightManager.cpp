@@ -126,6 +126,64 @@ void FLightManager::Initialize(D3D11RHI* RHIDevice)
 			}
 		}
 	}
+
+	if (!VSMShadowAtlasSRV2D)
+	{
+		D3D11_TEXTURE2D_DESC VSMDesc = {};
+		VSMDesc.Width = ShadowAtlasSize2D;
+		VSMDesc.Height = ShadowAtlasSize2D;
+		VSMDesc.MipLevels = 1;
+		VSMDesc.ArraySize = 1;
+		VSMDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+		VSMDesc.SampleDesc.Count = 1;
+		VSMDesc.SampleDesc.Quality = 0;
+		VSMDesc.Usage = D3D11_USAGE_DEFAULT;
+		VSMDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+		HRESULT hr = RHIDevice->GetDevice()->CreateTexture2D(&VSMDesc, nullptr, &VSMShadowAtlasTexture2D);
+		if (FAILED(hr))
+		{
+			UE_LOG("FLightManager::Initialize: CreateTexture2D for VSMShadowAtlas2D failed!");
+			// 실패 시 리소스들을 nullptr로 안전하게 처리
+			VSMShadowAtlasTexture2D = nullptr;
+			VSMShadowAtlasRTV2D = nullptr;
+			VSMShadowAtlasSRV2D = nullptr;
+			return; // 혹은 적절한 오류 처리
+		}
+
+		D3D11_RENDER_TARGET_VIEW_DESC RTVDesc = {};
+		RTVDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+		RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+		RTVDesc.Texture2D.MipSlice = 0;
+
+		hr = RHIDevice->GetDevice()->CreateRenderTargetView(VSMShadowAtlasTexture2D, &RTVDesc, &VSMShadowAtlasRTV2D);
+		if (FAILED(hr))
+		{
+			UE_LOG("FLightManager::Initialize: CreateTexture2D for VSMShadowAtlasRTV2D failed!");
+			// 실패 시 리소스들을 nullptr로 안전하게 처리
+			VSMShadowAtlasTexture2D = nullptr;
+			VSMShadowAtlasRTV2D = nullptr;
+			VSMShadowAtlasSRV2D = nullptr;
+			return; // 혹은 적절한 오류 처리
+		}
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+		SRVDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+		SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		SRVDesc.Texture2D.MostDetailedMip = 0;
+		SRVDesc.Texture2D.MipLevels = 1;
+
+		hr = RHIDevice->GetDevice()->CreateShaderResourceView(VSMShadowAtlasTexture2D, &SRVDesc, &VSMShadowAtlasSRV2D);
+		if (FAILED(hr))
+		{
+			UE_LOG("FLightManager::Initialize: CreateTexture2D for VSMShadowAtlasSRV2D failed!");
+			// 실패 시 리소스들을 nullptr로 안전하게 처리
+			VSMShadowAtlasTexture2D = nullptr;
+			VSMShadowAtlasRTV2D = nullptr;
+			VSMShadowAtlasSRV2D = nullptr;
+			return; // 혹은 적절한 오류 처리
+		}
+	}
 }
 
 void FLightManager::Release()
@@ -272,6 +330,11 @@ void FLightManager::UpdateLightBuffer(D3D11RHI* RHIDevice)
 	if (ShadowAtlasSRV2D)
 	{
 		RHIDevice->GetDeviceContext()->PSSetShaderResources(9, 1, &ShadowAtlasSRV2D);
+	}
+
+	if (VSMShadowAtlasSRV2D)
+	{
+		RHIDevice->GetDeviceContext()->PSSetShaderResources(10, 1, &VSMShadowAtlasSRV2D);
 	}
 
 	// 7.2. 라이트 버퍼 (t3, t4)

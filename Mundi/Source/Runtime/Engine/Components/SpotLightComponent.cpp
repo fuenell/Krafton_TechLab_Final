@@ -16,6 +16,7 @@ BEGIN_PROPERTIES(USpotLightComponent)
 	ADD_PROPERTY_RANGE(int, SampleCount, "Light", 0, 16, "PCF 샘플 횟수")
 	ADD_PROPERTY_SRV(ID3D11ShaderResourceView*, ShadowMapSRV, "ShadowMap", true, "쉐도우 맵 Far Plane")
 	ADD_PROPERTY(bool, bOverrideCameraLightPerspective, "ShadowMap", true, "Override Camera Light Perspective")
+
 END_PROPERTIES()
 
 USpotLightComponent::USpotLightComponent()
@@ -68,10 +69,11 @@ void USpotLightComponent::GetShadowRenderRequests(FSceneView* View, TArray<FShad
 	ShadowRenderRequest.LightOwner = this;
 	ShadowRenderRequest.ViewMatrix = GetViewMatrix();
 	ShadowRenderRequest.ProjectionMatrix = GetProjectionMatrix();
+	ShadowRenderRequest.WorldLocation = GetWorldLocation();
+	ShadowRenderRequest.Radius = GetAttenuationRadius();
 	ShadowRenderRequest.Size = ShadowResolutionScale;
 	// ShadowRenderRequest.ViewMatrix = GetViewMatrix() * GetProjectionMatrix();
 	// ShadowRenderRequest.ProjectionMatrix = WarpMatrix;
-	ShadowRenderRequest.Size = 256;
 	ShadowRenderRequest.SubViewIndex = 0;
 	ShadowRenderRequest.AtlasScaleOffset = 0;
 	ShadowRenderRequest.SampleCount = SampleCount;
@@ -128,7 +130,7 @@ FSpotLightInfo USpotLightComponent::GetLightInfo() const
 	// Info.ShadowData.ShadowViewProjMatrix = GetViewMatrix() * GetProjectionMatrix() * GetWarpMatrix();
 	Info.ShadowData.ShadowViewProjMatrix = GetViewMatrix() * GetProjectionMatrix();
 	Info.ShadowData.SampleCount = SampleCount;
-	
+	Info.ShadowData.WorldPosition = GetWorldLocation();
 	return Info;
 }
 
@@ -216,7 +218,7 @@ FMatrix USpotLightComponent::GetViewMatrix() const
 FMatrix USpotLightComponent::GetProjectionMatrix() const
 {
 	float Fovy = DegreesToRadians(OuterConeAngle * 2.0f);
-	return FMatrix::PerspectiveFovLH(Fovy, 1.0f, 1.0f, GetAttenuationRadius());
+	return FMatrix::PerspectiveFovLH(Fovy, 1.0f, 0.5f, GetAttenuationRadius());
 }
 
 void USpotLightComponent::RenderDebugFrustum(TArray<FVector>& StartPoints, TArray<FVector>& EndPoints, TArray<FVector4>& Colors) const

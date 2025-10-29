@@ -10,8 +10,8 @@ cbuffer ViewProjBuffer : register(b1)
 {
     row_major float4x4 ViewMatrix;
     row_major float4x4 ProjectionMatrix;
-    row_major float4x4 InverseViewMatrix;
-    row_major float4x4 InverseProjectionMatrix;
+    row_major float4x4 InverseViewMatrix;   // 0행 광원의 월드 좌표 + 스포트라이트 반경
+    row_major float4x4 InverseProjectionMatrix; 
 };
 
 // --- 셰이더 입출력 구조체 ---
@@ -28,6 +28,7 @@ struct VS_INPUT
 struct VS_OUT
 {
     float4 Position : SV_Position;
+    float3 WorldPosition : TEXCOORD0;
 };
 
 VS_OUT mainVS(VS_INPUT Input)
@@ -38,6 +39,7 @@ VS_OUT mainVS(VS_INPUT Input)
     float4 WorldPos = mul(float4(Input.Position, 1.0f), WorldMatrix);
     float4 ViewPos = mul(WorldPos, ViewMatrix);
     Output.Position = mul(ViewPos, ProjectionMatrix);
+    Output.WorldPosition = WorldPos.xyz;
     
     return Output;
 }

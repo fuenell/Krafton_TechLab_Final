@@ -282,14 +282,21 @@ void FSceneRenderer::RenderShadowMaps()
 	// --- 1단계: 2D 아틀라스 렌더링 (Spot + Directional) ---
 	{
 		ID3D11DepthStencilView* AtlasDSV2D = LightManager->GetShadowAtlasDSV2D();
+		ID3D11RenderTargetView* VSMAtlasRTV2D = LightManager->GetVSMShadowAtlasRTV2D();
 		float AtlasTotalSize2D = (float)LightManager->GetShadowAtlasSize2D();
+		ID3D11DepthStencilView* DefaultDSV = RHIDevice->GetSceneDSV();
 		if (AtlasDSV2D && AtlasTotalSize2D > 0)
 		{
+			ID3D11ShaderResourceView* NullSRV[2] = { nullptr, nullptr };
+			RHIDevice->GetDeviceContext()->PSSetShaderResources(9, 2, NullSRV);
+			RHIDevice->OMSetCustomRenderTargets(1, &VSMAtlasRTV2D, AtlasDSV2D);
+			float ClearColor[] = {1.0f, 1.0f, 0.0f, 0.0f};
+			RHIDevice->GetDeviceContext()->ClearRenderTargetView(VSMAtlasRTV2D, ClearColor);
 			// 1.1. RHI 상태 설정 (2D 아틀라스)
-			RHIDevice->OMSetCustomRenderTargets(0, nullptr, AtlasDSV2D);
+			//RHIDevice->OMSetCustomRenderTargets(0, nullptr, AtlasDSV2D);
 			RHIDevice->GetDeviceContext()->ClearDepthStencilView(AtlasDSV2D, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1, 0);
 
-			RHIDevice->ClearDepthBuffer(1.0f, 0);
+			RHIDevice->ClearDepthBuffer(1.0f, 0); // 이 부분 중복되는듯 ? 테스트 해보고 지울 예정
 			RHIDevice->RSSetState(ERasterizerMode::Shadows);
 			RHIDevice->OMSetDepthStencilState(EComparisonFunc::LessEqual);
 
@@ -300,7 +307,7 @@ void FSceneRenderer::RenderShadowMaps()
 				RHIDevice->GetDeviceContext()->RSSetViewports(1, &ShadowVP);
 
 				// 뎁스 패스 렌더링
-				RenderShadowDepthPass(Request.ViewMatrix, Request.ProjectionMatrix, ShadowMeshBatches);
+				RenderShadowDepthPass(Request, ShadowMeshBatches);
 
 				FShadowMapData Data;
 				if (Request.Size > 0) // 렌더링 성공
@@ -311,7 +318,10 @@ void FSceneRenderer::RenderShadowMaps()
 				}
 				// 렌더링 실패 시(Size==0) 빈 데이터(기본값) 전달
 				LightManager->SetShadowMapData(Request.LightOwner, Request.SubViewIndex, Data);
+				// vsm srv unbind
 			}
+			ID3D11RenderTargetView* NullRTV[1] = { nullptr };
+			RHIDevice->OMSetCustomRenderTargets(1, NullRTV, DefaultDSV);
 		}
 	}
 
@@ -350,7 +360,7 @@ void FSceneRenderer::RenderShadowMaps()
 				{
 					RHIDevice->OMSetCustomRenderTargets(0, nullptr, FaceDSV);
 					RHIDevice->ClearDepthBuffer(1.0f, 0); // 각 면을 클리어
-					RenderShadowDepthPass(Request.ViewMatrix, Request.ProjectionMatrix, ShadowMeshBatches);
+					RenderShadowDepthPass(Request, ShadowMeshBatches);
 				}
 			}
 		}
@@ -368,7 +378,7 @@ void FSceneRenderer::RenderShadowMaps()
 	RHIDevice->SetAndUpdateConstantBuffer(ViewProjBufferType(OriginViewProjBuffer));
 }
 
-void FSceneRenderer::RenderShadowDepthPass(FMatrix& InLightView, FMatrix& InLightProj, const TArray<FMeshBatchElement>& InShadowBatches)
+void FSceneRenderer::RenderShadowDepthPass(FShadowRenderRequest& ShadowRequest, const TArray<FMeshBatchElement>& InShadowBatches)
 {
 	// 1. 뎁스 전용 셰이더 로드
 	UShader* DepthVS = UResourceManager::GetInstance().Load<UShader>("Shaders/Shadows/DepthOnly_VS.hlsl");
@@ -377,13 +387,24 @@ void FSceneRenderer::RenderShadowDepthPass(FMatrix& InLightView, FMatrix& InLigh
 	FShaderVariant* ShaderVariant = DepthVS->GetOrCompileShaderVariant(RHIDevice->GetDevice());
 	if (!ShaderVariant) return;
 
+	// vsm용 픽셀 셰이더
+	UShader* DepthPs = UResourceManager::GetInstance().Load<UShader>("Shaders/Shadows/DepthOnly_PS.hlsl");
+	if (!DepthPs || !DepthPs->GetPixelShader()) return;
+
+	FShaderVariant* ShaderVarianVSM = DepthPs->GetOrCompileShaderVariant(RHIDevice->GetDevice());
+	if (!ShaderVarianVSM) return;
+
 	// 2. 파이프라인 설정
 	RHIDevice->GetDeviceContext()->IASetInputLayout(ShaderVariant->InputLayout);
 	RHIDevice->GetDeviceContext()->VSSetShader(ShaderVariant->VertexShader, nullptr, 0);
-	RHIDevice->GetDeviceContext()->PSSetShader(nullptr, nullptr, 0); // 픽셀 셰이더 없음
+	//RHIDevice->GetDeviceContext()->PSSetShader(nullptr, nullptr, 0); // 픽셀 셰이더 없음
+	// vsm 테스트용
+	RHIDevice->GetDeviceContext()->PSSetShader(ShaderVarianVSM->PixelShader, nullptr, 0);
 
 	// 3. 라이트의 View-Projection 행렬을 메인 ViewProj 버퍼에 설정
-	ViewProjBufferType ViewProjBuffer = ViewProjBufferType(InLightView, InLightProj, FMatrix::Identity(), FMatrix::Identity());	// NOTE: 그림자 맵 셰이더에는 역행렬이 필요 없으므로 Identity를 전달함
+	FMatrix WorldLocation = {};
+	WorldLocation.VRows[0] = FVector4(ShadowRequest.WorldLocation.X, ShadowRequest.WorldLocation.Y, ShadowRequest.WorldLocation.Z, ShadowRequest.Radius);
+	ViewProjBufferType ViewProjBuffer = ViewProjBufferType(ShadowRequest.ViewMatrix, ShadowRequest.ProjectionMatrix, WorldLocation, FMatrix::Identity());	// NOTE: 그림자 맵 셰이더에는 역행렬이 필요 없으므로 Identity를 전달함
 	RHIDevice->SetAndUpdateConstantBuffer(ViewProjBufferType(ViewProjBuffer));
 
 	// 4. (DrawMeshBatches와 유사하게) 배치 순회하며 그리기
@@ -1169,6 +1190,7 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 	ID3D11SamplerState* DefaultSampler = RHIDevice->GetSamplerState(RHI_Sampler_Index::Default);
 	// Shadow PCF용 샘플러 추가
 	ID3D11SamplerState* ShadowSampler = RHIDevice->GetSamplerState(RHI_Sampler_Index::Shadow);
+	ID3D11SamplerState* VSMSampler = RHIDevice->GetSamplerState(RHI_Sampler_Index::VSM);
 
 	// 정렬된 리스트 순회
 	for (const FMeshBatchElement& Batch : InMeshBatches)
@@ -1250,8 +1272,8 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 			RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 2, Srvs);
 
 			// 2. 샘플러 바인딩
-			ID3D11SamplerState* Samplers[3] = { DefaultSampler, DefaultSampler, ShadowSampler };
-			RHIDevice->GetDeviceContext()->PSSetSamplers(0, 3, Samplers);			
+			ID3D11SamplerState* Samplers[4] = { DefaultSampler, DefaultSampler, ShadowSampler, VSMSampler };
+			RHIDevice->GetDeviceContext()->PSSetSamplers(0, 4, Samplers);			
 
 			// 3. 재질 CBuffer 바인딩
 			RHIDevice->SetAndUpdateConstantBuffer(PixelConst);

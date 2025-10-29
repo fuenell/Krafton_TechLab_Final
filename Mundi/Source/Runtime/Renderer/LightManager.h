@@ -20,12 +20,13 @@ enum class ELightType
 // -----------------------------------------------------------------------------
 
 // FSceneRenderer(Pass 1)가 계산하여 FLightManager(Pass 2)로 전달할 섀도우 데이터. 2D / CSM 아틀라스에서 사용됩니다.
-struct FShadowMapData
+struct FShadowMapData // 112 bytes
 {
-    FMatrix ShadowViewProjMatrix;
-    FVector4 AtlasScaleOffset;
-    int32 SampleCount;
-    float Padding[3];
+    FMatrix ShadowViewProjMatrix; // 64
+    FVector4 AtlasScaleOffset; // 16
+    FVector WorldPosition; // 12
+    int32 SampleCount; // 4
+    float Padding[4]; //16
 };
 
 struct FShadowRenderRequest
@@ -33,6 +34,8 @@ struct FShadowRenderRequest
     ULightComponent* LightOwner;
     FMatrix ViewMatrix;
     FMatrix ProjectionMatrix;
+    FVector WorldLocation;
+    float Radius;
     uint32 Size;
     int32 SubViewIndex; // Point(0~5), CSM(0~N), Spot(0)
     int32 AssignedSliceIndex = -1; // Cube Atlas Slice Index
@@ -132,6 +135,7 @@ public:
     uint32 GetShadowCubeArrayCount() const { return CubeArrayCount; }
     ID3D11DepthStencilView* GetShadowCubeFaceDSV(UINT SliceIndex, UINT FaceIndex) const; // (구현 필요)
     bool GetCachedShadowData(ULightComponent* Light, int32 SubViewIndex, FShadowMapData& OutData) const;
+    ID3D11RenderTargetView* GetVSMShadowAtlasRTV2D() const { return VSMShadowAtlasRTV2D; }
 
     void AllocateAtlasRegions2D(TArray<FShadowRenderRequest>& InOutRequests2D);
     void AllocateAtlasCubeSlices(TArray<FShadowRenderRequest>& InOutRequestsCube);
@@ -173,6 +177,11 @@ private:
     TArray<ID3D11DepthStencilView*> ShadowCubeFaceDSVs;
     uint32 AtlasSizeCube = 1024;
     uint32 CubeArrayCount = 8;
+
+    // Atlas 3: VSM 용 2D 아틀라스 (일단 Spot에만 적용)
+    ID3D11Texture2D* VSMShadowAtlasTexture2D = nullptr;
+    ID3D11RenderTargetView* VSMShadowAtlasRTV2D = nullptr;
+    ID3D11ShaderResourceView* VSMShadowAtlasSRV2D = nullptr; // t10
 
     // --- 섀도우 데이터 캐시 (CPU) ---
     // Key: 라이트, Value: 2D 섀도우 데이터 배열 (CSM의 경우 여러 개)

@@ -256,6 +256,7 @@ private:
 	ID3D11SamplerState* LinearClampSamplerState = nullptr;
 	ID3D11SamplerState* PointClampSamplerState = nullptr;
 	ID3D11SamplerState* ShadowSamplerState = nullptr;
+	ID3D11SamplerState* VSMSamplerState = nullptr;
 
 	UShader* PreShader = nullptr; // Shaders, Inputlayout
 

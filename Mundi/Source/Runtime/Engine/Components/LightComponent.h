@@ -5,6 +5,12 @@ class FSceneView;
 
 struct FShadowRenderRequest;
 
+enum class EShadowMapType
+{
+	Standard,
+	Variance
+};
+
 // 실제 조명 효과를 가진 라이트들의 공통 베이스
 class ULightComponent : public ULightComponentBase
 {
@@ -35,6 +41,7 @@ public:
 	float GetShadowBias() { return ShadowBias; }
 	float GetShadowSlopeBias() { return ShadowSlopeBias; }
 	float GetShadowSharpen() { return ShadowSharpen; }
+	EShadowMapType GetShadowMapType() const { return ShadowMapType; }
 
 protected:
 	float Temperature = 6500.0f; // 색온도 (K)
@@ -43,4 +50,6 @@ protected:
 	float ShadowBias = 0.0f;	// NOTE: 추후 필요한 기본값으로 설정 필요
 	float ShadowSlopeBias = 0.0f;	// NOTE: 추후 필요한 기본값으로 설정 필요
 	float ShadowSharpen = 0.0f;	// NOTE: 추후 필요한 기본값으로 설정 필요
+
+	EShadowMapType ShadowMapType = EShadowMapType::Standard;
 };

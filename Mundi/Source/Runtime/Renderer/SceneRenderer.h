@@ -77,7 +77,7 @@ private:
 	void RenderSceneDepthPath();
 
 	void RenderShadowMaps();
-	void RenderShadowDepthPass(FMatrix& InLightView, FMatrix& InLightProj, const TArray<FMeshBatchElement>& InShadowBatches);
+	void RenderShadowDepthPass(FShadowRenderRequest& ShadowRequest, const TArray<FMeshBatchElement>& InShadowBatches);
 
 	/** @brief 렌더링에 필요한 포인터들이 유효한지 확인합니다. */
 	bool IsValid() const;
