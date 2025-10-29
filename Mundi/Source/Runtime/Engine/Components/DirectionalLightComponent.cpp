@@ -47,6 +47,7 @@ void UDirectionalLightComponent::GetShadowRenderRequests(FSceneView* View, TArra
 		CameraFrustum *= ViewInv;
 		CameraFrustum *= ShadowMapView;
 		FAABB CameraFrustumAABB = FAABB(CameraFrustum);
+		CameraFrustumAABB.Min.Z -= View->Camera->GetFarClip();
 		FMatrix ShadowMapOrtho = FMatrix::OrthoMatrix(CameraFrustumAABB);
 		FShadowRenderRequest ShadowRenderRequest;
 		ShadowRenderRequest.LightOwner = this;
@@ -70,6 +71,7 @@ void UDirectionalLightComponent::GetShadowRenderRequests(FSceneView* View, TArra
 			CameraFrustum *= ViewInv;
 			CameraFrustum *= ShadowMapView;
 			FAABB CameraFrustumAABB = FAABB(CameraFrustum);
+			CameraFrustumAABB.Min.Z -= View->Camera->GetFarClip();
 			FMatrix ShadowMapOrtho = FMatrix::OrthoMatrix(CameraFrustumAABB);
 			FShadowRenderRequest ShadowRenderRequest;
 			ShadowRenderRequest.LightOwner = this;
