@@ -5,12 +5,17 @@ class UCapsuleComponent : public UShapeComponent
 {
 public:
 	DECLARE_CLASS(UCapsuleComponent, UShapeComponent)
+	GENERATED_REFLECTION_BODY();
 
 	UCapsuleComponent();
+	void OnRegister(UWorld* World) override;
 
 protected:
-	float CapsuleHalfHeight = WorldAABB.GetHalfExtent().Z;
-	float CapsuleRadius = WorldAABB.GetHalfExtent().X < WorldAABB.GetHalfExtent().Y ? WorldAABB.GetHalfExtent().Y : WorldAABB.GetHalfExtent().X;
+	float CapsuleHalfHeight;
+	float CapsuleRadius;
 
 	void GetShape(FShape& Out) const override; 
+
+public:
+	void RenderDebugVolume(class URenderer* Renderer) const override;
 };

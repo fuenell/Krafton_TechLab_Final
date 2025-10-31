@@ -4,7 +4,7 @@
 IMPLEMENT_CLASS(UBoxComponent)
 
 BEGIN_PROPERTIES(UBoxComponent)
-MARK_AS_COMPONENT("박스 충돌 컴포넌트", "박스 크기의 충돌체를 생성하는 컴포넌트입니다.")
+MARK_AS_COMPONENT("박스 충돌 컴포넌트", "박스 모양의 충돌체를 생성하는 컴포넌트입니다.")
 	ADD_PROPERTY(FVector, BoxExtent, "BoxExtent", true, "박스 충돌체의 크기입니다.")
 END_PROPERTIES()
 
