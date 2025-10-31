@@ -1,32 +1,64 @@
 ﻿#pragma once
 
+#include <vector>
+
+using FDelegateHandle = size_t;
+
 template<typename... Args>
 class TDelegate
 {
 public:
 	using HandlerType = std::function<void(Args...)>;
 
-	void Add(const HandlerType& Handler)
+	TDelegate() : NextHandle(1) {}
+
+	FDelegateHandle Add(const HandlerType& Handler)
 	{
-		Handlers.push_back(Handler);
+		FDelegateHandle Handle = NextHandle++;
+		Handlers.push_back({ Handle, Handler });
+		return Handle;
 	}
 
 	template<typename T>
-	void AddDynamic(T* Instance, void(T::*Func)(Args...))
+	FDelegateHandle AddDynamic(T* Instance, void(T::*Func)(Args...))
 	{
-		Handlers.push_back([=](Args... args) {
-			(Instance->*Func)(args...);
+		FDelegateHandle Handle = NextHandle++;
+		Handlers.push_back({
+			Handle,
+			[=](Args... args) {
+			(Instance->*Func)(args...); }
 		});
+		return Handle;
+	}
+
+	void Remove(FDelegateHandle Handle)
+	{
+		auto it = std::remove_if(Handlers.begin(), Handlers.end(),
+		[&](const Entry& e)
+		{
+			return e.Handle == Handle;
+		});
+		Handlers.erase(it, Handlers.end());
 	}
 
 	void Broadcast(Args... args) {
-		for (auto& Handler : Handlers) {
-			Handler(args...);
+		for (auto& Entry : Handlers) {
+			if (Entry.Handler)
+			{
+				Entry.Handler(args...);
+			}
 		}
 	}
-	
+
 private:
-	std::vector<HandlerType> Handlers;
+	struct Entry
+	{
+		FDelegateHandle Handle;
+		HandlerType Handler;
+	};
+
+	std::vector<Entry> Handlers;
+	FDelegateHandle NextHandle;
 };
 
 #define DECLARE_DELEGATE(Name, ...)				TDelegate<__VA_ARGS__> Name
