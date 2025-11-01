@@ -70,7 +70,7 @@ void UShapeComponent::UpdateOverlaps()
             if (Other->GetOwner() == this->GetOwner()) continue;
             if (!Other->bGenerateOverlapEvents) continue;
  
-            // 내로우페이즈: Collision 모듈
+            // Collision 모듈
             if (!Collision::CheckOverlap(this, Other)) continue;
 
             OverlapNow.Add(Other);
@@ -97,6 +97,7 @@ void UShapeComponent::UpdateOverlaps()
         }
     }
 
+    //End
     for (UShapeComponent* Comp : OverlapPrev)
     {
         if (!OverlapNow.Contains(Comp))
@@ -106,8 +107,11 @@ void UShapeComponent::UpdateOverlaps()
     }
 
     OverlapPrev.clear();
-    for( UShapeComponent* Comp : OverlapPrev)
-        OnComponentEndOverlap.Broadcast(this, Comp);
+    for (UShapeComponent* Comp : OverlapNow)
+    {
+        OverlapPrev.Add(Comp);
+
+    }
 
 }
 
