@@ -34,7 +34,7 @@ public:
     FLuaCoroutineScheduler();
     ~FLuaCoroutineScheduler() = default;
 
-    FLuaCoroHandle Register(sol::thread&& InThread, sol::coroutine&& Co, void* Owner);
+    FLuaCoroHandle Register(sol::thread&& Thread, sol::coroutine&& Co, void* Owner);
         
     void Tick(double DeltaTime);
     void AddCoroutine(sol::coroutine&& Co);

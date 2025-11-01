@@ -21,7 +21,7 @@ public:
 public:
 	void BeginPlay() override;
 	void TickComponent(float DeltaTime) override;       // 매 프레임
-	void EndPlay(EEndPlayReason Reason) override;       // 파괴/월드 제거 시
+	void EndPlay() override;							// 파괴/월드 제거 시
 	
 	void OnOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp);
 

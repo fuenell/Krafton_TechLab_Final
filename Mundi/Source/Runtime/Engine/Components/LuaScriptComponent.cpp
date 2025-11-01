@@ -34,10 +34,10 @@ void ULuaScriptComponent::BeginPlay()
 
 	Env["StartCoroutine"] = [LuaVM, this](sol::function f) {
 		sol::state_view L = LuaVM->GetState();
-
+		
 		sol::thread Thread = sol::thread::create(L); // Coroutine 관리할 Thread 생성
 		sol::state_view ThreadState = Thread.state();
-
+		
 		sol::coroutine Coroutine(ThreadState.lua_state(), f);                // 스레드에 함수 올리기
 		return LuaVM->GetScheduler().Register(std::move(Thread), std::move(Coroutine), this);
 	};
@@ -90,7 +90,7 @@ void ULuaScriptComponent::TickComponent(float DeltaTime)
 	}
 }
 
-void ULuaScriptComponent::EndPlay(EEndPlayReason Reason)
+void ULuaScriptComponent::EndPlay()
 {
 	if (FuncEndPlay.valid()) {
 		auto Result = FuncEndPlay();

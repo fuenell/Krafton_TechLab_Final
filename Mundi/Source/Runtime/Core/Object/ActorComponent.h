@@ -4,15 +4,6 @@
 class AActor;
 class UWorld;
 
-enum class EEndPlayReason : uint8
-{
-    Destroyed,
-    LevelTransition,
-    EndPlayInEditor,
-    RemovedFromWorld,
-    Quit
-};
-
 class UActorComponent : public UObject
 {
 public:
@@ -28,7 +19,7 @@ public:
     virtual void InitializeComponent();                // BeginPlay 전에 1회
     virtual void BeginPlay();                          // 월드 시작 시 1회
     virtual void TickComponent(float DeltaTime);       // 매 프레임
-    virtual void EndPlay(EEndPlayReason Reason);       // 파괴/월드 제거 시
+    virtual void EndPlay();                            // 파괴/월드 제거 시
 
     // ─────────────── Registration (월드/씬 등록 수명)
     // 액터/월드가 소유할 때 호출되는 등록/해제 포인트

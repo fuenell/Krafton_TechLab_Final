@@ -194,7 +194,7 @@ bool UWorld::DestroyActor(AActor* Actor)
 	if (SelectionMgr) SelectionMgr->DeselectActor(Actor);
 
 	// 게임 수명 종료
-	Actor->EndPlay(EEndPlayReason::Destroyed);
+	Actor->EndPlay();
 
 	// 컴포넌트 정리 (등록 해제 → 파괴)
 	TArray<USceneComponent*> Components = Actor->GetSceneComponents();

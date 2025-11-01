@@ -18,10 +18,10 @@ FLuaCoroutineScheduler::FLuaCoroutineScheduler()
 	Tasks.Reserve(100);
 }
 
-FLuaCoroHandle FLuaCoroutineScheduler::Register(sol::thread&& InThread, sol::coroutine&& Co, void* Owner)
+FLuaCoroHandle FLuaCoroutineScheduler::Register(sol::thread&& Thread, sol::coroutine&& Co, void* Owner)
 {
 	FCoroTask Task;
-	Task.Thread = std::move(InThread);
+	Task.Thread = std::move(Thread); /* Thread Anchoring */
 	Task.Co     = std::move(Co);
 	Task.Owner  = Owner;
 	Task.Id     = ++NextId;

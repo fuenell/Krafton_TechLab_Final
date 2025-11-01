@@ -46,7 +46,7 @@ public:
     // 수명
     virtual void BeginPlay();
     virtual void Tick(float DeltaSeconds);
-    virtual void EndPlay(EEndPlayReason Reason);
+    virtual void EndPlay();
     virtual void Destroy();
 
     // 이름

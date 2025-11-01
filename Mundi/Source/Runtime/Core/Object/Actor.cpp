@@ -58,10 +58,10 @@ void AActor::Tick(float DeltaSeconds)
 	SetActorLocation(LuaGameObject->Location);
 	SetActorScale(LuaGameObject->Scale);
 }
-void AActor::EndPlay(EEndPlayReason Reason)
+void AActor::EndPlay()
 {
 	for (UActorComponent* Comp : OwnedComponents)
-		if (Comp) Comp->EndPlay(Reason);
+		if (Comp) Comp->EndPlay();
 }
 void AActor::Destroy()
 {
@@ -79,7 +79,7 @@ void AActor::Destroy()
 	}
 
 	// 월드가 없을 때만 자체 정리
-	EndPlay(EEndPlayReason::Destroyed);
+	EndPlay();
 	UnregisterAllComponents(true);
 	DestroyAllComponents();
 	ClearSceneComponentCaches();
@@ -199,7 +199,7 @@ void AActor::UnregisterAllComponents(bool bCallEndPlayOnBegun)
 		// BeginPlay가 이미 호출된 컴포넌트라면 EndPlay(RemovedFromWorld) 보장
 		if (bCallEndPlayOnBegun && C->HasBegunPlay())
 		{
-			C->EndPlay(EEndPlayReason::RemovedFromWorld);
+			C->EndPlay();
 		}
 		C->UnregisterComponent(); // 내부 OnUnregister/리소스 해제
 	}

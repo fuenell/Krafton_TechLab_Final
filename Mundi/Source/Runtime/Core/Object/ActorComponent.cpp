@@ -59,7 +59,7 @@ void UActorComponent::UnregisterComponent()
     // 게임 수명 종료가 필요하면 EndPlay 보장
     if (bHasBegunPlay)
     {
-        EndPlay(EEndPlayReason::RemovedFromWorld);
+        EndPlay();
         bHasBegunPlay = false;
     }
 
@@ -109,7 +109,7 @@ void UActorComponent::TickComponent(float DeltaTime)
     // 매 프레임 처리
 }
 
-void UActorComponent::EndPlay(EEndPlayReason Reason)
+void UActorComponent::EndPlay()
 {
     // 파괴 시
     // 필요하다면 Override
