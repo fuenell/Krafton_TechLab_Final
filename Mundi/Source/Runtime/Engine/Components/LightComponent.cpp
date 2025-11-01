@@ -114,9 +114,9 @@ void ULightComponent::OnRegister(UWorld* InWorld)
 	}
 }
 
-void ULightComponent::OnSerialized()
+void ULightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
-	Super::OnSerialized();
+	Super::Serialize(bInIsLoading, InOutHandle);
 
 }
 

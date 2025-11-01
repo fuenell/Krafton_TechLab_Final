@@ -26,9 +26,9 @@ void ULightComponentBase::UpdateLightData()
 	// 자식 클래스에서 오버라이드
 }
 
-void ULightComponentBase::OnSerialized()
+void ULightComponentBase::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
-	Super::OnSerialized();
+	Super::Serialize(bInIsLoading, InOutHandle);
 
 }
 

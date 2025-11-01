@@ -55,46 +55,47 @@ void AFakeSpotLightActor::DuplicateSubObjects()
 	}
 }
 
-void AFakeSpotLightActor::OnSerialized()
+void AFakeSpotLightActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
-	Super::OnSerialized();
+	Super::Serialize(bInIsLoading, InOutHandle);
 
-	
-	// 로딩 시 컴포넌트 중복 방지 로직:
-	// 
-	// 1. 생성자에서 생성된 native 컴포넌트(DecalComponent, BillboardComponent)가 있음
-	// 2. 씬 파일에서 직렬화된 컴포넌트가 로드되면 SceneComponents에 추가됨
-	// 3. 이 로직은 native 컴포넌트를 제거하고 직렬화된 컴포넌트로 교체함
-	// 4. 이를 통해 PIE나 씬 로드 시 중복 컴포넌트를 방지함
-	
-	UPerspectiveDecalComponent* DecalComponentPre = nullptr;
-	UBillboardComponent* BillboardCompPre = nullptr;
-
-	// 직렬화된 컴포넌트를 찾아서 포인터 교체
-	for (auto& Component : SceneComponents)
+	if (bInIsLoading)
 	{
-		if (UPerspectiveDecalComponent* PerpectiveDecalComp = Cast<UPerspectiveDecalComponent>(Component))
+		// 로딩 시 컴포넌트 중복 방지 로직:
+		// 
+		// 1. 생성자에서 생성된 native 컴포넌트(DecalComponent, BillboardComponent)가 있음
+		// 2. 씬 파일에서 직렬화된 컴포넌트가 로드되면 SceneComponents에 추가됨
+		// 3. 이 로직은 native 컴포넌트를 제거하고 직렬화된 컴포넌트로 교체함
+		// 4. 이를 통해 PIE나 씬 로드 시 중복 컴포넌트를 방지함
+	
+		UPerspectiveDecalComponent* DecalComponentPre = nullptr;
+		UBillboardComponent* BillboardCompPre = nullptr;
+
+		// 직렬화된 컴포넌트를 찾아서 포인터 교체
+		for (auto& Component : SceneComponents)
 		{
-			DecalComponentPre = DecalComponent;  // 기존 native 컴포넌트 백업
-			DecalComponent->DetachFromParent();  // 부모에서 분리
-			DecalComponent = PerpectiveDecalComp;  // 새로 로드된 컴포넌트로 교체
+			if (UPerspectiveDecalComponent* PerpectiveDecalComp = Cast<UPerspectiveDecalComponent>(Component))
+			{
+				DecalComponentPre = DecalComponent;  // 기존 native 컴포넌트 백업
+				DecalComponent->DetachFromParent();  // 부모에서 분리
+				DecalComponent = PerpectiveDecalComp;  // 새로 로드된 컴포넌트로 교체
+			}
+			else if (UBillboardComponent* BillboardCompTemp = Cast<UBillboardComponent>(Component))
+			{
+				BillboardCompPre = BillboardComponent;  // 기존 native 컴포넌트 백업
+				BillboardComponent->DetachFromParent();  // 부모에서 분리
+				BillboardComponent = BillboardCompTemp;  // 새로 로드된 컴포넌트로 교체
+			}
 		}
-		else if (UBillboardComponent* BillboardCompTemp = Cast<UBillboardComponent>(Component))
-		{
-			BillboardCompPre = BillboardComponent;  // 기존 native 컴포넌트 백업
-			BillboardComponent->DetachFromParent();  // 부모에서 분리
-			BillboardComponent = BillboardCompTemp;  // 새로 로드된 컴포넌트로 교체
-		}
-	}
 
-	// 기존 native 컴포넌트를 OwnedComponents에서 제거 (메모리는 나중에 정리됨)
-	if (DecalComponentPre)
-	{
-		DecalComponentPre->GetOwner()->RemoveOwnedComponent(DecalComponentPre);
+		// 기존 native 컴포넌트를 OwnedComponents에서 제거 (메모리는 나중에 정리됨)
+		if (DecalComponentPre)
+		{
+			DecalComponentPre->GetOwner()->RemoveOwnedComponent(DecalComponentPre);
+		}
+		if (BillboardCompPre)
+		{
+			BillboardCompPre->GetOwner()->RemoveOwnedComponent(BillboardCompPre);
+		}
 	}
-	if (BillboardCompPre)
-	{
-		BillboardCompPre->GetOwner()->RemoveOwnedComponent(BillboardCompPre);
-	}
-	
 }

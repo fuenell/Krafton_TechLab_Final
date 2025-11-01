@@ -34,9 +34,12 @@ void AAmbientLightActor::DuplicateSubObjects()
 	}
 }
 
-void AAmbientLightActor::OnSerialized()
+void AAmbientLightActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
-	Super::OnSerialized();
+	Super::Serialize(bInIsLoading, InOutHandle);
 
-	LightComponent = Cast<UAmbientLightComponent>(RootComponent);
+	if (bInIsLoading)
+	{
+		LightComponent = Cast<UAmbientLightComponent>(RootComponent);
+	}
 }

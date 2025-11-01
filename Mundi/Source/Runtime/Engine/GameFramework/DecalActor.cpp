@@ -35,10 +35,12 @@ void ADecalActor::DuplicateSubObjects()
 	}
 }
 
-void ADecalActor::OnSerialized()
+void ADecalActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
-	Super::OnSerialized();
+	Super::Serialize(bInIsLoading, InOutHandle);
 
-	DecalComponent = Cast<UDecalComponent>(RootComponent);
-
+	if(bInIsLoading)
+	{
+		DecalComponent = Cast<UDecalComponent>(RootComponent);
+	}
 }

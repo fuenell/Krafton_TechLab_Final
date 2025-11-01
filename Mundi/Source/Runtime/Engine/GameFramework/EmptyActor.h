@@ -13,5 +13,5 @@ public:
 	void DuplicateSubObjects() override;
 	DECLARE_DUPLICATE(AEmptyActor)
 
-	void OnSerialized() override;
+	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 };

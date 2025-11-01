@@ -19,9 +19,9 @@ void AEmptyActor::DuplicateSubObjects()
 	Super::DuplicateSubObjects();
 }
 
-void AEmptyActor::OnSerialized()
+void AEmptyActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
-	Super::OnSerialized();
+	Super::Serialize(bInIsLoading, InOutHandle);
 
 
 }

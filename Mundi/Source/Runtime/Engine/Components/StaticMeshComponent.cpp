@@ -326,6 +326,7 @@ FAABB UStaticMeshComponent::GetWorldAABB() const
 	FVector WorldMax = FVector(WorldMax4.X, WorldMax4.Y, WorldMax4.Z);
 	return FAABB(WorldMin, WorldMax);
 }
+
 void UStaticMeshComponent::OnTransformUpdated()
 {
 	Super::OnTransformUpdated();
@@ -468,6 +469,12 @@ void UStaticMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 
 				MaterialSlots[i] = LoadedMaterial;
 			}
+
+			// AutoSerialize로 로드된 StaticMesh에 AddUsingComponents 호출
+			if (StaticMesh)
+			{
+				StaticMesh->AddUsingComponents(this);
+			}
 		}
 	}
 	else // --- 저장 ---
@@ -494,19 +501,4 @@ void UStaticMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		}
 		InOutHandle[MaterialSlotsKey] = SlotsArrayJson;
 	}
-}
-
-// 직렬화 완료 직후 호출됨
-void UStaticMeshComponent::OnSerialized()
-{
-	Super::OnSerialized();
-
-	// 1. AutoSerialize로 로드된 StaticMesh에 AddUsingComponents 호출
-	if (StaticMesh)
-	{
-		StaticMesh->AddUsingComponents(this);
-	}
-
-	// 2. 월드 파티션 업데이트
-	MarkWorldPartitionDirty();
 }

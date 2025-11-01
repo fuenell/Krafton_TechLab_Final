@@ -195,9 +195,9 @@ void UPointLightComponent::RenderDebugVolume(URenderer* Renderer) const
 	Renderer->AddLines(StartPoints, EndPoints, Colors);
 }
 
-void UPointLightComponent::OnSerialized()
+void UPointLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
-	Super::OnSerialized();
+	Super::Serialize(bInIsLoading, InOutHandle);
 
 }
 

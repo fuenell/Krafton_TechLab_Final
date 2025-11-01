@@ -24,9 +24,9 @@ UDecalComponent::UDecalComponent()
 	SetCanEverTick(true);
 }
 
-void UDecalComponent::OnSerialized()
+void UDecalComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
-	Super::OnSerialized();
+	Super::Serialize(bInIsLoading, InOutHandle);
 
 }
 

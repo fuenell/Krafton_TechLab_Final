@@ -780,12 +780,14 @@ void USpotLightComponent::RenderDebugVolume(URenderer* Renderer) const
 	Renderer->AddLines(StartPoints, EndPoints, Colors);
 }
 
-void USpotLightComponent::OnSerialized()
+void USpotLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
-	Super::OnSerialized();
+	Super::Serialize(bInIsLoading, InOutHandle);
 
-	ValidateConeAngles();
-
+	if (bInIsLoading)
+	{
+		ValidateConeAngles();
+	}
 }
 
 void USpotLightComponent::DuplicateSubObjects()

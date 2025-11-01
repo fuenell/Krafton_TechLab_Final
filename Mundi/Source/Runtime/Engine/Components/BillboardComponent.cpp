@@ -54,12 +54,14 @@ void UBillboardComponent::SetMaterial(uint32 InElementIndex, UMaterialInterface*
 	Material = InNewMaterial;
 }
 
-void UBillboardComponent::OnSerialized()
+void UBillboardComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
-	Super::OnSerialized();
+	Super::Serialize(bInIsLoading, InOutHandle);
 
-	TexturePath = Texture->GetFilePath();
-
+	if (bInIsLoading)
+	{
+		TexturePath = Texture->GetFilePath();
+	}
 }
 
 void UBillboardComponent::DuplicateSubObjects()

@@ -64,8 +64,7 @@ public:
     DECLARE_DUPLICATE(UCameraComponent)
 
     // Serialization
-    virtual void OnSerialized() override;
-    virtual void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+    void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
 private:
     float FieldOfView;   // degrees

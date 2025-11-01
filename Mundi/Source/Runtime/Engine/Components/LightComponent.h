@@ -28,7 +28,7 @@ public:
 	virtual void GetShadowRenderRequests(FSceneView* View, TArray<FShadowRenderRequest>& OutRequests) {};
 
 	// Serialization & Duplication
-	virtual void OnSerialized() override;
+	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 	virtual void DuplicateSubObjects() override;
 	DECLARE_DUPLICATE(ULightComponent)
 

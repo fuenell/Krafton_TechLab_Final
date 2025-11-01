@@ -28,7 +28,7 @@ public:
     void SetMaterial(uint32 InElementIndex, UMaterialInterface* InNewMaterial) override;
 
     // Serialize
-    void OnSerialized() override;
+    void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
     // Duplication
     void DuplicateSubObjects() override;

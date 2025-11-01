@@ -100,14 +100,7 @@ void UHeightFogComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		InOutHandle["StartDistance"] = StartDistance;
 		InOutHandle["FogCutoffDistance"] = FogCutoffDistance;
 		InOutHandle["FogMaxOpacity"] = FogMaxOpacity;
-
 	}
-}
-void UHeightFogComponent::OnSerialized()
-{
-	Super::OnSerialized();
-
-	
 }
 
 void UHeightFogComponent::DuplicateSubObjects()

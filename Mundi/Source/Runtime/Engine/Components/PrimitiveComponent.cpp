@@ -27,11 +27,10 @@ void UPrimitiveComponent::DuplicateSubObjects()
     Super::DuplicateSubObjects();
 }
 
-void UPrimitiveComponent::OnSerialized()
+void UPrimitiveComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
-    Super::OnSerialized();
+    Super::Serialize(bInIsLoading, InOutHandle);
 }
-
 
 bool UPrimitiveComponent::IsOverlappingActor(const AActor* Other) const
 {

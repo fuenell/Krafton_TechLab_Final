@@ -180,9 +180,9 @@ void UDirectionalLightComponent::OnTransformUpdated()
 	GWorld->GetLightManager()->UpdateLight(this);
 }
 
-void UDirectionalLightComponent::OnSerialized()
+void UDirectionalLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
-	Super::OnSerialized();
+	Super::Serialize(bInIsLoading, InOutHandle);
 
 }
 
