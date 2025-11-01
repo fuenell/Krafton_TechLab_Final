@@ -2,7 +2,6 @@
 
 function BeginPlay()
     print("[BeginPlay] " .. Obj.UUID)
-    Obj:PrintLocation()
     
     Obj.Velocity.X = 4
     StartCoroutine(AI)
@@ -28,7 +27,6 @@ end
 
 function EndPlay()
     print("[EndPlay] " .. Obj.UUID)
-    Obj:PrintLocation()
 end
 
 function OnOverlap(OtherActor)
