@@ -6,6 +6,7 @@
 #include "SelectionManager.h"
 #include "CameraActor.h"
 #include "EditorEngine.h"
+#include "PlatformProcess.h"
 #include <commdlg.h>
 #include <random>
 
@@ -100,6 +101,9 @@ void UMainToolbarWidget::RenderToolbar()
         // Actor Spawn 버튼
         ImGui::SameLine(0, 12.0f);
         RenderActorSpawnButton();
+
+        ImGui::SameLine(0, 12.0f);
+        RenderLoadPrefabButton();
 
         // 구분선
         ImGui::SameLine(0, 12.0f);
@@ -400,6 +404,74 @@ void UMainToolbarWidget::RenderActorSpawnButton()
             }
         }
         ImGui::EndPopup();
+    }
+
+    ImGui::PopStyleColor(3);
+    ImGui::PopStyleVar(2);
+}
+
+void UMainToolbarWidget::RenderLoadPrefabButton()
+{
+    const ImVec2 IconSizeVec(IconSize, IconSize);
+
+    // 버튼 스타일
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0)); // 투명 버튼
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.2f, 0.2f, 0.2f, 0.5f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 0.7f));
+
+    ImGui::BeginGroup();
+
+    bool bButtonClicked = false;
+
+    // (변수명은 IconAddActor이지만, 프리팹 로드 아이콘이라고 가정합니다)
+    if (IconAddActor && IconAddActor->GetShaderResourceView())
+    {
+        if (ImGui::ImageButton("##LoadPrefabBtn", (void*)IconAddActor->GetShaderResourceView(), IconSizeVec))
+        {
+            bButtonClicked = true;
+        }
+
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("프리팹을 로드합니다");
+    }
+
+    // 버튼 주변의 테두리 그리기
+    ImVec2 GroupMin = ImGui::GetItemRectMin();
+    ImVec2 GroupMax = ImGui::GetItemRectMax();
+    ImDrawList* DrawList = ImGui::GetWindowDrawList();
+    DrawList->AddRect(
+        GroupMin,
+        GroupMax,
+        ImGui::GetColorU32(ImVec4(0.4f, 0.45f, 0.5f, 0.8f)),
+        4.0f,
+        0,
+        1.3f
+    );
+
+    ImGui::EndGroup();
+
+    if (bButtonClicked)
+    {
+        // 프로젝트에 맞는 값으로 수정하세요.
+        const FWideString BaseDir = UTF8ToWide(GDataDir) + L"/Prefabs";
+        const FWideString Extension = L".prefab"; // 예시 확장자
+        const FWideString Description = L"Prefab Files";
+
+        // 이전에 생성한 파일 로드 대화상자 함수 호출
+		std::filesystem::path FilePath = FPlatformProcess::OpenLoadFileDialog(BaseDir, Extension, Description);
+
+        // 파일이 성공적으로 선택되었는지 확인
+        if (!FilePath.empty())
+        {
+            // 실제 프리팹 로딩 로직 실행
+            GWorld->SpawnPrefabActor(FilePath.string());
+        }
+        else
+        {
+            // 프리팹 로드 취소
+        }
     }
 
     ImGui::PopStyleColor(3);

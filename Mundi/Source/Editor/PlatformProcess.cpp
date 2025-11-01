@@ -41,27 +41,27 @@ void FPlatformProcess::OpenFileInDefaultEditor(const FWideString& RelativePath)
 
 std::filesystem::path FPlatformProcess::OpenSaveFileDialog(const FWideString BaseDir, const FWideString Extension, const FWideString Description, const FWideString DefaultFileName)
 {
-    OPENFILENAMEW ofn;
-    wchar_t szFile[260] = {}; // 선택된 전체 파일 경로를 수신할 버퍼
-    wchar_t szInitialDir[260] = {};
+    OPENFILENAMEW Ofn;
+    wchar_t SzFile[260] = {}; // 선택된 전체 파일 경로를 수신할 버퍼
+    wchar_t SzInitialDir[260] = {};
 
-    // GetSaveFileNameW 호출 전에 szFile 버퍼에 기본 파일명 복사
+    // GetSaveFileNameW 호출 전에 SzFile 버퍼에 기본 파일명 복사
     if (!DefaultFileName.empty())
     {
         // 예: "Untitled.scene"
-        wcscpy_s(szFile, _countof(szFile), DefaultFileName.c_str());
+        wcscpy_s(SzFile, _countof(SzFile), DefaultFileName.c_str());
     }
 
-    // 1. 기본 경로 설정
-    fs::path baseDir = fs::absolute(BaseDir);
-    // (디렉토리가 없으면 생성)
-    if (!fs::exists(baseDir) || !fs::is_directory(baseDir))
+    // 기본 경로 설정
+    fs::path AbsoluteBaseDir = fs::absolute(BaseDir);
+    // 디렉토리가 없으면 생성
+    if (!fs::exists(AbsoluteBaseDir) || !fs::is_directory(AbsoluteBaseDir))
     {
-        fs::create_directories(baseDir);
+        fs::create_directories(AbsoluteBaseDir);
     }
-    wcscpy_s(szInitialDir, baseDir.wstring().c_str());
+    wcscpy_s(SzInitialDir, AbsoluteBaseDir.wstring().c_str());
 
-    // --- [수정 1] 확장자 정리 (e.g., ".scene" -> "scene") ---
+    // --- 확장자 정리 (e.g., ".scene" -> "scene") ---
     // (FString에 .StartsWith, .RightChop이 있다고 가정)
     FWideString CleanExtension = Extension;
     if (CleanExtension.starts_with(L"."))
@@ -69,7 +69,7 @@ std::filesystem::path FPlatformProcess::OpenSaveFileDialog(const FWideString Bas
         CleanExtension = CleanExtension.substr(1);
     }
 
-    // --- [수정 2] 필터 문자열 동적 생성 ---
+    // --- 필터 문자열 동적 생성 ---
     // "Scene Files\0*.scene\0All Files\0*.*\0\0" 형식
     FWideString FilterString;
     FilterString += Description.c_str();           // e.g., "Scene Files"
@@ -82,45 +82,108 @@ std::filesystem::path FPlatformProcess::OpenSaveFileDialog(const FWideString Bas
     FilterString.push_back(L'\0');                 // \0
     FilterString.push_back(L'\0');                 // \0 (Double null-termination)
 
-    // --- [수정 3] 다이얼로그 타이틀 동적 생성 ---
+    // --- 다이얼로그 타이틀 동적 생성 ---
     FWideString TitleString = L"Save " + Description;
 
     // Initialize OPENFILENAME
-    ZeroMemory(&ofn, sizeof(ofn));
-    ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = GetActiveWindow();
-    ofn.lpstrFile = szFile;
-    ofn.nMaxFile = sizeof(szFile) / sizeof(wchar_t);
+    ZeroMemory(&Ofn, sizeof(Ofn));
+    Ofn.lStructSize = sizeof(Ofn);
+    Ofn.hwndOwner = GetActiveWindow();
+    Ofn.lpstrFile = SzFile;
+    Ofn.nMaxFile = sizeof(SzFile) / sizeof(wchar_t);
 
-    // --- [수정 4] 동적 값 할당 ---
-    ofn.lpstrFilter = FilterString.c_str(); // std::wstring의 c_str() 사용
-    ofn.nFilterIndex = 1;
-    ofn.lpstrFileTitle = nullptr;
-    ofn.nMaxFileTitle = 0;
-    ofn.lpstrInitialDir = szInitialDir;
-    ofn.lpstrTitle = TitleString.c_str();     // FString::c_str() 사용
-    ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_EXPLORER | OFN_HIDEREADONLY | OFN_NOCHANGEDIR | OFN_ENABLESIZING;
-    ofn.lpstrDefExt = CleanExtension.c_str(); // FString::c_str() 사용
+    // --- 동적 값 할당 ---
+    Ofn.lpstrFilter = FilterString.c_str();
+    Ofn.nFilterIndex = 1;
+    Ofn.lpstrFileTitle = nullptr;
+    Ofn.nMaxFileTitle = 0;
+    Ofn.lpstrInitialDir = SzInitialDir;
+    Ofn.lpstrTitle = TitleString.c_str();
+    Ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_EXPLORER | OFN_HIDEREADONLY | OFN_NOCHANGEDIR | OFN_ENABLESIZING;
+    Ofn.lpstrDefExt = CleanExtension.c_str();
 
-    UE_LOG("MainToolbar: Opening Save Dialog (Modal)...");
 
-    if (GetSaveFileNameW(&ofn) == TRUE)
+    if (GetSaveFileNameW(&Ofn) == TRUE)
     {
-        UE_LOG("MainToolbar: Save Dialog Closed");
-
-        // --- [수정 5] 파일 경로가 아닌 '부모 디렉토리'가 없으면 생성 ---
-        fs::path FilePath = szFile;
+        // --- 파일 경로가 아닌 '부모 디렉토리'가 없으면 생성 ---
+        fs::path FilePath = SzFile;
         fs::path ParentDir = FilePath.parent_path();
 
         if (!fs::exists(ParentDir))
         {
             fs::create_directories(ParentDir);
-            UE_LOG("MainToolbar: Created parent directory");
         }
 
         return FilePath;
     }
 
-    UE_LOG("MainToolbar: Save Dialog Cancelled");
     return L"";
+}
+
+// 사용자가 선택한 파일의 전체 경로. 취소 시 빈 경로.
+std::filesystem::path FPlatformProcess::OpenLoadFileDialog(const FWideString BaseDir, const FWideString Extension, const FWideString Description)
+{
+    OPENFILENAMEW Ofn;
+    wchar_t SzFile[260] = {}; // 선택된 전체 파일 경로를 수신할 버퍼
+    wchar_t SzInitialDir[260] = {};
+
+    // 1. 기본 경로 설정
+    fs::path AbsoluteBaseDir = fs::absolute(BaseDir);
+    // (디렉토리가 없으면 생성)
+    if (!fs::exists(AbsoluteBaseDir) || !fs::is_directory(AbsoluteBaseDir))
+    {
+        fs::create_directories(AbsoluteBaseDir);
+    }
+    wcscpy_s(SzInitialDir, AbsoluteBaseDir.wstring().c_str());
+
+    // 2. 확장자 정리 (e.g., ".scene" -> "scene")
+    FWideString CleanExtension = Extension;
+    if (CleanExtension.starts_with(L"."))
+    {
+        CleanExtension = CleanExtension.substr(1);
+    }
+
+    // 3. 필터 문자열 동적 생성
+    // "Scene Files\0*.scene\0All Files\0*.*\0\0" 형식
+    FWideString FilterString;
+    FilterString += Description.c_str();      // e.g., "Scene Files"
+    FilterString.push_back(L'\0');            // \0
+    FilterString += L"*." + CleanExtension; // e.g., "*.scene"
+    FilterString.push_back(L'\0');            // \0
+    FilterString += L"All Files";
+    FilterString.push_back(L'\0');            // \0
+    FilterString += L"*.*";
+    FilterString.push_back(L'\0');            // \0
+    FilterString.push_back(L'\0');            // \0 (Double null-termination)
+
+    // 4. 다이얼로그 타이틀 동적 생성
+    FWideString TitleString = L"Open " + Description;
+
+    // 5. OPENFILENAME 구조체 초기화
+    ZeroMemory(&Ofn, sizeof(Ofn));
+    Ofn.lStructSize = sizeof(Ofn);
+    Ofn.hwndOwner = GetActiveWindow(); // 또는 특정 윈도우 핸들
+    Ofn.lpstrFile = SzFile; // [중요] 비어있는 버퍼를 전달
+    Ofn.nMaxFile = sizeof(SzFile) / sizeof(wchar_t);
+    Ofn.lpstrFilter = FilterString.c_str();
+    Ofn.nFilterIndex = 1;
+    Ofn.lpstrFileTitle = nullptr;
+    Ofn.nMaxFileTitle = 0;
+    Ofn.lpstrInitialDir = SzInitialDir;
+    Ofn.lpstrTitle = TitleString.c_str();
+    Ofn.lpstrDefExt = CleanExtension.c_str();
+
+    // 6. 플래그 설정
+    // OFN_OVERWRITEPROMPT (덮어쓰기) 제거
+    // OFN_FILEMUSTEXIST (파일이 존재해야 함) 추가
+    Ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_EXPLORER | OFN_HIDEREADONLY | OFN_NOCHANGEDIR | OFN_ENABLESIZING;
+
+    // 7. GetOpenFileNameW 호출
+    if (GetOpenFileNameW(&Ofn) == TRUE)
+    {
+        // 사용자가 선택한 파일 경로 반환
+        return fs::path(SzFile);
+    }
+
+    return L""; // 취소 시 빈 경로 반환
 }

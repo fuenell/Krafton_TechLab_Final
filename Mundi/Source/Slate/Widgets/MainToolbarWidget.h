@@ -21,6 +21,7 @@ private:
     void RenderToolbar();
     void RenderSceneButtons();
     void RenderActorSpawnButton();
+    void RenderLoadPrefabButton();
     void RenderPIEButtons();
 
     // UI 헬퍼 메서드
