@@ -32,7 +32,7 @@ public:
 	virtual void RenderDebugVolume(class URenderer* Renderer) const override;
 
 	// Serialization & Duplication
-	virtual void OnSerialized() override;
+	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 	virtual void DuplicateSubObjects() override;
 	DECLARE_DUPLICATE(UPointLightComponent)
 

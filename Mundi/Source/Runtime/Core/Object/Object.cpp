@@ -10,10 +10,6 @@ FString UObject::GetComparisonName()
     return FString();
 }
 
-void UObject::OnSerialized()
-{
-}
-
 // 리플렉션 기반 자동 직렬화 (현재 클래스의 프로퍼티만 처리)
 void UObject::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
@@ -271,7 +267,6 @@ void UObject::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		// ObjectPtr, Struct 등은 필요시 추가
 		}
 	}
-	OnSerialized();
 }
 
 void UObject::DuplicateSubObjects()

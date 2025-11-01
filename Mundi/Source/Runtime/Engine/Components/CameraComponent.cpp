@@ -192,10 +192,3 @@ void UCameraComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
         InOutHandle["ProjectionMode"] = static_cast<int32>(ProjectionMode);
     }
 }
-
-void UCameraComponent::OnSerialized()
-{
-    Super::OnSerialized();
-
-  
-}

@@ -24,7 +24,7 @@ public:
 	DECLARE_DUPLICATE(AStaticMeshActor)
 
 	// Serialize
-	void OnSerialized() override;
+	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
 protected:
 	UStaticMeshComponent* StaticMeshComponent;

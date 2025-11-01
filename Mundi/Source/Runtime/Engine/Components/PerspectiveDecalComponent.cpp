@@ -177,11 +177,3 @@ void UPerspectiveDecalComponent::Serialize(const bool bInIsLoading, JSON& InOutH
 		InOutHandle["FovY"] = GetFovY();
 	}
 }
-
-void UPerspectiveDecalComponent::OnSerialized()
-{
-	Super::OnSerialized();
-
-	
-
-}

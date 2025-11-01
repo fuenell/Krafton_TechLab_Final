@@ -207,14 +207,6 @@ void ACameraActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
     }
 }
 
-void ACameraActor::OnSerialized()
-{
-    Super::OnSerialized();
-
-    
-
-}
-
 void ACameraActor::DuplicateSubObjects()
 {
     Super::DuplicateSubObjects();

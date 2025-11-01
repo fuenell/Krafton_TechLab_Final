@@ -72,7 +72,7 @@ public:
     DECLARE_DUPLICATE(UActorComponent)
 
     // ───── 직렬화 ────────────────────────────
-    virtual void OnSerialized() override;
+    void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
 protected:
     AActor* Owner = nullptr;     // 소유 액터

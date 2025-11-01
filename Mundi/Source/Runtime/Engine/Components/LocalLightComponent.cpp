@@ -34,9 +34,9 @@ float ULocalLightComponent::GetAttenuationFactor(const FVector& WorldPosition) c
 	return FMath::Max(0.0f, Attenuation);
 }
 
-void ULocalLightComponent::OnSerialized()
+void ULocalLightComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
-	Super::OnSerialized();
+	Super::Serialize(bInIsLoading, InOutHandle);
 
 }
 

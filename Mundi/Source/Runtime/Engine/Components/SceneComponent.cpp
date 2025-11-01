@@ -372,11 +372,6 @@ void USceneComponent::OnRegister(UWorld* InWorld)
     OnTransformUpdated();
 }
 
-void USceneComponent::OnSerialized()
-{
-	Super::OnSerialized();
-}
-
 void USceneComponent::OnTransformUpdated()
 {
     for (USceneComponent* Child : GetAttachChildren())

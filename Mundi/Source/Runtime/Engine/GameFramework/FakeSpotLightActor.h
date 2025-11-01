@@ -21,7 +21,7 @@ public:
 	void DuplicateSubObjects() override;
 	DECLARE_DUPLICATE(AFakeSpotLightActor)
 
-	void OnSerialized() override;
+	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 protected:
 	UBillboardComponent* BillboardComponent{};
 	UPerspectiveDecalComponent* DecalComponent{};

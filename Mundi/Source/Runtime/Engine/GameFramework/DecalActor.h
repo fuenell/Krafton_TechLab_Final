@@ -21,7 +21,7 @@ public:
     DECLARE_DUPLICATE(ADecalActor)
 
     // Serialize
-    void OnSerialized() override;
+    void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
 protected:
     UDecalComponent* DecalComponent;
