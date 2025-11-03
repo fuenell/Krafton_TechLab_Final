@@ -486,6 +486,8 @@ void FLuaManager::ShutdownBeforeLuaClose()
 {
     CoroutineSchedular.ShutdownBeforeLuaClose();
     SharedLib = sol::nil;
+
+    GComponentFunctionTables.Empty();
 }
 
 // Lua 함수 캐시 함수
