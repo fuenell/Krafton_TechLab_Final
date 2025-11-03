@@ -66,6 +66,10 @@ public:
     void DuplicateSubObjects() override;
     DECLARE_DUPLICATE(UPrimitiveComponent)
 
+    // Overlap event generation toggle API
+    void SetGenerateOverlapEvents(bool bEnable) { bGenerateOverlapEvents = bEnable; }
+    bool GetGenerateOverlapEvents() const { return bGenerateOverlapEvents; }
+
     // ───── 직렬화 ────────────────────────────
     void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 

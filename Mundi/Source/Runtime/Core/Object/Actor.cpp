@@ -388,6 +388,14 @@ FVector AActor::GetActorScale() const
 
 void AActor::SetActorIsVisible(bool bIsActive)
 {
+	//TODO: Primitibe의 bGenerateOverlapEvents 끄기
+	for (UActorComponent* Comp : OwnedComponents)
+	{
+		if (auto* Prim = Cast<UPrimitiveComponent>(Comp))
+		{
+			Prim->SetGenerateOverlapEvents(false);
+		}
+	}
 	return RootComponent->SetVisibility(bIsActive);
 }
 

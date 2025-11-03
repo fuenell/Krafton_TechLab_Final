@@ -128,6 +128,7 @@ end
 
 function Die()
     bGravity = true
+    ActiveIDs = {}
 end
 
 function Rebirth()
