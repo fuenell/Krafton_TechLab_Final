@@ -66,6 +66,12 @@ void URenderer::EndFrame()
 
 void URenderer::RenderSceneForView(UWorld* World, ACameraActor* Camera, FViewport* Viewport)
 {
+	// PIE 상태에서는 Slate가 아닌 월드의 카메라 사용
+	if (World->bPie)
+	{
+		Camera = World->GetCameraActor();
+	}
+
 	// 1. 렌더에 필요한 정보를 모은 FSceneView를 생성합니다.
 	FSceneView View(Camera, Viewport, &World->GetRenderSettings());	// NOTE: 현재 viewport에 해당하는 ViewMode가 적용되는지 확인 필요
 

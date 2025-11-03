@@ -17,6 +17,9 @@ local bActive               = false
 local ActiveIDs = {}
 local IDCount = 0
 
+local PlayerInitPosition = Vector(0, 0, 3)
+local PlayerInitVelocity = Vector(0, 0, 0)
+
 function AddID(id)
     if not ActiveIDs[id] then
         ActiveIDs[id] = true
@@ -32,7 +35,7 @@ function RemoveID(id)
         print("Removed ID:".. id.."Count:".. IDCount)
         
         if IDCount == 0 then
-            bGravity = true
+            Die()
         end
     end
 end
@@ -56,8 +59,8 @@ end
 ------------------------------------------------------------
 function BeginPlay()
     print("[BeginPlay] " .. Obj.UUID)
-    Obj.Location = Vector(0, 0, 1)
-    Obj.Velocity = Vector(0, 0, 0)
+    Obj.Location = PlayerInitPosition
+    Obj.Velocity = PlayerInitVelocity
 
     local Camera = GetCamera()
     if Camera then
@@ -72,40 +75,45 @@ function EndPlay()
 end
 
 function OnBeginOverlap(OtherActor)
-    if OtherActor.Tag == "tile" then
+    if OtherActor.Tag == "Tile" then
         AddID(OtherActor.UUID)
         if not bActive then
             bActive = true
         end
+    elseif OtherActor.Tag == "fireball" then
+        Die()
     end
 end
 
 function OnEndOverlap(OtherActor)
-    if OtherActor.Tag == "tile" then
+    if OtherActor.Tag == "Tile" then
         RemoveID(OtherActor.UUID)
     end
 end
 
 function Tick(Delta)
-    SetCamera()
-    Billboard()
-
-    local gravityAccel = Vector(0, 0, Gravity)
-    Obj.Velocity = Obj.Velocity + gravityAccel * Delta
+    local GravityAccel = Vector(0, 0, Gravity)
+    Obj.Velocity = GravityAccel * Delta
     Obj.Location = Obj.Location + Obj.Velocity * Delta
 
-    if not bActive then
+    if not bActive then -- Not Started
+        Gravity = -30
+        MoveCamera()
         return
-    end
 
-    if bGravity then
-        Gravity = -5.0
-    else
+    elseif bGravity then -- and Active! => Die
+        Gravity = -50
+        
+        if Obj.Location.Z < -5 then
+            Rebirth()
+        end
+
+    elseif not bGravity then -- and Active!
         Gravity = 0.0
-        Obj.Velocity = Vector(0, 0, 0)
+        MoveCamera()
 
         if IDCount == 0 then
-            bGravity = true
+            Die()
         end
 
         Rotate()
@@ -114,11 +122,20 @@ function Tick(Delta)
         if InputManager:IsKeyDown('S') then MoveForward(-MovementDelta) end
         if InputManager:IsKeyDown('A') then MoveRight(-MovementDelta) end
         if InputManager:IsKeyDown('D') then MoveRight(MovementDelta) end
-        if InputManager:IsKeyDown('E') then bGravity = true end
+        if InputManager:IsKeyDown('E') then Die() end -- 죽기를 선택
     end
 end
 
+function Die()
+    bGravity = true
+    ActiveIDs = {}
+end
 
+function Rebirth()
+    bActive = false
+    bGravity = false
+    Obj.Location = PlayerInitPosition
+end
 
 ------------------------------------------------------------
 function Rotate()
@@ -137,18 +154,11 @@ function Rotate()
     local Candidate = RotateAroundAxis(ForwardVector, RightVector, Pitch)
 
     -- 수직 잠김 방지
-    if (Candidate.Z > 0.2) then
+    if (Candidate.Z > 0.2) then -- 아래로 각도 제한
         Candidate.Z = 0.2
     end
-    if (Candidate.Z < -0.6) then
+    if (Candidate.Z < -0.6) then -- 위로 각도 제한
         Candidate.Z = -0.6
-    -- local DotUp = FVector.Dot(Candidate, UpVector)
-    -- if math.abs(DotUp) > 0.999 then
-    --     local Horizontal = Candidate - UpVector * DotUp
-
-    --     Horizontal = NormalizeCopy(Horizontal)
-    --     local HorizontalLength = math.sqrt(1.0 - VerticalDotLimit * VerticalDotLimit)
-    --     Candidate = Horizontal * HorizontalLength + UpVector * (DotUp > 0 and VerticalDotLimit or -VerticalDotLimit)
     end
 
     ForwardVector = NormalizeCopy(Candidate)
@@ -165,6 +175,11 @@ function MoveRight(Delta)
 end
 
 ---------------------------------------------------------
+
+function MoveCamera()
+    SetCamera()
+    Billboard()
+end
 
 function Billboard()
     local Camera = GetCamera()

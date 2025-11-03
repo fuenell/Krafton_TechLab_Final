@@ -28,6 +28,8 @@ public:
     
     void SetIsActive(bool NewIsActive)
     {
+
+        //TODO: 충돌 끄기
         Owner->SetActorIsVisible(NewIsActive);
     }
     

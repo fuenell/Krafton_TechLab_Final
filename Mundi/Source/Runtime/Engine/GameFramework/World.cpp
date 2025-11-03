@@ -220,6 +220,17 @@ UWorld* UWorld::DuplicateWorldForPIE(UWorld* InEditorWorld)
 	return PIEWorld;
 }
 
+void UWorld::SetCameraActor(ACameraActor* InCamera)
+{
+	MainCameraActor = InCamera;
+
+	MainCameraActor->SetWorld(this);
+
+	//기즈모 카메라 설정
+	if (GizmoActor)
+		GizmoActor->SetCameraActor(MainCameraActor);
+}
+
 FString UWorld::GenerateUniqueActorName(const FString& ActorType)
 {
 	// GetInstance current count for this type
