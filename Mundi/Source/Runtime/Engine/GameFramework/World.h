@@ -73,14 +73,7 @@ public:
     FLuaManager* GetLuaManager() const { return LuaManager.get(); }
 
     ACameraActor* GetCameraActor() { return MainCameraActor; }
-    void SetCameraActor(ACameraActor* InCamera) 
-    { 
-        MainCameraActor = InCamera; 
-
-        //기즈모 카메라 설정
-        if (GizmoActor)
-            GizmoActor->SetCameraActor(MainCameraActor);
-    }
+    void SetCameraActor(ACameraActor* InCamera);
 
     /** Generate unique name for actor based on type */
     FString GenerateUniqueActorName(const FString& ActorType);

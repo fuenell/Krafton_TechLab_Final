@@ -353,7 +353,7 @@ void UEditorEngine::StartPIE()
     UWorld* PIEWorld = UWorld::DuplicateWorldForPIE(EditorWorld);
 
     GWorld = PIEWorld;
-    SLATE.SetPIEWorld(GWorld);
+    SLATE.SetPIEWorld(GWorld);  // SLATE의 카메라를 가져와서 설정, TODO: 추후 월드의 카메라 컴포넌트를 가져와서 설정하도록 변경 필요
 
     bPIEActive = true;
 
