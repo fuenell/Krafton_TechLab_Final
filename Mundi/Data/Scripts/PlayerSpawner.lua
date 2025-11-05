@@ -29,6 +29,11 @@ function Tick(dt)
     
     elseif GlobalConfig.GameState == "Start" then
         if InputManager:IsKeyDown("R") then
+            
+    
+        if GlobalConfig and GlobalConfig.DestroyAll then
+            GlobalConfig.DestroyAll()
+        end
             SpawnPrefab("Data/Prefabs/Player.prefab")
             GlobalConfig.PlayerState = "Alive"
             GlobalConfig.GameState = "Playing" 

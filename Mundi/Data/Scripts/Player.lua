@@ -182,7 +182,8 @@ function Die()
     if bDie then 
         return
     end
-
+ 
+    
     AudioComp = GetComponent(Obj, "UAudioComponent")
     AudioComp:PlayOneShot(0)   
     TargetHitStop(Obj, 0.5, 0)
@@ -195,7 +196,7 @@ function Die()
     VelZ = 0
     CurGravity = GravityConst
     local ActiveIDs = {}
-    
+
     StartCoroutine(EndAfter)
 end
 

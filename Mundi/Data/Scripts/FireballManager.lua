@@ -2,6 +2,7 @@
 local MaxFireNumber = 40
 local CurrentFireNumber = 0
 local FireballsPool = {} 
+local AllFireballs = {}
 
 local MinVelocity = 5
 local MaxVelocity = 15
@@ -10,6 +11,11 @@ local DestroyTime = 6.0
 
 
 local function PushFireball(Fireball) 
+    if Fireball.bIsActive == false then
+        return
+    end
+
+
     Fireball.bIsActive = false
     Fireball.Velocity = Vector(0,0,0)
     --여기에 문제가 있는 것 같은,, 초기화 이슈 
@@ -51,6 +57,7 @@ function BeginPlay()
             PushFireball(Fireball) 
         end
 
+        AllFireballs[#AllFireballs + 1] = Fireball
     end
 
     -- Fireball 생성 함수를 전역에 등록    
@@ -89,6 +96,19 @@ function BeginPlay()
         PushFireball(InactiveFireball)       
     end
 
+    GlobalConfig.DestroyAll = function()
+        
+        for i = 1, #AllFireballs do
+            local fb = AllFireballs[i]
+            if fb and fb.bIsActive == true then
+                PushFireball(fb)
+
+            end
+        end
+        
+    end 
+
+
 
 end 
 
@@ -98,6 +118,7 @@ function EndPlay()
     GlobalConfig.SpawnFireballAt = nil
     GlobalConfig.IsCanSpawnFireball = nil
     GlobalConfig.ResetFireballs = nil
+    GlobalConfig.DestroyAll = nil
 end
 
 function Tick(dt)
@@ -105,5 +126,3 @@ function Tick(dt)
     
         
 end
-
-
