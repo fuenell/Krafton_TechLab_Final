@@ -39,6 +39,7 @@ APlayerCameraManager::~APlayerCameraManager()
 void APlayerCameraManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	
 
 	// 매 틱 모든 카메라 로직을 계산하여 CachedViewInfo를 업데이트합니다.
 	LastDeltaSeconds = DeltaTime;
@@ -64,7 +65,7 @@ void APlayerCameraManager::BuildForFrame(float DeltaTime)
 	}
 
 	// 3) 수명 정리
-	for (int32 i=ActiveModifiers.Num()-1; i>=0; --i)
+	for (int32 i= ActiveModifiers.Num()-1; i>=0; i--)
 	{
 		UCameraModifierBase* M = ActiveModifiers[i];
 		if (!M) { ActiveModifiers.RemoveAtSwap(i); continue; }
@@ -73,8 +74,6 @@ void APlayerCameraManager::BuildForFrame(float DeltaTime)
 
 		if (M->Duration >= 0.f && !M->bEnabled)
 		{ ActiveModifiers.RemoveAtSwap(i); continue; }
-
-		++i;
 	}
 
 	if (PendingViewTarget)

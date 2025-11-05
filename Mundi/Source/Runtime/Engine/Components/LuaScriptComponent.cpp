@@ -8,6 +8,9 @@
 #include "../Scripting/LuaManager.h"
 #include "../Scripting/GameObject.h"
 
+// for test
+#include "PlayerCameraManager.h"
+
 IMPLEMENT_CLASS(ULuaScriptComponent)
 
 BEGIN_PROPERTIES(ULuaScriptComponent)
@@ -85,6 +88,8 @@ void ULuaScriptComponent::BeginPlay()
 			GEngine.EndPIE();
 		}
 	}
+
+	GWorld->GetFirstPlayerCameraManager()->FadeIn(1.0, FLinearColor(0.0, 1.0, 1.0, 1.0));
 }
 
 void ULuaScriptComponent::OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp)

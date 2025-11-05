@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Actor.h"
 #include "Camera/UCamMod_Fade.h"
 
@@ -52,7 +52,7 @@ protected:
 		FadeModifier->CurrentAlpha = FadeModifier->StartAlpha;
 
 		ActiveModifiers.Add(FadeModifier);
-		ActiveModifiers.Sort([](UCameraModifierBase* A, UCameraModifierBase* B){ return *A < *B; });
+		// ActiveModifiers.Sort([](UCameraModifierBase* A, UCameraModifierBase* B){ return *A < *B; });
 	}
 	
 public:
