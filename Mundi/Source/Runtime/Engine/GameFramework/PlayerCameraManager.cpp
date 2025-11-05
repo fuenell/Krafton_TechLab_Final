@@ -90,7 +90,7 @@ void APlayerCameraManager::BuildForFrame(float DeltaTime)
 		// 최종 종횡비 (AspectRatio)
 		if (SceneView.ViewRect.Height() > 0)
 		{
-			SceneView.AspectRatio = SceneView.ViewRect.Width() / SceneView.ViewRect.Height();
+			SceneView.AspectRatio = (float)SceneView.ViewRect.Width() / (float)SceneView.ViewRect.Height();
 		}
 		else
 		{
