@@ -284,7 +284,6 @@ function Billboard()
         local Eye = CameraLocation
         local At = Obj.Location
         local Direction = Vector(At.X - Eye.X, At.Y - Eye.Y, At.Z - Eye.Z)
-        print(Direction)
         Camera:SetCameraForward(Direction)
     end
 end
