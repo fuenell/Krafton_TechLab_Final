@@ -48,16 +48,16 @@
 #include <cassert>
 
 // Core Project Headers
+#include "Vector.h"
+#include "ResourceData.h"
 #include "VertexData.h"
 #include "UEContainer.h"
-#include "Vector.h"
 #include "Name.h"
 #include "PathUtils.h"
 #include "Object.h"
 #include "ObjectFactory.h"
 #include "ObjectMacros.h"
 #include "Enums.h"
-#include "ResourceData.h"
 #include "GlobalConsole.h"
 #include "D3D11RHI.h"
 #include "World.h"

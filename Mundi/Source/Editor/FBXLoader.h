@@ -12,6 +12,8 @@ public:
 
 	FSkeletalMeshData LoadFbxMesh(const FString& FilePath);
 
+	
+
 protected:
 	~UFbxLoader() override;
 private:
@@ -19,13 +21,17 @@ private:
 	UFbxLoader& operator=(const UFbxLoader&) = delete;
 
 
-	void LoadMeshFromNode(FbxNode* InNode, FSkeletalMeshData& MeshData, TMap<FbxNode*, int32>& BoneToIndex);
+	void LoadMeshFromNode(FbxNode* InNode, FSkeletalMeshData& MeshData, TMap<int32, TArray<uint32>>& MaterialGroupIndexList, TMap<FbxNode*, int32>& BoneToIndex, TMap<FbxSurfaceMaterial*, int32>& MaterialToIndex);
 
 	void LoadSkeletonFromNode(FbxNode* InNode, FSkeletalMeshData& MeshData, int32 ParentNodeIndex, TMap<FbxNode*, int32>& BoneToIndex);
 
 	void LoadMeshFromAttribute(FbxNodeAttribute* InAttribute, FSkeletalMeshData& MeshData);
 
-	void LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<FbxNode*, int32>& BoneToIndex);
+	void LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<int32, TArray<uint32>>& MaterialGroupIndexList, TMap<FbxNode*, int32>& BoneToIndex, TArray<int32> MaterialSlotToIndex, int32 MaterialIndex = 0);
+
+	void ParseMaterial(FbxSurfaceMaterial* Material, FMaterialInfo& MaterialInfo);
+
+	FString ParseTexturePath(FbxProperty& Property);
 
 	FbxString GetAttributeTypeName(FbxNodeAttribute* InAttribute);
 

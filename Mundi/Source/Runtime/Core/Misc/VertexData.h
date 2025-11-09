@@ -240,6 +240,7 @@ struct FSkeletalMeshData
     TArray<uint32> Indices; // 인덱스 배열
     FSkeleton Skeleton; // 스켈레톤 정보
     TArray<FGroupInfo> GroupInfos; // 머티리얼 그룹 (기존 시스템 재사용)
-    bool bHasMaterial;
+    TArray<FMaterialInfo> Materials;
+    bool bHasMaterial = false;
     FString CacheFilePath;
 };

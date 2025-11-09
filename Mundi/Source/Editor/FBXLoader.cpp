@@ -77,6 +77,19 @@ FSkeletalMeshData UFbxLoader::LoadFbxMesh(const FString& FilePath)
 	// 정점이 몇번 뼈의 영향을 받는지 표현하려면 직접 뼈 인덱스를 만들어야함.
 	TMap<FbxNode*, int32> BoneToIndex;
 
+	// 머티리얼도 인덱스가 따로 없어서(있긴 한데 순서가 뒤죽박죽이고 모든 노드를 순회하기 전까지 머티리얼 개수를 몰라서) 직접 만들어줘야함
+	// FbxSurfaceMaterial : 진짜 머티리얼 , FbxGeometryElementMaterial : 인덱싱용, 폴리곤이 어떤 머티리얼 슬롯을 쓰는지 알려줌
+	TMap<FbxSurfaceMaterial*, int32> MaterialToIndex;
+
+	// 머티리얼마다 정점 Index를 할당해 줄 것임. 머티리얼 정렬을 해놔야 렌더링 비용이 적게 드니까. 
+	// 최종적으로 이 맵의 Array들을 합쳐서 MeshData.Indices에 저장하고 GroupInfos를 채워줄 것임.
+	TMap<int32, TArray<uint32>> MaterialGroupIndexList;
+
+	// 머티리얼이 어떤 노드는 있는데 어떤 노드는 없을 수 있음, 이때 머티리얼이 없는 노드의 Index를 저장해놓고 나중에 머티리얼이 있는 노드의 index를
+	// 그룹별 정렬하게 되면 인덱스가 꼬임. 그래서 머티리얼이 없는 경우 그냥 0번 그룹을 쓰도록 하고 머티리얼 인덱스 0번을 nullptr에 할당함
+	MaterialGroupIndexList.Add(0, TArray<uint32>());
+	MaterialToIndex.Add(nullptr, 0);
+	MeshData.Materials.Add(FMaterialInfo());
 	if (RootNode)
 	{
 		// 2번의 패스로 나눠서 처음엔 뼈의 인덱스를 결정하고 2번째 패스에서 뼈가 영향을 미치는 정점들을 구하고 정점마다 뼈 인덱스를 할당해 줄 것임(동시에 TPose 역행렬도 구함)
@@ -86,15 +99,42 @@ FSkeletalMeshData UFbxLoader::LoadFbxMesh(const FString& FilePath)
 		}
 		for (int Index = 0; Index < RootNode->GetChildCount(); Index++)
 		{
-			LoadMeshFromNode(RootNode->GetChild(Index), MeshData, BoneToIndex);
+			LoadMeshFromNode(RootNode->GetChild(Index), MeshData, MaterialGroupIndexList, BoneToIndex, MaterialToIndex);
 		}
 	}
 
+	// 머티리얼이 있는 경우 플래그 설정
+	if (MeshData.Materials.Num() > 0)
+	{
+		MeshData.bHasMaterial = true;
+	}
+	// 있든없든 항상 기본 머티리얼 포함 머티리얼 그룹별로 인덱스 저장하므로 Append 해줘야함
+	MeshData.GroupInfos.SetNum(MaterialGroupIndexList.Num());
+	uint32 Count = 0;
+	for (auto& Element : MaterialGroupIndexList)
+	{
+		int32 MatrialIndex = Element.first;
+
+		const TArray<uint32>& IndexList = Element.second;
+
+		// 최종 인덱스 배열에 리스트 추가
+		MeshData.Indices.Append(IndexList);
+
+		// 그룹info에 Startindex와 Count 추가
+		MeshData.GroupInfos[MatrialIndex].StartIndex = Count;
+		MeshData.GroupInfos[MatrialIndex].IndexCount = IndexList.Num();
+		Count += IndexList.Num();
+	}
+	
 	return MeshData;
 }
 
 
-void UFbxLoader::LoadMeshFromNode(FbxNode* InNode, FSkeletalMeshData& MeshData, TMap<FbxNode*, int32>& BoneToIndex)
+void UFbxLoader::LoadMeshFromNode(FbxNode* InNode,
+	FSkeletalMeshData& MeshData,
+	TMap<int32, TArray<uint32>>& MaterialGroupIndexList,
+	TMap<FbxNode*, int32>& BoneToIndex, 
+	TMap<FbxSurfaceMaterial*, int32>& MaterialToIndex)
 {
 
 	// 부모노드로부터 상대좌표 리턴
@@ -102,6 +142,10 @@ void UFbxLoader::LoadMeshFromNode(FbxNode* InNode, FSkeletalMeshData& MeshData, 
 	FbxDouble3 Rotation = InNode->LclRotation.Get();
 	FbxDouble3 Scaling  = InNode->LclScaling.Get();*/
 
+	// 최적화, 메시 로드 전에 미리 머티리얼로부터 인덱스를 해시맵을 이용해서 얻고 그걸 TArray에 저장하면 됨. 
+	// 노드의 머티리얼 리스트는 슬롯으로 참조함(내가 정한 MaterialIndex는 슬롯과 다름), 슬롯에 대응하는 머티리얼 인덱스를 캐싱하는 것
+	// 그럼 폴리곤 순회하면서 해싱할 필요가 없음
+	TArray<int32> MaterialSlotToIndex;
 	// Attribute 참조 함수
 	for (int Index = 0; Index < InNode->GetNodeAttributeCount(); Index++)
 	{
@@ -113,13 +157,73 @@ void UFbxLoader::LoadMeshFromNode(FbxNode* InNode, FSkeletalMeshData& MeshData, 
 		
 		if (Attribute->GetAttributeType() == FbxNodeAttribute::eMesh)
 		{
-			LoadMesh((FbxMesh*)Attribute, MeshData, BoneToIndex);
+			FbxMesh* Mesh = (FbxMesh*)Attribute;
+			// 위의 MaterialSlotToIndex는 MaterialToIndex 해싱을 안 하기 위함이고, MaterialGroupIndexList도 머티리얼이 없거나 1개만 쓰는 경우 해싱을 피할 수 있음.
+			// 이를 위한 최적화 코드를 작성함.
+			
+
+			// 0번이 기본 머티리얼이고 1번 이상은 블렌딩 머티리얼이라고 함. 근데 엄청 고급 기능이라서 일반적인 로더는 0번만 쓴다고 함.
+			if (Mesh->GetElementMaterialCount() > 0)
+			{
+				// 머티리얼 슬롯 인덱싱 해주는 클래스 (ex. materialElement->GetIndexArray() : 폴리곤마다 어떤 머티리얼 슬롯을 쓰는지 Array로 표현)
+				FbxGeometryElementMaterial* MaterialElement = Mesh->GetElementMaterial(0);
+				// 머티리얼이 폴리곤 단위로 매핑함 -> 모든 폴리곤이 같은 머티리얼을 쓰지 않음(같은 머티리얼을 쓰는 경우 = eAllSame)
+				// MaterialCount랑은 전혀 다른 동작임(슬롯이 2개 이상 있어도 매핑 모드가 eAllSame이라서 머티리얼을 하나만 쓰는 경우가 있음)
+				if (MaterialElement->GetMappingMode() == FbxGeometryElement::eByPolygon)
+				{
+					for (int MaterialSlot = 0; MaterialSlot < InNode->GetMaterialCount(); MaterialSlot++)
+					{
+						int MaterialIndex = 0;
+						FbxSurfaceMaterial* Material = InNode->GetMaterial(MaterialSlot);
+						if (MaterialToIndex.Contains(Material))
+						{
+							MaterialIndex = MaterialToIndex[Material];
+						}
+						else
+						{
+							FMaterialInfo MaterialInfo{};
+							ParseMaterial(Material, MaterialInfo);
+							MeshData.Materials.Add(MaterialInfo);
+							// 새로운 머티리얼, 머티리얼 인덱스 설정
+							MaterialIndex = MeshData.Materials.Num() - 1;
+							MaterialToIndex.Add(Material, MaterialIndex);
+						}
+						// MaterialSlot에 대응하는 전역 MaterialIndex 저장
+						MaterialSlotToIndex.Add(MaterialIndex);
+					}
+				}
+				// 노드가 하나의 머티리얼만 쓰는 경우
+				else if (MaterialElement->GetMappingMode() == FbxGeometryElement::eAllSame)
+				{
+					int MaterialIndex = 0;
+					int MaterialSlot = MaterialElement->GetIndexArray().GetAt(0);
+					FbxSurfaceMaterial* Material = InNode->GetMaterial(MaterialSlot);
+					if (MaterialToIndex.Contains(Material))
+					{
+						MaterialIndex = MaterialToIndex[Material];
+					}
+					else
+					{
+						FMaterialInfo MaterialInfo{};
+						ParseMaterial(Material, MaterialInfo);
+						MeshData.Materials.Add(MaterialInfo);
+						// 새로운 머티리얼, 머티리얼 인덱스 설정(0이 시작이라서 1을 빼주지 않음
+						MaterialIndex = MeshData.Materials.Num() - 1;
+						MaterialToIndex.Add(Material, MaterialIndex);
+					}
+					// MaterialSlotToIndex에 추가할 필요 없음(머티리얼 하나일때 해싱 패스하고 Material Index로 바로 그룹핑 할 거라서 안 씀)
+					LoadMesh(Mesh, MeshData, MaterialGroupIndexList, BoneToIndex, MaterialSlotToIndex, MaterialIndex);
+					continue;
+				}
+			}
+			
+			LoadMesh(Mesh, MeshData, MaterialGroupIndexList, BoneToIndex, MaterialSlotToIndex);
 		}
 	}
 
 	for (int Index = 0; Index < InNode->GetChildCount(); Index++)
 	{
-		LoadMeshFromNode(InNode->GetChild(Index), MeshData, BoneToIndex);
+		LoadMeshFromNode(InNode->GetChild(Index), MeshData, MaterialGroupIndexList, BoneToIndex, MaterialToIndex);
 	}
 }
 
@@ -182,9 +286,8 @@ void UFbxLoader::LoadMeshFromAttribute(FbxNodeAttribute* InAttribute, FSkeletalM
 	//UE_LOG("<Attribute Type = %s, Name = %s\n", TypeName.Buffer(), AttributeName.Buffer());
 }
 
-void UFbxLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<FbxNode*, int32>& BoneToIndex)
+void UFbxLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<int32, TArray<uint32>>& MaterialGroupIndexList, TMap<FbxNode*, int32>& BoneToIndex, TArray<int32> MaterialSlotToIndex, int32 MaterialIndex)
 {
-
 	// 위에서 뼈 인덱스를 구했으므로 일단 ControlPoint에 대응되는 뼈 인덱스와 가중치부터 할당할 것임(이후 MeshData를 채우면서 ControlPoint를 순회할 것이므로)
 	struct IndexWeight
 	{
@@ -215,13 +318,13 @@ void UFbxLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<Fbx
 			Cluster->GetTransformLinkMatrix(BindPoseMatrix);
 			FbxAMatrix BindPoseInverseMatrix = BindPoseMatrix.Inverse();
 			// FbxMatrix는 128바이트, FMatrix는 64바이트라서 memcpy쓰면 망함
-			for(int Row = 0 ; Row < 4 ; Row++)
-				for (int Col = 0 ; Col < 4 ; Col++)
+			for (int Row = 0; Row < 4; Row++)
+				for (int Col = 0; Col < 4; Col++)
 				{
 					MeshData.Skeleton.Bones[BoneToIndex[Cluster->GetLink()]].InverseBindPose.M[Row][Col] = BindPoseInverseMatrix[Row][Col];
 					MeshData.Skeleton.Bones[BoneToIndex[Cluster->GetLink()]].BindPose.M[Row][Col] = BindPoseMatrix[Row][Col];
 				}
-			
+
 
 			for (int ControlPointIndex = 0; ControlPointIndex < IndexCount; ControlPointIndex++)
 			{
@@ -238,11 +341,11 @@ void UFbxLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<Fbx
 	// TriangleStrip은 한번 만들면 편집이 사실상 불가능함, FBX같은 호환성이 중요한 모델링 포멧이 유연성 부족한 모델을 저장할 이유도 없고
 	// 엔진 최적화 측면에서도 GPU의 Vertex Cache가 Strip과 비슷한 성능을 내면서도 직관적이고 유연해서 잘 쓰지도 않기 때문에 그냥 안 씀.
 	int PolygonCount = InMesh->GetPolygonCount();
-	
+
 	// ControlPoints는 정점의 위치 정보를 배열로 저장함, Vertex마다 ControlIndex로 참조함.
 	FbxVector4* ControlPoints = InMesh->GetControlPoints();
 
-	
+
 	// Vertex 위치가 같아도 서로 다른 Normal, Tangent, UV좌표를 가질 수 있음, FBX는 하나의 인덱스 배열에서 이들을 서로 다른 인덱스로 관리하길 강제하지 않고 
 	// Vertex 위치는 ControlPoint로 관리하고 그 외의 정보들은 선택적으로 분리해서 관리하도록 함. 그래서 ControlPoint를 Index로 쓸 수도 없어서 따로 만들어야 하고, 
 	// 위치정보 외의 정보를 참조할때는 매핑 방식별로 분기해서 저장해야함. 만약 매핑 방식이 eByPolygonVertex(꼭짓점 기준)인 경우 폴리곤의 꼭짓점을 순회하는 순서
@@ -251,11 +354,22 @@ void UFbxLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<Fbx
 
 	// 위의 이유로 ControlPoint를 인덱스 버퍼로 쓸 수가 없어서 Vertex마다 대응되는 Index Map을 따로 만들어서 계산할 것임.
 	TMap<FSkinnedVertex, uint32> IndexMap;
-	
-	
+
+
 	for (int PolygonIndex = 0; PolygonIndex < PolygonCount; PolygonIndex++)
 	{
+		// 최종적으로 사용할 머티리얼 인덱스를 구함, MaterialIndex 기본값이 0이므로 없는 경우 처리됨, 머티리얼이 하나일때 materialIndex가 1 이상이므로 처리됨.
+		// 머티리얼이 여러개일때만 처리해주면 됌.
 		
+		// 머티리얼이 여러개인 경우(머티리얼이 하나 이상 있는데 materialIndex가 0이면 여러개, 하나일때는 MaterialIndex를 설정해주니까)
+		// 이때는 해싱을 해줘야함
+		if (MaterialIndex == 0 && InMesh->GetElementMaterialCount() > 0)
+		{
+			FbxGeometryElementMaterial* Material = InMesh->GetElementMaterial(0);
+			int MaterialSlot = Material->GetIndexArray().GetAt(PolygonIndex);
+			MaterialIndex = MaterialSlotToIndex[MaterialSlot];
+		}
+
 		// 하나의 Polygon 내에서의 VertexIndex, PolygonSize가 다를 수 있지만 위에서 삼각화를 해줬기 때문에 무조건 3임
 		for (int VertexIndex = 0; VertexIndex < InMesh->GetPolygonSize(PolygonIndex); VertexIndex++)
 		{
@@ -266,7 +380,7 @@ void UFbxLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<Fbx
 			const FbxVector4& Position = ControlPoints[ControlPointIndex];
 			SkinnedVertex.Position = FVector(Position.mData[0], Position.mData[1], Position.mData[2]);
 
-			
+
 			if (ControlPointToBoneWeight.Contains(ControlPointIndex))
 			{
 				const TArray<IndexWeight>& WeightArray = ControlPointToBoneWeight[ControlPointIndex];
@@ -290,7 +404,7 @@ void UFbxLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<Fbx
 				FbxGeometryElementVertexColor* VertexColors = InMesh->GetElementVertexColor(0);
 				int MappingIndex;
 				// 확장성을 고려하여 switch를 씀, ControlPoint와 PolygonVertex말고 다른 모드들도 있음.
-				switch(VertexColors->GetMappingMode())
+				switch (VertexColors->GetMappingMode())
 				{
 				case FbxGeometryElement::eByPolygon: //다른 모드 예시
 				case FbxGeometryElement::eAllSame:
@@ -301,73 +415,73 @@ void UFbxLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<Fbx
 				case FbxGeometryElement::eByControlPoint:
 					MappingIndex = ControlPointIndex;
 					break;
-				// 꼭짓점마다 컬러가 저장된 경우(같은 위치여도 다른 컬러 저장 가능), 위와 같지만 꼭짓점마다 할당되는 VertexId를 씀.
+					// 꼭짓점마다 컬러가 저장된 경우(같은 위치여도 다른 컬러 저장 가능), 위와 같지만 꼭짓점마다 할당되는 VertexId를 씀.
 				case FbxGeometryElement::eByPolygonVertex:
 					MappingIndex = VertexId;
 					break;
 				}
-				
+
 				// 매핑 방식에 더해서, 실제로 그 ControlPoint에서 어떻게 참조할 것인지가 다를 수 있음.(데이터 압축때문에 필요, IndexBuffer를 쓰는 것과 비슷함)
 				switch (VertexColors->GetReferenceMode())
 				{
 					// 인덱스 자체가 데이터 배열의 인덱스인 경우(중복이 생길 수 있음)
 				case FbxGeometryElement::eDirect:
-					{
-						// 바로 참조 가능.
-						const FbxColor& Color = VertexColors->GetDirectArray().GetAt(MappingIndex);
-						SkinnedVertex.Color = FVector4(Color.mRed, Color.mGreen, Color.mBlue, Color.mAlpha);
-					}
-					break;
+				{
+					// 바로 참조 가능.
+					const FbxColor& Color = VertexColors->GetDirectArray().GetAt(MappingIndex);
+					SkinnedVertex.Color = FVector4(Color.mRed, Color.mGreen, Color.mBlue, Color.mAlpha);
+				}
+				break;
 				//인덱스 배열로 간접참조해야함
 				case FbxGeometryElement::eIndexToDirect:
-					{
-						int Id = VertexColors->GetIndexArray().GetAt(MappingIndex);
-						const FbxColor& Color = VertexColors->GetDirectArray().GetAt(Id);
-						SkinnedVertex.Color = FVector4(Color.mRed, Color.mGreen, Color.mBlue, Color.mAlpha);
-					}
-					break;
+				{
+					int Id = VertexColors->GetIndexArray().GetAt(MappingIndex);
+					const FbxColor& Color = VertexColors->GetDirectArray().GetAt(Id);
+					SkinnedVertex.Color = FVector4(Color.mRed, Color.mGreen, Color.mBlue, Color.mAlpha);
+				}
+				break;
 				//외의 경우는 일단 배제
 				default:
 					break;
-				}	
+				}
 			}
-			
+
 			if (InMesh->GetElementTangentCount() > 0)
 			{
 				FbxGeometryElementTangent* Tangents = InMesh->GetElementTangent(0);
 
 				// 왜 Color에서 계산한 Mapping Index를 안 쓰지? -> 컬러, 탄젠트, 노말, UV 모두 다 다른 매핑 방식을 사용 가능함.
-				int MappingIndex; 
+				int MappingIndex;
 
 				switch (Tangents->GetMappingMode())
 				{
-					case FbxGeometryElement::eByControlPoint:
-						MappingIndex = ControlPointIndex;
-						break;
-					case FbxGeometryElement::eByPolygonVertex:
-						MappingIndex = VertexId;
-						break;
-					default:
-						break;
+				case FbxGeometryElement::eByControlPoint:
+					MappingIndex = ControlPointIndex;
+					break;
+				case FbxGeometryElement::eByPolygonVertex:
+					MappingIndex = VertexId;
+					break;
+				default:
+					break;
 				}
 
 				switch (Tangents->GetReferenceMode())
 				{
-					case FbxGeometryElement::eDirect:
-						{
-							const FbxVector4& Tangent = Tangents->GetDirectArray().GetAt(MappingIndex);
-							SkinnedVertex.Tangent = FVector4(Tangent.mData[0], Tangent.mData[1], Tangent.mData[2], Tangent.mData[3]);
-						}
-						break;
-					case FbxGeometryElement::eIndexToDirect:
-						{
-							int Id = Tangents->GetIndexArray().GetAt(MappingIndex);
-							const FbxVector4& Tangent = Tangents->GetDirectArray().GetAt(Id);
-							SkinnedVertex.Tangent = FVector4(Tangent.mData[0], Tangent.mData[1], Tangent.mData[2], Tangent.mData[3]);
-						}
-						break;
-					default:
-						break;
+				case FbxGeometryElement::eDirect:
+				{
+					const FbxVector4& Tangent = Tangents->GetDirectArray().GetAt(MappingIndex);
+					SkinnedVertex.Tangent = FVector4(Tangent.mData[0], Tangent.mData[1], Tangent.mData[2], Tangent.mData[3]);
+				}
+				break;
+				case FbxGeometryElement::eIndexToDirect:
+				{
+					int Id = Tangents->GetIndexArray().GetAt(MappingIndex);
+					const FbxVector4& Tangent = Tangents->GetDirectArray().GetAt(Id);
+					SkinnedVertex.Tangent = FVector4(Tangent.mData[0], Tangent.mData[1], Tangent.mData[2], Tangent.mData[3]);
+				}
+				break;
+				default:
+					break;
 				}
 			}
 
@@ -394,18 +508,18 @@ void UFbxLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<Fbx
 				switch (Normals->GetReferenceMode())
 				{
 				case FbxGeometryElement::eDirect:
-					{
-						const FbxVector4& Normal = Normals->GetDirectArray().GetAt(MappingIndex);
-						SkinnedVertex.Normal = FVector(Normal.mData[0], Normal.mData[1], Normal.mData[2]);
-					}
-					break;
+				{
+					const FbxVector4& Normal = Normals->GetDirectArray().GetAt(MappingIndex);
+					SkinnedVertex.Normal = FVector(Normal.mData[0], Normal.mData[1], Normal.mData[2]);
+				}
+				break;
 				case FbxGeometryElement::eIndexToDirect:
-					{
-						int Id = Normals->GetIndexArray().GetAt(MappingIndex);
-						const FbxVector4& Normal = Normals->GetDirectArray().GetAt(Id);
-						SkinnedVertex.Normal = FVector(Normal.mData[0], Normal.mData[1], Normal.mData[2]);
-					}
-					break;
+				{
+					int Id = Normals->GetIndexArray().GetAt(MappingIndex);
+					const FbxVector4& Normal = Normals->GetDirectArray().GetAt(Id);
+					SkinnedVertex.Normal = FVector(Normal.mData[0], Normal.mData[1], Normal.mData[2]);
+				}
+				break;
 				default:
 					break;
 				}
@@ -426,39 +540,39 @@ void UFbxLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<Fbx
 					switch (UVs->GetReferenceMode())
 					{
 					case FbxGeometryElement::eDirect:
-						{
-							const FbxVector2& UV = UVs->GetDirectArray().GetAt(ControlPointIndex);
-							SkinnedVertex.UV = FVector2D(UV.mData[0], UV.mData[1]);
-						}
-						break;
+					{
+						const FbxVector2& UV = UVs->GetDirectArray().GetAt(ControlPointIndex);
+						SkinnedVertex.UV = FVector2D(UV.mData[0], UV.mData[1]);
+					}
+					break;
 					case FbxGeometryElement::eIndexToDirect:
-						{
-							int Id = UVs->GetIndexArray().GetAt(ControlPointIndex);
-							const FbxVector2& UV = UVs->GetDirectArray().GetAt(Id);
-							SkinnedVertex.UV = FVector2D(UV.mData[0], UV.mData[1]);
-						}
-						break;
+					{
+						int Id = UVs->GetIndexArray().GetAt(ControlPointIndex);
+						const FbxVector2& UV = UVs->GetDirectArray().GetAt(Id);
+						SkinnedVertex.UV = FVector2D(UV.mData[0], UV.mData[1]);
+					}
+					break;
 					default:
 						break;
 					}
 					break;
 				case FbxGeometryElement::eByPolygonVertex:
+				{
+					int TextureUvIndex = InMesh->GetTextureUVIndex(PolygonIndex, VertexIndex);
+					switch (UVs->GetReferenceMode())
 					{
-						int TextureUvIndex = InMesh->GetTextureUVIndex(PolygonIndex, VertexIndex);
-						switch (UVs->GetReferenceMode())
-						{
-							case FbxGeometryElement::eDirect:
-							case FbxGeometryElement::eIndexToDirect:
-								{
-									const FbxVector2& UV = UVs->GetDirectArray().GetAt(TextureUvIndex);
-									SkinnedVertex.UV = FVector2D(UV.mData[0], UV.mData[1]);
-								}
-								break;
-							default:
-								break;
-						}
+					case FbxGeometryElement::eDirect:
+					case FbxGeometryElement::eIndexToDirect:
+					{
+						const FbxVector2& UV = UVs->GetDirectArray().GetAt(TextureUvIndex);
+						SkinnedVertex.UV = FVector2D(UV.mData[0], UV.mData[1]);
 					}
 					break;
+					default:
+						break;
+					}
+				}
+				break;
 				default:
 					break;
 				}
@@ -480,10 +594,13 @@ void UFbxLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<Fbx
 				// 인덱스 맵에 추가
 				IndexMap.Add(SkinnedVertex, IndexOfVertex);
 			}
-			// 인덱스 리스트에 최종 인덱스 추가(Vertex 리스트와 대응)
-			MeshData.Indices.Add(IndexOfVertex);
+			// 대응하는 머티리얼 인덱스 리스트에 추가
+			TArray<uint32>& GroupIndexList = MaterialGroupIndexList[MaterialIndex];
+			GroupIndexList.Add(IndexOfVertex);
 
-			
+			// 인덱스 리스트에 최종 인덱스 추가(Vertex 리스트와 대응)
+			// 머티리얼 사용하면서 필요 없어짐.(머티리얼 소팅 후 한번에 복사할거임)
+			//MeshData.Indices.Add(IndexOfVertex);
 
 			// Vertex 하나 저장했고 Vertex마다 Id를 사용하므로 +1
 			VertexId++;
@@ -491,10 +608,104 @@ void UFbxLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<Fbx
 	} // for PolygonCount
 }
 
+
+// 머티리얼 파싱해서 FMaterialInfo에 매핑
+void UFbxLoader::ParseMaterial(FbxSurfaceMaterial* Material, FMaterialInfo& MaterialInfo)
+{
+	// FbxPropertyT : 타입에 대해 애니메이션과 연결 지원(키프레임마다 타입 변경 등)
+	FbxPropertyT<FbxDouble3> Double3Prop;
+	FbxPropertyT<FbxDouble> DoubleProp;
+
+	MaterialInfo.MaterialName = Material->GetName();
+	// PBR 제외하고 Phong, Lambert 머티리얼만 처리함. 
+	if (Material->GetClassId().Is(FbxSurfacePhong::ClassId))
+	{
+		FbxSurfacePhong* SurfacePhong = (FbxSurfacePhong*)Material;
+
+		Double3Prop = SurfacePhong->Diffuse;
+		MaterialInfo.DiffuseColor = FVector(Double3Prop.Get()[0], Double3Prop.Get()[1], Double3Prop.Get()[2]);
+
+		Double3Prop = SurfacePhong->Ambient;
+		MaterialInfo.AmbientColor = FVector(Double3Prop.Get()[0], Double3Prop.Get()[1], Double3Prop.Get()[2]);
+
+		// SurfacePhong->Reflection : 환경 반사, 퐁 모델에선 필요없음
+		Double3Prop = SurfacePhong->Specular;
+		DoubleProp = SurfacePhong->ReflectionFactor;
+		MaterialInfo.SpecularColor = FVector(Double3Prop.Get()[0], Double3Prop.Get()[1], Double3Prop.Get()[2]) * DoubleProp.Get();
+
+		Double3Prop = SurfacePhong->Emissive;
+		MaterialInfo.EmissiveColor = FVector(Double3Prop.Get()[0], Double3Prop.Get()[1], Double3Prop.Get()[2]);
+
+		DoubleProp = SurfacePhong->Shininess;
+		MaterialInfo.SpecularExponent = DoubleProp.Get();
+
+		DoubleProp = SurfacePhong->TransparencyFactor;
+		MaterialInfo.Transparency = DoubleProp.Get();
+	}
+	else if (Material->GetClassId().Is(FbxSurfaceLambert::ClassId))
+	{
+		FbxSurfaceLambert* SurfacePhong = (FbxSurfaceLambert*)Material;
+
+		Double3Prop = SurfacePhong->Diffuse;
+		MaterialInfo.DiffuseColor = FVector(Double3Prop.Get()[0], Double3Prop.Get()[1], Double3Prop.Get()[2]);
+
+		Double3Prop = SurfacePhong->Ambient;
+		MaterialInfo.AmbientColor = FVector(Double3Prop.Get()[0], Double3Prop.Get()[1], Double3Prop.Get()[2]);
+
+		Double3Prop = SurfacePhong->Emissive;
+		MaterialInfo.EmissiveColor = FVector(Double3Prop.Get()[0], Double3Prop.Get()[1], Double3Prop.Get()[2]);
+
+		DoubleProp = SurfacePhong->TransparencyFactor;
+		MaterialInfo.Transparency = DoubleProp.Get();
+	}
+
+
+	FbxProperty Property;
+
+	Property = Material->FindProperty(FbxSurfaceMaterial::sDiffuse);
+	MaterialInfo.DiffuseTextureFileName = ParseTexturePath(Property);
+
+	Property = Material->FindProperty(FbxSurfaceMaterial::sNormalMap);
+	MaterialInfo.NormalTextureFileName = ParseTexturePath(Property);
+
+	Property = Material->FindProperty(FbxSurfaceMaterial::sAmbient);
+	MaterialInfo.AmbientTextureFileName = ParseTexturePath(Property);
+
+	Property = Material->FindProperty(FbxSurfaceMaterial::sSpecular);
+	MaterialInfo.SpecularTextureFileName = ParseTexturePath(Property);
+
+	Property = Material->FindProperty(FbxSurfaceMaterial::sEmissive);
+	MaterialInfo.EmissiveTextureFileName = ParseTexturePath(Property);
+
+	Property = Material->FindProperty(FbxSurfaceMaterial::sTransparencyFactor);
+	MaterialInfo.TransparencyTextureFileName = ParseTexturePath(Property);
+
+	Property = Material->FindProperty(FbxSurfaceMaterial::sShininess);
+	MaterialInfo.SpecularExponentTextureFileName = ParseTexturePath(Property);
+	
+}
+
+FString UFbxLoader::ParseTexturePath(FbxProperty& Property)
+{
+	if (Property.IsValid())
+	{
+		if (Property.GetSrcObjectCount<FbxFileTexture>() > 0)
+		{
+			FbxFileTexture* Texture = Property.GetSrcObject<FbxFileTexture>(0);
+			if (Texture)
+			{
+				return FString(Texture->GetFileName());
+			}
+		}
+	}
+	return FString();
+}
+
 FbxString UFbxLoader::GetAttributeTypeName(FbxNodeAttribute* InAttribute)
 {
+	// 테스트코드
 	// Attribute타입에 대한 자료형, 이것으로 Skeleton만 빼낼 수 있을 듯
-	FbxNodeAttribute::EType Type = InAttribute->GetAttributeType();
+	/*FbxNodeAttribute::EType Type = InAttribute->GetAttributeType();
 	switch (Type) {
 	case FbxNodeAttribute::eUnknown: return "unidentified";
 	case FbxNodeAttribute::eNull: return "null";
@@ -517,6 +728,7 @@ FbxString UFbxLoader::GetAttributeTypeName(FbxNodeAttribute* InAttribute)
 	case FbxNodeAttribute::eLODGroup: return "lodgroup";
 	case FbxNodeAttribute::eSubDiv: return "subdiv";
 	default: return "unknown";
-	}
+	}*/
+	return "test";
 }
 
