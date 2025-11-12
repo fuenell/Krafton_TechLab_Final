@@ -165,12 +165,14 @@ enum class EEngineShowFlags : uint64
     SF_TileCullingDebug = 1ull << 14, // Show/hide tile culling debug visualization
 
     SF_Billboard = 1ull << 15,
+    SF_EditorIcon = 1ull << 16,
 
-    SF_Shadows = 1ull << 16,
-    SF_ShadowAntiAliasing = 1ull << 17,
+    SF_Shadows = 1ull << 17,
+    SF_ShadowAntiAliasing = 1ull << 18,
 
     // Default enabled flags
-    SF_DefaultEnabled = SF_Primitives | SF_StaticMeshes | SF_SkeletalMeshes | SF_Grid | SF_Lighting | SF_Decals | SF_Fog | SF_FXAA |SF_Billboard | SF_Shadows | SF_ShadowAntiAliasing,
+    SF_DefaultEnabled = SF_Primitives | SF_StaticMeshes | SF_SkeletalMeshes | SF_Grid | SF_Lighting | SF_Decals |
+        SF_Fog | SF_FXAA | SF_Billboard | SF_EditorIcon | SF_Shadows | SF_ShadowAntiAliasing,
 
     // All flags (for initialization/reset)
     SF_All = 0xFFFFFFFFFFFFFFFFull

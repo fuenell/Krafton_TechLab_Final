@@ -1,11 +1,10 @@
 #include "pch.h"
 #include "SkeletalViewerBootstrap.h"
+#include "CameraActor.h"
 #include "Source/Runtime/Engine/SkeletalViewer/ViewerState.h"
 #include "FViewport.h"
 #include "FSkeletalViewerViewportClient.h"
 #include "Source/Runtime/Engine/GameFramework/SkeletalMeshActor.h"
-#include "ResourceManager.h"
-#include "SkeletalMesh.h"
 
 ViewerState* SkeletalViewerBootstrap::CreateViewerState(const char* Name, UWorld* InWorld, ID3D11Device* InDevice)
 {
@@ -18,6 +17,7 @@ ViewerState* SkeletalViewerBootstrap::CreateViewerState(const char* Name, UWorld
     State->World = NewObject<UWorld>();
     State->World->SetWorldType(EWorldType::PreviewMinimal);  // Set as preview world for memory optimization
     State->World->Initialize();
+    State->World->GetRenderSettings().DisableShowFlag(EEngineShowFlags::SF_EditorIcon);
 
     State->World->GetGizmoActor()->SetSpace(EGizmoSpace::Local);
     
@@ -30,6 +30,7 @@ ViewerState* SkeletalViewerBootstrap::CreateViewerState(const char* Name, UWorld
     Client->SetWorld(State->World);
     Client->SetViewportType(EViewportType::Perspective);
     Client->SetViewMode(EViewMode::VMI_Lit_Phong);
+    Client->GetCamera()->SetActorLocation(FVector(10, 0, 5));
 
     State->Client = Client;
     State->Viewport->SetViewportClient(Client);

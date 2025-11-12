@@ -618,6 +618,7 @@ void FSceneRenderer::GatherVisibleProxies()
 	const bool bDrawLight = World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_Lighting);
 	const bool bUseAntiAliasing = World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_FXAA);
 	const bool bUseBillboard = World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_Billboard);
+	const bool bUseIcon = World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_EditorIcon);
 
 	// Helper lambda to collect components from an actor
 	auto CollectComponentsFromActor = [&](AActor* Actor, bool bIsEditorActor)
@@ -654,7 +655,10 @@ void FSceneRenderer::GatherVisibleProxies()
 					// 에디터 보조 컴포넌트 (빌보드 등)
 					if (!PrimitiveComponent->IsEditable())
 					{
-						Proxies.EditorPrimitives.Add(PrimitiveComponent);
+						if (bUseIcon)
+						{
+							Proxies.EditorPrimitives.Add(PrimitiveComponent);
+						}
 						continue;
 					}
 

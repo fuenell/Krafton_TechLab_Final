@@ -77,6 +77,7 @@ SViewportWindow::~SViewportWindow()
 	IconDecal = nullptr;
 	IconStaticMesh = nullptr;
 	IconBillboard = nullptr;
+	IconEditorIcon = nullptr;
 	IconFog = nullptr;
 	IconCollision = nullptr;
 	IconAntiAliasing = nullptr;
@@ -415,6 +416,9 @@ void SViewportWindow::LoadToolbarIcons(ID3D11Device* Device)
 
 	IconBillboard = NewObject<UTexture>();
 	IconBillboard->Load(GDataDir + "/Icon/Viewport_Billboard.png", Device);
+
+	IconEditorIcon = NewObject<UTexture>();
+	IconEditorIcon->Load(GDataDir + "/Icon/Viewport_EditorIcon.png", Device);
 
 	IconFog = NewObject<UTexture>();
 	IconFog->Load(GDataDir + "/Icon/Viewport_Fog.png", Device);
@@ -1585,6 +1589,24 @@ void SViewportWindow::RenderShowFlagDropdownMenu()
 		if (ImGui::IsItemHovered())
 		{
 			ImGui::SetTooltip("빌보드 텍스트를 표시합니다.");
+		}
+		
+		// EditorIcon
+		bool bIcon = RenderSettings.IsShowFlagEnabled(EEngineShowFlags::SF_EditorIcon);
+		if (ImGui::Checkbox("##Icon", &bIcon))
+		{
+			RenderSettings.ToggleShowFlag(EEngineShowFlags::SF_EditorIcon);
+		}
+		ImGui::SameLine();
+		if (IconEditorIcon && IconEditorIcon->GetShaderResourceView())
+		{
+			ImGui::Image((void*)IconEditorIcon->GetShaderResourceView(), IconSize);
+			ImGui::SameLine(0, 4);
+		}
+		ImGui::Text(" 아이콘");
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("에디터 전용 아이콘을 표시합니다.");
 		}
 
 		// Fog
