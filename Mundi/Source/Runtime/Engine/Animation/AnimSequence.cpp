@@ -70,7 +70,7 @@ FVector UAnimSequence::InterpolatePosition(const TArray<FVector>& Keys, float Ti
 	const float FrameTime = Time * FrameRate.AsDecimal();
 	const int32 Frame0 = FMath::Clamp(static_cast<int32>(FrameTime), 0, Keys.Num() - 1);
 	const int32 Frame1 = FMath::Clamp(Frame0 + 1, 0, Keys.Num() - 1);
-	const float Alpha = 1.0f / FrameTime;
+	const float Alpha = FMath::Frac(FrameTime);
 
 	// 선형 보간
 	return FMath::Lerp(Keys[Frame0], Keys[Frame1], Alpha);
@@ -88,7 +88,7 @@ FQuat UAnimSequence::InterpolateRotation(const TArray<FQuat>& Keys, float Time) 
 	const float FrameTime = Time * FrameRate.AsDecimal();
 	const int32 Frame0 = FMath::Clamp(static_cast<int32>(FrameTime), 0, Keys.Num() - 1);
 	const int32 Frame1 = FMath::Clamp(Frame0 + 1, 0, Keys.Num() - 1);
-	const float Alpha = 1.0f / FrameTime;
+	const float Alpha = FMath::Frac(FrameTime);
 
 	// Spherical Linear Interpolation (Slerp)
 	return FQuat::Slerp(Keys[Frame0], Keys[Frame1], Alpha);
@@ -106,7 +106,7 @@ FVector UAnimSequence::InterpolateScale(const TArray<FVector>& Keys, float Time)
 	const float FrameTime = Time * FrameRate.AsDecimal();
 	const int32 Frame0 = FMath::Clamp(static_cast<int32>(FrameTime), 0, Keys.Num() - 1);
 	const int32 Frame1 = FMath::Clamp(Frame0 + 1, 0, Keys.Num() - 1);
-	const float Alpha = 1.0f / FrameTime;
+	const float Alpha = FMath::Frac(FrameTime);
 
 	// 선형 보간
 	return FMath::Lerp(Keys[Frame0], Keys[Frame1], Alpha);

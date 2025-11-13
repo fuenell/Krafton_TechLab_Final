@@ -62,6 +62,12 @@ namespace FMath
 	{
 		return A + (B - A) * Alpha;
 	}
+
+	// 소수부만 반환 (예: Frac(3.7) = 0.7)
+	static float Frac(float Value)
+	{
+		return Value - std::floor(Value);
+	}
 }
 // 각도를 -180 ~ 180 범위로 정규화 (모듈러 연산)
 inline float NormalizeAngleDeg(float angleDeg)
