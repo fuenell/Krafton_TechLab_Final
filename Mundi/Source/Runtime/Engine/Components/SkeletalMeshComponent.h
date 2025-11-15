@@ -14,6 +14,34 @@ public:
     void TickComponent(float DeltaTime) override;
     void SetSkeletalMesh(const FString& PathFileName) override;
 
+    /**
+     * 애니메이션 재생 시작
+     * @param Animation 재생할 애니메이션 시퀀스
+     * @param bLoop 루핑 여부 (기본값: true)
+     */
+    void PlayAnimation(class UAnimSequence* Animation, bool bLoop = true);
+
+    /**
+     * 애니메이션 재생 중지
+     */
+    void StopAnimation();
+
+    /**
+     * 애니메이션 재생 시간 설정
+     * @param Time 설정할 시간 (초 단위)
+     */
+    void SetAnimationTime(float Time);
+
+    /**
+     * 현재 애니메이션 재생 중인지 확인
+     */
+    bool IsPlayingAnimation() const { return bIsPlaying; }
+
+    /**
+     * 현재 재생 중인 애니메이션 가져오기
+     */
+    class UAnimSequence* GetCurrentAnimation() const { return CurrentAnimation; }
+
 // Editor Section
 public:
     /**
@@ -51,6 +79,12 @@ protected:
      */
     void UpdateFinalSkinningMatrices();
 
+    /**
+     * @brief 주어진 시간에 애니메이션을 평가하여 CurrentLocalSpacePose 업데이트
+     * @param Time 평가할 시간 (초 단위)
+     */
+    void EvaluateAnimation(float Time);
+
 protected:
     /**
      * @brief 각 뼈의 부모 기준 로컬 트랜스폼
@@ -66,11 +100,26 @@ protected:
      * @brief 부모에게 보낼 최종 스키닝 행렬 (임시 계산용)
      */
     TArray<FMatrix> TempFinalSkinningMatrices;
-    /**
-     * @brief CPU 스키닝에 전달할 최종 노말 스키닝 행렬
-     */
-    TArray<FMatrix> TempFinalSkinningNormalMatrices;
 
+    /**
+     * @brief 현재 재생 중인 애니메이션 시퀀스
+     */
+    class UAnimSequence* CurrentAnimation = nullptr;
+
+    /**
+     * @brief 현재 애니메이션 재생 시간 (초 단위)
+     */
+    float CurrentAnimationTime = 0.0f;
+
+    /**
+     * @brief 애니메이션 재생 중 여부
+     */
+    bool bIsPlaying = false;
+
+    /**
+     * @brief 애니메이션 루핑 여부
+     */
+    bool bLooping = false;
 
 // FOR TEST!!!
 private:

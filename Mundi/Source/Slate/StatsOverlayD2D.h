@@ -19,6 +19,7 @@ public:
     void SetShowTileCulling(bool b);
     void SetShowLights(bool b);
     void SetShowShadow(bool b);
+    void SetShowSkinning(bool b);
     void ToggleFPS();
     void ToggleMemory();
     void TogglePicking();
@@ -26,6 +27,7 @@ public:
     void ToggleTileCulling();
     void ToggleLights();
     void ToggleShadow();
+    void ToggleSkinning();
     bool IsFPSVisible() const { return bShowFPS; }
     bool IsMemoryVisible() const { return bShowMemory; }
     bool IsPickingVisible() const { return bShowPicking; }
@@ -33,6 +35,7 @@ public:
     bool IsTileCullingVisible() const { return bShowTileCulling; }
     bool IsLightsVisible() const { return bShowLights; }
     bool IsShadowVisible() const { return bShowShadow; }
+    bool IsSkinningVisible() const { return bShowSkinning; }
 
 private:
     UStatsOverlayD2D() = default;
@@ -52,8 +55,18 @@ private:
     bool bShowTileCulling = false;
     bool bShowShadow = false;
     bool bShowLights = false;
+    bool bShowSkinning = false;
 
     ID3D11Device* D3DDevice = nullptr;
     ID3D11DeviceContext* D3DContext = nullptr;
     IDXGISwapChain* SwapChain = nullptr;
+
+    // D2D 리소스 캐싱 (매 프레임 재사용)
+    struct ID2D1Factory1* D2dFactory = nullptr;
+    struct ID2D1Device* D2dDevice = nullptr;
+    struct ID2D1DeviceContext* D2dCtx = nullptr;
+    struct IDWriteFactory* Dwrite = nullptr;
+    struct IDWriteTextFormat* TextFormat = nullptr;
+    struct ID2D1SolidColorBrush* CachedBrush = nullptr;
+    bool bD2DInitialized = false;
 };
