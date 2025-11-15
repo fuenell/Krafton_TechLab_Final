@@ -98,4 +98,8 @@ private:
      * @brief GPU 스키닝용 본 행렬 상수 버퍼
      */
     ID3D11Buffer* BoneMatricesBuffer = nullptr;
+    /**
+     * @brief 현재 할당된 본 버퍼 크기 (바이트 단위, 재생성 판단용)
+     */
+    int32 CurrentBoneBufferSize = 0;
 };

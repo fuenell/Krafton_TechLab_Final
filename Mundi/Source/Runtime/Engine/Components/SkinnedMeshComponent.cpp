@@ -60,6 +60,7 @@ void USkinnedMeshComponent::DuplicateSubObjects()
    VertexBuffer = nullptr;
    GPUSkinnedVertexBuffer = nullptr;
    BoneMatricesBuffer = nullptr;
+   CurrentBoneBufferSize = 0;
 
    // PIE 종료 후 스키닝 데이터를 다시 계산하도록 플래그 설정
    bSkinningMatricesDirty = true;
@@ -352,8 +353,8 @@ void USkinnedMeshComponent::PerformSkinning(bool bUseGPU)
       // NOTE: GPU 셰이더 실행 시간은 현재 구조상 측정 불가
       // (Begin/End 사이에 실제 Draw call이 없음, 별도의 렌더링 파이프라인 통합 필요)
 
-      // 통계에 추가
-      const uint64 BoneBufferSize = sizeof(FMatrix) * 128; // MAX_BONES
+      // 통계에 추가 (실제 할당된 버퍼 크기 사용)
+      const uint64 BoneBufferSize = CurrentBoneBufferSize;
       StatManager.AddGPUMesh(NumVertices, NumBones, BoneBufferSize);
       StatManager.AddGPUBoneMatrixCalcTime(LastBoneMatrixCalcTimeMS); // 본 행렬 계산 시간 추가
       StatManager.AddGPUBoneBufferUploadTime(BoneUploadTimeMS);
@@ -486,31 +487,42 @@ FVector4 USkinnedMeshComponent::SkinVertexTangent(const FSkinnedVertex& InVertex
 
 void USkinnedMeshComponent::UpdateBoneMatrixBuffer()
 {
-   constexpr int32 MAX_BONES = 128;
+   // 실제 본 개수 계산
+   const int32 NumBones = FinalSkinningMatrices.Num();
+   if (NumBones == 0) return;
 
-   // GPU 스키닝용 본 행렬 버퍼 (노멀 행렬 없이 하나만 사용)
-   struct FBoneMatricesBufferData
-   {
-      FMatrix BoneMatrices[MAX_BONES];
-   };
+   // 버퍼 크기 계산 (실제 본 개수만큼)
+   const int32 RawBufferSize = NumBones * sizeof(FMatrix);
 
-   FBoneMatricesBufferData BufferData;
-   ZeroMemory(&BufferData, sizeof(BufferData));
+   // D3D11 상수 버퍼는 16바이트 정렬 필수
+   const int32 AlignedBufferSize = ((RawBufferSize + 15) / 16) * 16;
 
-   // 본 행렬 복사 (최대 MAX_BONES개까지)
-   const int32 NumBones = FMath::Min(FinalSkinningMatrices.Num(), MAX_BONES);
+   // 동적 배열로 본 행렬 데이터 준비
+   TArray<FMatrix> BufferData;
+   BufferData.SetNum(NumBones);
    for (int32 i = 0; i < NumBones; ++i)
    {
-      BufferData.BoneMatrices[i] = FinalSkinningMatrices[i];
+      BufferData[i] = FinalSkinningMatrices[i];
    }
 
-   // 버퍼가 없으면 생성
-   if (!BoneMatricesBuffer)
+   ID3D11Device* Device = GEngine.GetRHIDevice()->GetDevice();
+   ID3D11DeviceContext* Context = GEngine.GetRHIDevice()->GetDeviceContext();
+
+   // 버퍼 크기가 변경되었거나 버퍼가 없으면 재생성
+   if (!BoneMatricesBuffer || CurrentBoneBufferSize != AlignedBufferSize)
    {
+      // 기존 버퍼 해제
+      if (BoneMatricesBuffer)
+      {
+         BoneMatricesBuffer->Release();
+         BoneMatricesBuffer = nullptr;
+      }
+
+      // 새 버퍼 생성
       D3D11_BUFFER_DESC BufferDesc;
       ZeroMemory(&BufferDesc, sizeof(BufferDesc));
       BufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-      BufferDesc.ByteWidth = sizeof(FBoneMatricesBufferData);
+      BufferDesc.ByteWidth = AlignedBufferSize;
       BufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
       BufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
       BufferDesc.MiscFlags = 0;
@@ -518,26 +530,27 @@ void USkinnedMeshComponent::UpdateBoneMatrixBuffer()
 
       D3D11_SUBRESOURCE_DATA InitData;
       ZeroMemory(&InitData, sizeof(InitData));
-      InitData.pSysMem = &BufferData;
+      InitData.pSysMem = BufferData.GetData();
 
-      ID3D11Device* Device = GEngine.GetRHIDevice()->GetDevice();
       HRESULT hr = Device->CreateBuffer(&BufferDesc, &InitData, &BoneMatricesBuffer);
       if (FAILED(hr))
       {
-         UE_LOG("Failed to create bone matrices buffer");
+         UE_LOG("Failed to create bone matrices buffer (Size: %d bytes, NumBones: %d)", AlignedBufferSize, NumBones);
+         CurrentBoneBufferSize = 0;
          return;
       }
+
+      CurrentBoneBufferSize = AlignedBufferSize;
    }
    else
    {
-      // 버퍼 업데이트
-      ID3D11DeviceContext* Context = GEngine.GetRHIDevice()->GetDeviceContext();
-
+      // 버퍼 크기가 동일하면 데이터만 업데이트
       D3D11_MAPPED_SUBRESOURCE MappedResource;
       HRESULT hr = Context->Map(BoneMatricesBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource);
       if (SUCCEEDED(hr))
       {
-         memcpy(MappedResource.pData, &BufferData, sizeof(FBoneMatricesBufferData));
+         // 실제 데이터 크기만큼만 복사
+         memcpy(MappedResource.pData, BufferData.GetData(), RawBufferSize);
          Context->Unmap(BoneMatricesBuffer, 0);
       }
       else

@@ -74,7 +74,7 @@ cbuffer FLightShadowmBufferType : register(b5)
 
 // b6: BoneMatrices (VS) - GPU Skinning용 본 행렬 배열
 #ifdef GPU_SKINNING
-#define MAX_BONES 128
+#define MAX_BONES 256
 cbuffer BoneMatricesBuffer : register(b6)
 {
     row_major float4x4 BoneMatrices[MAX_BONES];          // 본 변환 행렬 (위치, 노멀, 탄젠트 모두 사용)
