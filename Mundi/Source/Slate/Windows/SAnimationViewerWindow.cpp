@@ -258,7 +258,18 @@ void SAnimationViewerWindow::OnRender()
         ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 8.0f);
         ImGui::BeginChild("RightPanel", ImVec2(rightWidth, totalHeight), true);
         ImGui::PopStyleVar();
-        RenderRightPanel();
+        {
+            float bonePropsHeight = ImGui::GetContentRegionAvail().y * 0.5f;
+            float animBrowserHeight = ImGui::GetContentRegionAvail().y * 0.5f;
+
+            ImGui::BeginChild("BonePropertiesArea", ImVec2(0, bonePropsHeight), false);
+            RenderRightPanel();
+            ImGui::EndChild();
+
+            ImGui::BeginChild("AnimationBrowserArea", ImVec2(0, 0), false);
+            RenderAnimationBrowser();
+            ImGui::EndChild();
+        }
         ImGui::EndChild(); // RightPanel
 
         // Pop the ItemSpacing style
@@ -422,5 +433,58 @@ void SAnimationViewerWindow::LoadSkeletalMesh(ViewerState* State, const FString&
     else
     {
         UE_LOG("SAnimationViewerWindow: Failed to load skeletal mesh from %s", Path.c_str());
+    }
+}
+
+void SAnimationViewerWindow::RenderAnimationBrowser()
+{
+    if (!ActiveState)   return;
+
+    ImGui::Separator();
+    ImGui::Text("Animation Browser");
+    ImGui::Checkbox("Show Only Compatible", &ActiveState->bShowOnlyCompatible);
+    ImGui::Separator();
+
+    const TArray<UAnimSequence*>& AnimsToShow = ActiveState->bShowOnlyCompatible
+        ? ActiveState->CompatibleAnimations
+        : UResourceManager::GetInstance().GetAnimations();
+
+    if (AnimsToShow.IsEmpty())
+    {
+        ImGui::Text(ActiveState->bShowOnlyCompatible
+            ? "No compatible animations found."
+            : "No animations loaded in ResourceManager.");
+        return;
+    }
+
+    if (ImGui::BeginListBox("##AnimBrowser", ImVec2(-1, -1)))
+    {
+        for (UAnimSequence* Anim : AnimsToShow)
+        {
+            if (!Anim)  continue;
+
+            bool isSelected = (ActiveState->CurrentAnimation == Anim);
+            if (ImGui::Selectable(Anim->GetName().c_str(), isSelected))
+            {
+                if (ActiveState->PreviewActor)
+                {
+                    ActiveState->CurrentAnimation = Anim;
+                    ActiveState->TotalTime = Anim->GetSequenceLength();
+                    ActiveState->CurrentTime = 0.0f;
+                    ActiveState->bIsPlaying = true;
+
+                    USkeletalMeshComponent* MeshComp = ActiveState->PreviewActor->GetSkeletalMeshComponent();
+                    if (MeshComp)
+                    {
+                        MeshComp->PlayAnimation(Anim, ActiveState->bIsLooping, ActiveState->PlaybackSpeed);
+                    }
+                }
+            }
+            if (isSelected)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndListBox();
     }
 }

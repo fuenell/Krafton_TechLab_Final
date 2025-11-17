@@ -71,6 +71,22 @@ ViewerState* AnimationViewerBootstrap::CreateViewerState(const char* Name, UWorl
                     State->bIsLooping = true;
                     State->PlaybackSpeed = 1.0f;
                     Preview->GetSkeletalMeshComponent()->PlayAnimation(TestAnimation, State->bIsLooping, State->PlaybackSpeed);
+
+                    // Update compatible animation list
+                    State->CurrentMesh = Preview->GetSkeletalMeshComponent()->GetSkeletalMesh();
+                    State->CompatibleAnimations.Empty();
+                    if (const FSkeleton* CurrentSkeleton = State->CurrentMesh->GetSkeleton())
+                    {
+                        const FString& MeshSkeletonName = CurrentSkeleton->Name;
+                        const auto& AllAnimations = UResourceManager::GetInstance().GetAnimations();
+                        for (UAnimSequence* Anim : AllAnimations)
+                        {
+                            if (Anim && Anim->GetSkeletonName() == MeshSkeletonName)
+                            {
+                                State->CompatibleAnimations.Add(Anim);
+                            }
+                        }
+                    }
                 }
                 else
                 {

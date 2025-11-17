@@ -44,4 +44,5 @@ public:
     bool bIsScrubbing = false;
 
     TArray<UAnimSequence*> CompatibleAnimations;
+    bool bShowOnlyCompatible = false;
 };
