@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-class UWorld; class FViewport; class FViewportClient; class ASkeletalMeshActor; class USkeletalMesh;
+class UWorld; class FViewport; class FViewportClient; class ASkeletalMeshActor; class USkeletalMesh; class UAnimSequence;
 
 class ViewerState
 {
@@ -39,6 +39,9 @@ public:
     bool bIsLooping = true;
     float PlaybackSpeed = 1.0f;
     float CurrentTime = 0.0f;
+    float TotalTime = 0.0f;
+
+    bool bIsScrubbing = false;
 
     TArray<UAnimSequence*> CompatibleAnimations;
 };

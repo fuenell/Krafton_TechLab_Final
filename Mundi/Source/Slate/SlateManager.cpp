@@ -225,7 +225,7 @@ void USlateManager::OpenAssetViewer(UEditorAssetPreviewContext* Context)
 
         NewViewer->Initialize(x, y, w, h, World, Device, Context);
         DetachedWindows.Add(NewViewer);
-        UE_LOG("Opened a new asset viewer for asset: %s", Context->AssetPath);
+        UE_LOG("Opened a new asset viewer for asset: %s", Context->AssetPath.c_str());
     }
 }
 

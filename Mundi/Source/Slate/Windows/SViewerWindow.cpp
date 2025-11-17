@@ -298,7 +298,13 @@ void SViewerWindow::RenderLeftPanel(float PanelWidth)
                     // Auto-load an animation from the same FBX (if available) for convenience
                     if (UAnimSequence* Anim = UFbxLoader::GetInstance().LoadFbxAnimation(Path, Skeleton))
                     {
-                        ActiveState->PreviewActor->GetSkeletalMeshComponent()->PlayAnimation(Anim, true, 1.0f);
+                        ActiveState->CurrentAnimation = Anim;
+                        ActiveState->TotalTime = Anim->GetSequenceLength();
+                        ActiveState->CurrentTime = 0.0f;
+                        ActiveState->bIsPlaying = true;
+
+                        // Use the settings of ActiveState
+                        ActiveState->PreviewActor->GetSkeletalMeshComponent()->PlayAnimation(Anim, ActiveState->bIsLooping, ActiveState->PlaybackSpeed);
                     }
                     for (int32 i = 0; i < Skeleton->Bones.size(); ++i)
                     {

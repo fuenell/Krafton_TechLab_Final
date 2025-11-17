@@ -65,7 +65,12 @@ ViewerState* AnimationViewerBootstrap::CreateViewerState(const char* Name, UWorl
                 UAnimSequence* TestAnimation = UResourceManager::GetInstance().Get<UAnimSequence>("Data/DancingRacer_mixamo.com");
                 if (TestAnimation)
                 {
-                    Preview->GetSkeletalMeshComponent()->PlayAnimation(TestAnimation, true, 1.0f);
+                    State->CurrentAnimation = TestAnimation;
+                    State->TotalTime = TestAnimation->GetSequenceLength();
+                    State->bIsPlaying = true;
+                    State->bIsLooping = true;
+                    State->PlaybackSpeed = 1.0f;
+                    Preview->GetSkeletalMeshComponent()->PlayAnimation(TestAnimation, State->bIsLooping, State->PlaybackSpeed);
                 }
                 else
                 {

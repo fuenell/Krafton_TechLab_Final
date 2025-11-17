@@ -27,6 +27,7 @@ public:
 	 * @param InLength 새로운 시퀀스 길이 (초)
 	 */
 	void SetSequenceLength(float InLength) { SequenceLength = InLength; }
+	float GetSequenceLength() { return SequenceLength; }
 
 	/**
 	 * 스켈레톤 이름 가져오기
