@@ -26,6 +26,7 @@ public:
 	FViewport* GetViewport() const { return ActiveState ? ActiveState->Viewport : nullptr; }
 	FViewportClient* GetViewportClient() const { return ActiveState ? ActiveState->Client : nullptr; }
 	UEditorAssetPreviewContext* GetContext() const { return Context; }
+	ViewerState* GetActiveState() const { return ActiveState; }
 
 protected:
 	// Per-tab state

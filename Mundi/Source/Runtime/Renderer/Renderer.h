@@ -49,7 +49,22 @@ public:
 	void SetCurrentCamera(ACameraActor* InCamera) { CurrentCamera = InCamera; }
 	ACameraActor* GetCurrentCamera() const { return CurrentCamera; }
 
+	// Deferred buffer release system (GPU-safe resource management)
+	void DeferredReleaseBuffer(ID3D11Buffer* Buffer);
+
 private:
+	// Deferred release structure
+	struct FDeferredRelease
+	{
+		ID3D11Buffer* Buffer;
+		int FramesToWait;
+
+		FDeferredRelease(ID3D11Buffer* InBuffer, int InFrames)
+			: Buffer(InBuffer), FramesToWait(InFrames) {}
+	};
+
+	TArray<FDeferredRelease> DeferredReleaseQueue;
+	void ProcessDeferredReleases();
 	D3D11RHI* RHIDevice;    // NOTE: 개발 편의성을 위해서 DX11를 종속적으로 사용한다 (URHIDevice를 사용하지 않음)
 
 	// Current viewport size (per FViewport draw); 0 if unset

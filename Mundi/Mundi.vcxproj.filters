@@ -365,6 +365,9 @@
     <ClCompile Include="Source\Runtime\Renderer\Renderer.cpp">
       <Filter>Source\Runtime\Renderer</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Runtime\Renderer\RenderSettings.cpp">
+      <Filter>Source\Runtime\Renderer</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Runtime\Renderer\RenderManager.cpp">
       <Filter>Source\Runtime\Renderer</Filter>
     </ClCompile>

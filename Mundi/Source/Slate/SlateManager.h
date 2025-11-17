@@ -59,6 +59,9 @@ public:
     void SetRect(const FRect& InRect) { Rect = InRect; }
     const FRect& GetRect() const { return Rect; }
 
+    // Detached windows accessor
+    TArray<SWindow*>& GetDetachedWindows() { return DetachedWindows; }
+
     void SetWorld(UWorld* InWorld)
     {
         World = InWorld;

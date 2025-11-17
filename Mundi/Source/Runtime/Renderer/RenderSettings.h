@@ -47,9 +47,14 @@ public:
     void SetShadowAATechnique(EShadowAATechnique In) { ShadowAATechnique = In; }
     EShadowAATechnique GetShadowAATechnique() const { return ShadowAATechnique; }
 
-    // 전역 스키닝 모드 (언리얼 엔진 방식)
-    void SetGlobalSkinningMode(ESkinningMode Mode) { GlobalSkinningMode = Mode; }
-    ESkinningMode GetGlobalSkinningMode() const { return GlobalSkinningMode; }
+    // 전역 스키닝 모드 (모든 World가 공유, static 함수)
+    // 어떤 World의 RenderSettings를 통해서든 동일한 전역 값에 접근
+    static void SetGlobalSkinningMode(ESkinningMode Mode) { GlobalSkinningMode = Mode; }
+    static ESkinningMode GetGlobalSkinningMode() { return GlobalSkinningMode; }
+
+    // 편의 함수: 인스턴스 메서드로도 호출 가능 (기존 코드 호환성)
+    void SetGlobalSkinningModeInstance(ESkinningMode Mode) { SetGlobalSkinningMode(Mode); }
+    ESkinningMode GetGlobalSkinningModeInstance() const { return GetGlobalSkinningMode(); }
 
 private:
     EEngineShowFlags ShowFlags = EEngineShowFlags::SF_DefaultEnabled;
@@ -67,6 +72,6 @@ private:
     // 그림자 안티 에일리어싱
     EShadowAATechnique ShadowAATechnique = EShadowAATechnique::PCF; // 기본값 PCF
 
-    // 전역 스키닝 모드 (언리얼 엔진 방식)
-    ESkinningMode GlobalSkinningMode = ESkinningMode::ForceGPU;  // 기본값: 자동
+    // 전역 스키닝 모드 (모든 World가 공유, static)
+    static ESkinningMode GlobalSkinningMode;
 };

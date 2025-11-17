@@ -15,6 +15,7 @@
 
 #include "StaticMeshActor.h"
 #include "ResourceManager.h"
+#include "SViewerWindow.h"
 #include <filesystem>
 
 extern float CLIENTWIDTH;
@@ -1948,15 +1949,10 @@ void SViewportWindow::RenderShowFlagDropdownMenu()
 		{
 			RenderSettings.ToggleShowFlag(EEngineShowFlags::SF_GPUSkinning);
 
-			// Show Flag와 스키닝 모드 동기화
-			if (bGPUSkinning)
-			{
-				RenderSettings.SetGlobalSkinningMode(ESkinningMode::ForceGPU);
-			}
-			else
-			{
-				RenderSettings.SetGlobalSkinningMode(ESkinningMode::ForceCPU);
-			}
+			// Show Flag와 전역 스키닝 모드 동기화
+			// 전역(static) 설정이므로 모든 World가 자동으로 동일한 값 사용
+			ESkinningMode NewMode = bGPUSkinning ? ESkinningMode::ForceGPU : ESkinningMode::ForceCPU;
+			URenderSettings::SetGlobalSkinningMode(NewMode);
 		}
 		ImGui::SameLine();
 		if (IconGPUSkinning && IconGPUSkinning->GetShaderResourceView())

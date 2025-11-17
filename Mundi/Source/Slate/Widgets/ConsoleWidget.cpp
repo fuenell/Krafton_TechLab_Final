@@ -415,55 +415,39 @@ void UConsoleWidget::ExecCommand(const char* command_line)
 	}
 	else if (Strnicmp(command_line, "SKINNING GPU", 12) == 0)
 	{
-		// 현재 활성 World(PIE면 PIE, Editor면 Editor)만 스키닝 모드 변경
-		// Show Flag처럼 PIE 종료 시 Editor 설정으로 되돌아감
-		const TArray<FWorldContext>& WorldContexts = GEngine.GetWorldContexts();
+		// 전역 스키닝 모드 변경 (모든 World에 적용)
+		URenderSettings::SetGlobalSkinningMode(ESkinningMode::ForceGPU);
 
-		// 가장 마지막 World가 활성 World (PIE가 있으면 PIE, 없으면 Editor)
+		// Show Flag도 현재 활성 World에 설정
+		const TArray<FWorldContext>& WorldContexts = GEngine.GetWorldContexts();
 		if (!WorldContexts.empty())
 		{
 			UWorld* ActiveWorld = WorldContexts.back().World;
 			if (ActiveWorld)
 			{
-				ActiveWorld->GetRenderSettings().SetGlobalSkinningMode(ESkinningMode::ForceGPU);
 				ActiveWorld->GetRenderSettings().EnableShowFlag(EEngineShowFlags::SF_GPUSkinning);
-				AddLog("GPU Skinning enabled (current world only)");
-			}
-			else
-			{
-				AddLog("ERROR: Active World is null");
 			}
 		}
-		else
-		{
-			AddLog("ERROR: Could not find any World");
-		}
+
+		AddLog("GPU Skinning enabled globally (all worlds)");
 	}
 	else if (Strnicmp(command_line, "SKINNING CPU", 12) == 0)
 	{
-		// 현재 활성 World(PIE면 PIE, Editor면 Editor)만 스키닝 모드 변경
-		// Show Flag처럼 PIE 종료 시 Editor 설정으로 되돌아감
-		const TArray<FWorldContext>& WorldContexts = GEngine.GetWorldContexts();
+		// 전역 스키닝 모드 변경 (모든 World에 적용)
+		URenderSettings::SetGlobalSkinningMode(ESkinningMode::ForceCPU);
 
-		// 가장 마지막 World가 활성 World (PIE가 있으면 PIE, 없으면 Editor)
+		// Show Flag도 현재 활성 World에 설정
+		const TArray<FWorldContext>& WorldContexts = GEngine.GetWorldContexts();
 		if (!WorldContexts.empty())
 		{
 			UWorld* ActiveWorld = WorldContexts.back().World;
 			if (ActiveWorld)
 			{
-				ActiveWorld->GetRenderSettings().SetGlobalSkinningMode(ESkinningMode::ForceCPU);
 				ActiveWorld->GetRenderSettings().DisableShowFlag(EEngineShowFlags::SF_GPUSkinning);
-				AddLog("CPU Skinning enabled (current world only)");
-			}
-			else
-			{
-				AddLog("ERROR: Active World is null");
 			}
 		}
-		else
-		{
-			AddLog("ERROR: Could not find any World");
-		}
+
+		AddLog("CPU Skinning enabled globally (all worlds)");
 	}
 	else if (Stricmp(command_line, "MINIDUMP") == 0)
 	{

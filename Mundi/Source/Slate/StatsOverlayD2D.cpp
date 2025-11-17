@@ -409,67 +409,79 @@ void UStatsOverlayD2D::Draw()
 		}
 		bool bUseGPU = (GlobalMode == ESkinningMode::ForceGPU);
 
-		// CPU 스키닝 상자 (파란색) - 제목 포함
-		wchar_t CPUBuf[1024];
-		swprintf_s(CPUBuf,
-			L"[Skinning Performance]\n"
-			L"CPU Skinning\n"
-			L"Bone Matrix Calc:     %.3f ms\n"
-			L"Vertex Skinning:      %.3f ms\n"
-			L"Vertex Buffer Upload: %.3f ms\n"
-			L"GPU Draw Time:        %.3f ms\n"
-			L"Total Skinning Time:  %.3f ms\n"
-			L"\n"
-			L"Vertices: %d | Bones: %d\n"
-			L"Vertex Buffer: %.2f KB\n"
-			L"Buffer Updates: %d",
-			Stats.CPUBoneMatrixCalcTimeMS,
-			Stats.CPUVertexSkinningTimeMS,
-			Stats.CPUVertexBufferUploadTimeMS,
-			Stats.CPUGPUDrawTimeMS,
-			Stats.GetCPUTotalTimeMS(),
-			Stats.CPUTotalVertices,
-			Stats.CPUTotalBones,
-			Stats.CPUVertexBufferMemory / 1024.0,
-			Stats.CPUBufferUpdateCount);
+		// 통합 스키닝 통계 표시 (현재 모드에 따라 내용 변경)
+		wchar_t SkinningBuf[1024];
+		/**
+		* TODO
+		* @note Skinning 측정에서 추후에 신경 써야하는 점:
+		* GPU Draw Time은 현재 프레임의 값이 아닌 N-7 프레임의 값을 사용한다.
+		* 비동기 GPU 측정이기 때문에 실제로는 N 프레임의 결과가 나오려면 어느 정도 시간이 걸리기 때문이다.
+		* CPU 스키닝일 때 병목 현상 때문에 링버퍼를 활용해서 N-7 프레임 값을 사용하고 있기 때문이다.
+		* 
+		* 나머지 측정 값들은 현재 프레임인 N 프레임의 값을 사용하고 있다.
+		*/
+		if (bUseGPU)
+		{
+			// GPU 모드
+			swprintf_s(SkinningBuf,
+				L"[Skinning Performance]\n"
+				L"GPU Skinning\n"
+				L"Bone Matrix Calc:        %.3f ms\n"
+				L"CPU Vertex Skinning:     %.3f ms\n"
+				L"Bone Buffer Upload:      %.3f ms\n"
+				L"GPU Draw Time:           %.3f ms\n"
+				L"Total Skinning Time:     %.3f ms\n"
+				L"\n"
+				L"Vertices: %d | Bones: %d\n"
+				L"Bone Buffer: %.2f KB\n"
+				L"Buffer Updates: %d",
+				Stats.BoneMatrixCalcTimeMS,
+				Stats.VertexSkinningTimeMS, // GPU 모드에서는 0
+				Stats.BufferUploadTimeMS,   // 본 버퍼 업로드 시간
+				Stats.DrawTimeMS,
+				Stats.GetTotalTimeMS(),
+				Stats.TotalVertices,
+				Stats.TotalBones,
+				Stats.BufferMemory / 1024.0, // 본 버퍼 메모리
+				Stats.BufferUpdateCount);
+		}
+		else
+		{
+			// CPU 모드
+			swprintf_s(SkinningBuf,
+				L"[Skinning Performance]\n"
+				L"CPU Skinning\n"
+				L"Bone Matrix Calc:        %.3f ms\n"
+				L"CPU Vertex Skinning:     %.3f ms\n"
+				L"Vertex Buffer Upload:    %.3f ms\n"
+				L"GPU Draw Time:           %.3f ms\n"
+				L"Total Skinning Time:     %.3f ms\n"
+				L"\n"
+				L"Vertices: %d | Bones: %d\n"
+				L"Vertex Buffer: %.2f KB\n"
+				L"Buffer Updates: %d",
+				Stats.BoneMatrixCalcTimeMS,
+				Stats.VertexSkinningTimeMS, // CPU 모드에서만 값이 있음
+				Stats.BufferUploadTimeMS,   // 버텍스 버퍼 업로드 시간
+				Stats.DrawTimeMS,
+				Stats.GetTotalTimeMS(),
+				Stats.TotalVertices,
+				Stats.TotalBones,
+				Stats.BufferMemory / 1024.0, // 버텍스 버퍼 메모리
+				Stats.BufferUpdateCount);
+		}
 
-		const float cpuPanelHeight = 250.0f; // 제목 2줄 추가로 높이 증가
-		D2D1_RECT_F cpuRc = D2D1::RectF(Margin, NextY, Margin + SkinningPanelWidth, NextY + cpuPanelHeight);
+		const float skinningPanelHeight = 250.0f;
+		D2D1_RECT_F skinningRc = D2D1::RectF(Margin, NextY, Margin + SkinningPanelWidth, NextY + skinningPanelHeight);
+
+		// 현재 모드에 따라 색상 변경 (CPU: 파란색, GPU: 연두색)
+		D2D1::ColorF textColor = bUseGPU ? D2D1::ColorF(0.5f, 1.0f, 0.5f) : D2D1::ColorF(0.4f, 0.7f, 1.0f);
+
 		DrawTextBlock(
-			D2dCtx, CachedBrush, TextFormat, CPUBuf, cpuRc,
+			D2dCtx, CachedBrush, TextFormat, SkinningBuf, skinningRc,
 			D2D1::ColorF(0, 0, 0, 0.6f),
-			D2D1::ColorF(0.4f, 0.7f, 1.0f)); // 파란색
-		NextY += cpuPanelHeight + Space;
-
-		// GPU 스키닝 상자 (연두색) - 제목 포함
-		wchar_t GPUBuf[1024];
-		swprintf_s(GPUBuf,
-			L"[Skinning Performance]\n"
-			L"GPU Skinning\n"
-			L"Bone Matrix Calc:     %.3f ms\n"
-			L"Bone Buffer Upload:   %.3f ms\n"
-			L"GPU Draw Time:        %.3f ms\n"
-			L"Total Skinning Time:  %.3f ms\n"
-			L"\n"
-			L"Vertices: %d | Bones: %d\n"
-			L"Bone Buffer: %.2f KB\n"
-			L"Buffer Updates: %d",
-			Stats.GPUBoneMatrixCalcTimeMS,
-			Stats.GPUBoneBufferUploadTimeMS,
-			Stats.GPUDrawTimeMS,
-			Stats.GetGPUTotalTimeMS(),
-			Stats.GPUTotalVertices,
-			Stats.GPUTotalBones,
-			Stats.GPUBoneBufferMemory / 1024.0,
-			Stats.GPUBufferUpdateCount);
-
-		const float gpuPanelHeight = 230.0f; // 제목 2줄 추가로 높이 증가
-		D2D1_RECT_F gpuRc = D2D1::RectF(Margin, NextY, Margin + SkinningPanelWidth, NextY + gpuPanelHeight);
-		DrawTextBlock(
-			D2dCtx, CachedBrush, TextFormat, GPUBuf, gpuRc,
-			D2D1::ColorF(0, 0, 0, 0.6f),
-			D2D1::ColorF(0.5f, 1.0f, 0.5f)); // 연두색
-		NextY += gpuPanelHeight + Space;
+			textColor);
+		NextY += skinningPanelHeight + Space;
 	}
 
 	D2dCtx->EndDraw();

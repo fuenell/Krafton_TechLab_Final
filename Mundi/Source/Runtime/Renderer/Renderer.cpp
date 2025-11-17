@@ -32,6 +32,7 @@
 #include "SceneRenderer.h"
 #include "SceneView.h"
 #include "SkinningStats.h"
+#include "PlatformTime.h"
 
 #include <Windows.h>
 #include "DirectionalLightComponent.h"
@@ -57,14 +58,40 @@ void URenderer::BeginFrame()
 
 	RHIDevice->OMSetRenderTargets(ERTVMode::BackBufferWithDepth);
 
-	// 프레임별 데칼 통계를 추적하기 위해 초기화
+	// 지연 해제 큐 처리 (GPU 안전성 확보)
+	ProcessDeferredReleases();
+
+	// 프레임별 통계 초기화 (데칼, 스키닝)
 	FDecalStatManager::GetInstance().ResetFrameStats();
+
+	// 이전 프레임의 GPU draw 시간 가져오기 (비동기, N-7 프레임 결과)
+	double LastGPUDrawTimeMS = FSkinningStatManager::GetInstance().GetGPUDrawTimeMS(RHIDevice->GetDeviceContext());
+
+	// TimeProfile 시스템에 GPU Draw Time 추가 (프로파일링 통합)
+	if (LastGPUDrawTimeMS >= 0.0)
+	{
+		FScopeCycleCounter::AddTimeProfile(TStatId("GPUDrawTime"), LastGPUDrawTimeMS);
+	}
+
+	// 프레임 단위 스키닝 통계 리셋
+	FSkinningStatManager::GetInstance().ResetFrameStats();
+
+	// GPU draw 시간을 통계에 추가
+	// CPU 모드: CPU 본 계산 + 버텍스 스키닝 + 버퍼 업로드 + GPU draw
+	// GPU 모드: CPU 본 계산 + 본 버퍼 업로드 + GPU draw(셰이더 스키닝 포함)
+	FSkinningStatManager::GetInstance().AddDrawTime(LastGPUDrawTimeMS);
+
+	// GPU 타이머 시작 - 전체 프레임의 Draw Time 측정 (모든 뷰어 포함)
+	FSkinningStatManager::GetInstance().BeginGPUTimer(RHIDevice->GetDeviceContext());
 
 	RHIDevice->ClearAllBuffer();
 }
 
 void URenderer::EndFrame()
 {
+	// GPU 타이머 종료 - 전체 프레임의 Draw Time 측정 완료
+	FSkinningStatManager::GetInstance().EndGPUTimer(RHIDevice->GetDeviceContext());
+
 	RHIDevice->Present();
 }
 
@@ -373,4 +400,38 @@ void URenderer::ClearLineBatch()
 	LineBatchData->Indices.clear();
 
 	bLineBatchActive = false;
+}
+
+void URenderer::DeferredReleaseBuffer(ID3D11Buffer* Buffer)
+{
+	if (!Buffer)
+	{
+		return;
+	}
+
+	// GPU 타이머 링버퍼 크기(8)와 동일하게 8프레임 대기
+	// N-7 프레임의 쿼리 결과를 읽으므로, 8프레임 후면 GPU 작업 완료 보장
+	constexpr int FRAMES_TO_WAIT = 8;
+
+	DeferredReleaseQueue.Add(FDeferredRelease(Buffer, FRAMES_TO_WAIT));
+}
+
+void URenderer::ProcessDeferredReleases()
+{
+	// 역순으로 순회하며 제거 (인덱스 안정성)
+	for (int32 i = DeferredReleaseQueue.Num() - 1; i >= 0; --i)
+	{
+		FDeferredRelease& Entry = DeferredReleaseQueue[i];
+		Entry.FramesToWait--;
+
+		if (Entry.FramesToWait <= 0)
+		{
+			// GPU 작업이 완료되었으므로 안전하게 해제
+			if (Entry.Buffer)
+			{
+				Entry.Buffer->Release();
+			}
+			DeferredReleaseQueue.RemoveAt(i);
+		}
+	}
 }
