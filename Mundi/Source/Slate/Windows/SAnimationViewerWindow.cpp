@@ -236,6 +236,20 @@ void SAnimationViewerWindow::DestroyViewerState(ViewerState*& State)
     AnimationViewerBootstrap::DestroyViewerState(State);
 }
 
+void SAnimationViewerWindow::RenderRightPanel()
+{
+    if (!ActiveState)   return;
+
+    if (ActiveState->SelectedNotify.IsValid())
+    {
+        RenderNotifyProperties();
+    }
+    else
+    {
+        SViewerWindow::RenderRightPanel();
+    }
+}
+
 void SAnimationViewerWindow::LoadSkeletalMesh(ViewerState* State, const FString& Path)
 {
     if (!State || Path.empty())
@@ -339,6 +353,40 @@ void SAnimationViewerWindow::RenderAnimationBrowser()
         }
         ImGui::EndListBox();
     }
+}
+
+void SAnimationViewerWindow::RenderNotifyProperties()
+{
+    // Panel header
+    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.35f, 0.25f, 0.50f, 0.8f));
+    ImGui::Text("Notify Properties");
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4);
+    ImGui::Indent(8.0f);
+    ImGui::Text("Notify Properties");
+    ImGui::Unindent(8.0f);
+    ImGui::PopStyleColor();
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // 선택된 노티파이에 대한 참조 가져오기
+    FAnimNotifyEvent& notify = ActiveState->NotifyTracks[ActiveState->SelectedNotify.TrackIndex].Notifies[ActiveState->SelectedNotify.NotifyIndex];
+
+    // 이름 편집 (FName은 직접 수정이 어려우므로 char 버퍼 사용)
+    char nameBuffer[128];
+    strcpy_s(nameBuffer, sizeof(nameBuffer), notify.NotifyName.ToString().c_str());
+    if (ImGui::InputText("Name", nameBuffer, sizeof(nameBuffer), ImGuiInputTextFlags_EnterReturnsTrue))
+    {
+        notify.NotifyName = FName(nameBuffer);
+    }
+
+    // 시간 및 기간 편집
+    ImGui::DragFloat("Trigger Time", &notify.TriggerTime, 0.01f, 0.0f, ActiveState->TotalTime, "%.2f s");
+    ImGui::DragFloat("Duration", &notify.Duration, 0.01f, 0.0f, ActiveState->TotalTime, "%.2f s");
+
+    // 색상 편집
+    ImGui::ColorEdit4("Color", (float*)&notify.Color);
 }
 
 void SAnimationViewerWindow::AnimJumpToStart()
@@ -750,6 +798,117 @@ void SAnimationViewerWindow::RenderTimelineGridBody(float RowHeight, const TArra
             IM_COL32(90, 90, 90, 160)
         );
 
+        // ============================
+        //  ROW → NotifyTrack 매핑 사용
+        // ============================
+        int NotifyIndex = RowToNotifyIndex[row];
+
+        // Draw Notify Marker
+        if (NotifyIndex != -1 && ActiveState->TotalTime > 0.0f)
+        {
+            FNotifyTrack& Track = ActiveState->NotifyTracks[NotifyIndex];
+
+            for (int i = 0; i < Track.Notifies.size(); ++i)
+            {
+                const FAnimNotifyEvent& Notify = Track.Notifies[i];
+
+                float NotifyStartX = gridOrigin.x +
+                    (Notify.TriggerTime / ActiveState->TotalTime) * gridAvail.x;
+
+                float NotifyEndX = NotifyStartX;
+                if (Notify.Duration > 0.0f)
+                {
+                    float endNorm = (Notify.TriggerTime + Notify.Duration) / ActiveState->TotalTime;
+                    NotifyEndX = gridOrigin.x + endNorm * gridAvail.x;
+                }
+
+                // Y center
+                float midY = (y0 + y1) * 0.5f;
+
+                //--- Diamond Marker ---
+                float s = 5.0f;
+                ImVec2 d0(NotifyStartX, midY - s);
+                ImVec2 d1(NotifyStartX + s, midY);
+                ImVec2 d2(NotifyStartX, midY + s);
+                ImVec2 d3(NotifyStartX - s, midY);
+
+                ImU32 fillColor = IM_COL32(160, 130, 220, 255);  // 보라 계열
+                ImU32 fillHover = IM_COL32(200, 170, 255, 255);  // hover brighter
+                ImU32 barColor = IM_COL32(110, 90, 190, 180);
+
+                //--- Hitbox ---
+                ImVec2 hbMin(NotifyStartX - 8, midY - 8);
+                ImVec2 hbSize(16, 16);
+                ImGui::SetCursorScreenPos(hbMin);
+                ImGui::InvisibleButton(("NotifyHit_" + std::to_string(row) + "_" + std::to_string(i)).c_str(), hbSize);
+
+                if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
+                {
+                    ActiveState->SelectedNotify.TrackIndex = NotifyIndex;
+                    ActiveState->SelectedNotify.NotifyIndex = i;
+                    ActiveState->SelectedBoneIndex = -1;
+                }
+
+                bool hovered = ImGui::IsItemHovered();
+
+                //--- Duration Bar (if duration > 0) ---
+                if (NotifyEndX > NotifyStartX)
+                {
+                    draw->AddRectFilled(
+                        ImVec2(NotifyStartX, midY - 4),
+                        ImVec2(NotifyEndX, midY + 4),
+                        barColor,
+                        2.0f
+                    );
+                }
+
+                //--- Draw Diamond ---
+                draw->AddQuadFilled(
+                    d0, d1, d2, d3,
+                    hovered ? fillHover : fillColor
+                );
+
+                //--- Text (aligned inside the box or right of diamond) ---
+                std::string label = Notify.NotifyName.ToString();
+                float textX = (NotifyEndX > NotifyStartX) ? (NotifyStartX + 6) : (NotifyStartX + 10);
+
+                draw->AddText(
+                    ImVec2(textX, midY - 7),
+                    IM_COL32(230, 230, 230, 255),
+                    label.c_str()
+                );
+
+                //-----------------------------------------
+                // Notify Popup
+                //-----------------------------------------
+                if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+                    ImGui::OpenPopup(("NotifyPopup_" + std::to_string(row) + "_" + std::to_string(i)).c_str());
+
+                if (ImGui::BeginPopup(("NotifyPopup_" + std::to_string(row) + "_" + std::to_string(i)).c_str()))
+                {
+                    if (ImGui::MenuItem("Delete"))
+                        Track.Notifies.erase(Track.Notifies.begin() + i);
+
+                    if (ImGui::MenuItem("Add Duration +0.2s"))
+                        Track.Notifies[i].Duration += 0.2f;
+
+                    ImGui::EndPopup();
+                }
+
+                //-----------------------------------------
+                // Drag to move Notify
+                //-----------------------------------------
+                if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+                {
+                    float mouseX = ImGui::GetIO().MousePos.x;
+                    mouseX = std::clamp(mouseX, gridOrigin.x, gridOrigin.x + gridAvail.x);
+
+                    float norm = (mouseX - gridOrigin.x) / gridAvail.x;
+                    Track.Notifies[i].TriggerTime = norm * ActiveState->TotalTime;
+                }
+            }
+        }
+
         // Hitbox
         ImGui::SetCursorScreenPos(ImVec2(gridOrigin.x, y0));
         ImGui::InvisibleButton(
@@ -757,32 +916,29 @@ void SAnimationViewerWindow::RenderTimelineGridBody(float RowHeight, const TArra
             ImVec2(gridAvail.x, RowHeight)
         );
 
-        // ============================
-        //  ROW → NotifyTrack 매핑 사용
-        // ============================
-        int NotifyIndex = RowToNotifyIndex[row];
-
-        // NotifyTrackRow라면 우클릭 메뉴 활성화
-        if (NotifyIndex != -1)
+        // If right-clicked anywhere in the row → Add Notify popup
+        if (ImGui::BeginPopupContextItem(("RowPopup_" + std::to_string(row)).c_str()))
         {
-            if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+            if (ImGui::MenuItem("Add Notify"))
             {
-                ImGui::OpenPopup(("GridRowPopup_" + std::to_string(row)).c_str());
-                ImGui::ClearActiveID();
-            }
-        }
+                float mouseX = ImGui::GetMousePos().x - gridOrigin.x;
+                float newTime = (mouseX / gridAvail.x) * ActiveState->TotalTime;
+                newTime = std::clamp(newTime, 0.0f, ActiveState->TotalTime);
 
-        // Popup — Only begin for valid notify rows
-        if (NotifyIndex != -1)
-        {
-            if (ImGui::BeginPopup(("GridRowPopup_" + std::to_string(row)).c_str()))
-            {
-                if (ImGui::MenuItem("Add Notify"))
-                {
-                    // TODO: ActiveState->NotifyTracks[NotifyIndex].AddNotify(...)
-                }
-                ImGui::EndPopup();
+                FAnimNotifyEvent newNotify;
+                newNotify.TriggerTime = newTime;
+                newNotify.Duration = 0.0f;
+
+                int notifyCount = 0;
+                for (const auto& track : ActiveState->NotifyTracks)
+                    notifyCount += track.Notifies.size();
+
+                newNotify.NotifyName = FName("NewNotify_" + std::to_string(notifyCount + 1));
+
+                ActiveState->NotifyTracks[NotifyIndex].Notifies.Add(newNotify);
             }
+
+            ImGui::EndPopup();
         }
     }
 

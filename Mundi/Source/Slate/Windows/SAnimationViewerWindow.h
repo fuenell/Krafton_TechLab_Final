@@ -21,11 +21,13 @@ protected:
     virtual ViewerState* CreateViewerState(const char* Name, UEditorAssetPreviewContext* Context) override;
     virtual void DestroyViewerState(ViewerState*& State) override;
     virtual FString GetWindowTitle() const override { return "Animation Viewer"; }
+    virtual void RenderRightPanel() override;
 
 private:
     // Load a skeletal mesh into the active tab
     void LoadSkeletalMesh(ViewerState* State, const FString& Path);
     void RenderAnimationBrowser();
+    void RenderNotifyProperties();
 
     void AnimJumpToStart();
     void AnimJumpToEnd();

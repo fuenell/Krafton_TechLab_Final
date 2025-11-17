@@ -152,6 +152,7 @@ void SViewerWindow::OnMouseDown(FVector2D MousePos, uint32 Button)
                     {
                         // No bone was picked - clear selection
                         ActiveState->SelectedBoneIndex = -1;
+                        ActiveState->SelectedNotify.Invalidate();
                         ActiveState->bBoneLinesDirty = true;
 
                         // Hide gizmo and clear selection
@@ -466,6 +467,7 @@ void SViewerWindow::RenderLeftPanel(float PanelWidth)
                         if (ActiveState->SelectedBoneIndex != Index)
                         {
                             ActiveState->SelectedBoneIndex = Index;
+                            ActiveState->SelectedNotify.Invalidate();
                             ActiveState->bBoneLinesDirty = true;
                             ActiveState->bRequestScrollToBone = true;
 

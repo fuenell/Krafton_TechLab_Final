@@ -2,9 +2,29 @@
 
 class UWorld; class FViewport; class FViewportClient; class ASkeletalMeshActor; class USkeletalMesh; class UAnimSequence;
 
+struct FAnimNotifyEvent
+{
+    float TriggerTime;
+    float Duration;
+    FName NotifyName;
+    FLinearColor Color = FLinearColor(0.6f, 0.5f, 0.85f, 1.0f);
+};
+
 struct FNotifyTrack
 {
     FString Name;
+    TArray<FAnimNotifyEvent> Notifies;
+
+    FNotifyTrack(const FString& InName) : Name(InName) {}
+};
+
+struct FSelectedNotify
+{
+    int32 TrackIndex = -1;
+    int32 NotifyIndex = -1;
+
+    bool IsValid() const { return TrackIndex != -1 && NotifyIndex != -1; }
+    void Invalidate() { TrackIndex = -1; NotifyIndex = -1; }
 };
 
 class ViewerState
@@ -57,4 +77,6 @@ public:
     bool bFoldNotifies = false;
     bool bFoldCurves = false;
     bool bFoldAttributes = false;
+
+    FSelectedNotify SelectedNotify;
 };
