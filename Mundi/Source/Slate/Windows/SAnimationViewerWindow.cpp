@@ -664,6 +664,19 @@ void SAnimationViewerWindow::AnimJumpToStart()
         MeshComp->PlayAnimation(ActiveState->CurrentAnimation, ActiveState->bIsLooping, 0.0f);
         MeshComp->SetAnimationPosition(ActiveState->CurrentTime);
         MeshComp->TickComponent(0.0f);
+
+        // 애니메이션 포즈를 기반으로 현재 포즈 업데이트 (additive 포함)
+        MeshComp->ResetToAnimationPose();
+        if (!ActiveState->BoneAdditiveTransforms.IsEmpty())
+        {
+            MeshComp->ApplyAdditiveTransforms(ActiveState->BoneAdditiveTransforms);
+        }
+    }
+
+    // 본 라인 즉시 다시 그리기
+    if (ActiveState->bShowBones && ActiveState->CurrentMesh)
+    {
+        ActiveState->PreviewActor->RebuildBoneLines(ActiveState->SelectedBoneIndex);
     }
     ActiveState->bBoneLinesDirty = true;
 }
@@ -680,6 +693,19 @@ void SAnimationViewerWindow::AnimJumpToEnd()
         MeshComp->PlayAnimation(ActiveState->CurrentAnimation, ActiveState->bIsLooping, 0.0f);
         MeshComp->SetAnimationPosition(ActiveState->CurrentTime);
         MeshComp->TickComponent(0.0f);
+
+        // 애니메이션 포즈를 기반으로 현재 포즈 업데이트 (additive 포함)
+        MeshComp->ResetToAnimationPose();
+        if (!ActiveState->BoneAdditiveTransforms.IsEmpty())
+        {
+            MeshComp->ApplyAdditiveTransforms(ActiveState->BoneAdditiveTransforms);
+        }
+    }
+
+    // 본 라인 즉시 다시 그리기
+    if (ActiveState->bShowBones && ActiveState->CurrentMesh)
+    {
+        ActiveState->PreviewActor->RebuildBoneLines(ActiveState->SelectedBoneIndex);
     }
     ActiveState->bBoneLinesDirty = true;
 }
@@ -704,7 +730,22 @@ void SAnimationViewerWindow::AnimStep(bool bForward)
     {
         MeshComp->PlayAnimation(ActiveState->CurrentAnimation, ActiveState->bIsLooping, 0.0f);
         MeshComp->SetAnimationPosition(ActiveState->CurrentTime);
+        MeshComp->TickComponent(0.0f);
+
+        // 애니메이션 포즈를 기반으로 현재 포즈 업데이트 (additive 포함)
+        MeshComp->ResetToAnimationPose();
+        if (!ActiveState->BoneAdditiveTransforms.IsEmpty())
+        {
+            MeshComp->ApplyAdditiveTransforms(ActiveState->BoneAdditiveTransforms);
+        }
     }
+
+    // 본 라인 즉시 다시 그리기
+    if (ActiveState->bShowBones && ActiveState->CurrentMesh)
+    {
+        ActiveState->PreviewActor->RebuildBoneLines(ActiveState->SelectedBoneIndex);
+    }
+    ActiveState->bBoneLinesDirty = true;
 }
 
 void SAnimationViewerWindow::RenderCenterPanel()
