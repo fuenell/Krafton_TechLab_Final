@@ -17,12 +17,10 @@ protected:
     ViewerState* CreateViewerState(const char* Name, UEditorAssetPreviewContext* Context) override;
     void DestroyViewerState(ViewerState*& State) override;
     FString GetWindowTitle() const override { return "Blend Space 2D Editor"; }
+    void PreRenderViewportUpdate() override;
 
 private:
     void RenderCenterViewport(float Width, float Height);
-
-    // ImGui draw callback for Direct3D viewport rendering
-    static void ViewportRenderCallback(const ImDrawList* parent_list, const ImDrawCmd* cmd);
 
 private:
     // Cached instance on preview skeletal mesh component

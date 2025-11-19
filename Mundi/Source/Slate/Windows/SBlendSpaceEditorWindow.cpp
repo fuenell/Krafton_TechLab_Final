@@ -322,9 +322,6 @@ void SBlendSpaceEditorWindow::RenderCenterViewport(float Width, float Height)
     float actualWidth = availRegion.x;
     float actualHeight = availRegion.y;
 
-    // Reserve space (don't render anything here)
-    ImGui::Dummy(ImVec2(actualWidth, actualHeight));
-
     // Update viewport rect for input handling
     CenterRect.Left = Pos.x;
     CenterRect.Top = Pos.y;
@@ -332,13 +329,29 @@ void SBlendSpaceEditorWindow::RenderCenterViewport(float Width, float Height)
     CenterRect.Bottom = Pos.y + actualHeight;
     CenterRect.UpdateMinMax();
 
-    // Register D3D viewport rendering callback
-    // This callback executes during ImGui rendering to draw the 3D viewport
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
-    drawList->AddCallback(ViewportRenderCallback, this);
+    // Render viewport to texture
+    OnRenderViewport();
 
-    // Restore ImGui render state after D3D viewport rendering
-    drawList->AddCallback(ImDrawCallback_ResetRenderState, nullptr);
+    // Display the rendered texture using ImGui::Image
+    if (ActiveState && ActiveState->Viewport)
+    {
+        ID3D11ShaderResourceView* SRV = ActiveState->Viewport->GetSRV();
+        if (SRV)
+        {
+            ImGui::Image((void*)SRV, ImVec2(actualWidth, actualHeight));
+            // Update viewport hover state for Z-order aware input handling
+            ActiveState->Viewport->SetViewportHovered(ImGui::IsItemHovered());
+        }
+        else
+        {
+            ImGui::Dummy(ImVec2(actualWidth, actualHeight));
+            ActiveState->Viewport->SetViewportHovered(false);
+        }
+    }
+    else
+    {
+        ImGui::Dummy(ImVec2(actualWidth, actualHeight));
+    }
 }
 
 ViewerState* SBlendSpaceEditorWindow::CreateViewerState(const char* Name, UEditorAssetPreviewContext* Context)
@@ -351,46 +364,23 @@ void SBlendSpaceEditorWindow::DestroyViewerState(ViewerState*& State)
     BlendSpaceEditorBootstrap::DestroyViewerState(State);
 }
 
-// ImGui draw callback - Direct3D viewport rendering
-void SBlendSpaceEditorWindow::ViewportRenderCallback(const ImDrawList* parent_list, const ImDrawCmd* cmd)
+void SBlendSpaceEditorWindow::PreRenderViewportUpdate()
 {
-    // Get this pointer from UserCallbackData
-    SBlendSpaceEditorWindow* window = (SBlendSpaceEditorWindow*)cmd->UserCallbackData;
+    if (!ActiveState || !ActiveState->PreviewActor) return;
 
-    if (window && window->ActiveState && window->ActiveState->Viewport)
+    // Reconstruct bone overlay
+    if (ActiveState->bShowBones)
     {
-        FViewport* viewport = window->ActiveState->Viewport;
-
-        // Get D3D device context
-        ID3D11Device* device = window->Device;
-        ID3D11DeviceContext* context = nullptr;
-        device->GetImmediateContext(&context);
-
-        if (context)
+        ActiveState->bBoneLinesDirty = true;
+    }
+    if (ActiveState->bShowBones && ActiveState->PreviewActor && ActiveState->CurrentMesh && ActiveState->bBoneLinesDirty)
+    {
+        if (ULineComponent* LineComp = ActiveState->PreviewActor->GetBoneLineComponent())
         {
-            // Restore D3D state for 3D rendering (ImGui changes it)
-            // 1. Set viewport
-            D3D11_VIEWPORT d3dViewport = {};
-            d3dViewport.Width = static_cast<float>(viewport->GetSizeX());
-            d3dViewport.Height = static_cast<float>(viewport->GetSizeY());
-            d3dViewport.MinDepth = 0.0f;
-            d3dViewport.MaxDepth = 1.0f;
-            d3dViewport.TopLeftX = static_cast<float>(viewport->GetStartX());
-            d3dViewport.TopLeftY = static_cast<float>(viewport->GetStartY());
-            context->RSSetViewports(1, &d3dViewport);
-
-            // 2. Restore D3D render state (ImGui → 3D rendering)
-            float blendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-            context->OMSetBlendState(nullptr, blendFactor, 0xffffffff);  // Disable blending
-            context->OMSetDepthStencilState(nullptr, 0);                  // Default depth test
-            context->RSSetState(nullptr);                                 // Default rasterizer
-            context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-            // 3. Execute viewport rendering
-            window->OnRenderViewport();
-
-            context->Release();
+            LineComp->SetLineVisible(true);
         }
+        ActiveState->PreviewActor->RebuildBoneLines(ActiveState->SelectedBoneIndex);
+        ActiveState->bBoneLinesDirty = false;
     }
 }
 

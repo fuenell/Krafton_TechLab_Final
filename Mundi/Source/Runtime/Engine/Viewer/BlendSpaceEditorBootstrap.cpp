@@ -21,6 +21,7 @@ ViewerState* BlendSpaceEditorBootstrap::CreateViewerState(const char* Name, UWor
     // Viewport
     State->Viewport = new FViewport();
     State->Viewport->Initialize(0, 0, 1, 1, InDevice);
+    State->Viewport->SetUseRenderTarget(true);  // Use ImGui::Image method for viewer
 
     // Client
     auto* Client = new FBlendSpaceEditorViewportClient();
