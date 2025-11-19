@@ -12,4 +12,6 @@ public:
 
 protected:
     ~ADancingCharacter() override;
+
+    virtual void BeginPlay() override;
 };
