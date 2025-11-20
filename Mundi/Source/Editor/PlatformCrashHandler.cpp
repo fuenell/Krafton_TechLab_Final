@@ -27,13 +27,13 @@ bool FPlatformCrashHandler::GenerateMiniDump()
 
     if (success)
     {
-        char msg[512];
-        sprintf_s(msg, "MiniDump created: %ws", dumpPath);
-        MessageBoxA(nullptr, msg, "MiniDump Generated", MB_OK | MB_ICONINFORMATION);
+        wchar_t msg[512];
+        swprintf_s(msg, 512, L"MiniDump created: %s", dumpPath);
+        MessageBoxW(nullptr, msg, L"MiniDump Generated", MB_OK | MB_ICONINFORMATION);
     }
     else
     {
-        MessageBoxA(nullptr, "Failed to create MiniDump", "Error", MB_OK | MB_ICONERROR);
+        MessageBoxW(nullptr, L"Failed to create MiniDump", L"Error", MB_OK | MB_ICONERROR);
     }
 
     return success;
@@ -90,13 +90,13 @@ LONG WINAPI FPlatformCrashHandler::UnhandledExceptionFilter(EXCEPTION_POINTERS* 
 
     if (success)
     {
-        char msg[512];
-        sprintf_s(msg, "Application crashed!\n\nMiniDump saved to:\n%ws\n\nPlease send this file to developers.", dumpPath);
-        MessageBoxA(nullptr, msg, "Crash Detected", MB_OK | MB_ICONERROR);
+        wchar_t msg[512];
+        swprintf_s(msg, 512, L"Application crashed!\n\nMiniDump saved to:\n%s\n\nPlease send this file to developers.", dumpPath);
+        MessageBoxW(nullptr, msg, L"Crash Detected", MB_OK | MB_ICONERROR);
     }
     else
     {
-        MessageBoxA(nullptr, "Application crashed!\n\nFailed to create MiniDump.", "Crash Detected", MB_OK | MB_ICONERROR);
+        MessageBoxW(nullptr, L"Application crashed!\n\nFailed to create MiniDump.", L"Crash Detected", MB_OK | MB_ICONERROR);
     }
 
     // EXCEPTION_EXECUTE_HANDLER: 예외를 처리하고 프로그램 종료
