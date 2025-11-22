@@ -462,10 +462,8 @@ GEMINI.md
 /Mundi/BuildTools/**/nul
 
 # Auto-Generated Reflection Files
-# Generated 폴더는 자동 생성되지만 커밋에 포함 (빌드 없이 바로 실행 가능하도록)
-# 단, 일부 임시 파일은 제외
-/Mundi/Generated/**/*.bak
-/Mundi/Generated/**/*.tmp
+# Generated 폴더는 빌드 시 자동 생성되므로 git에서 제외
+/Mundi/Generated/
 
 # Python
 __pycache__/
