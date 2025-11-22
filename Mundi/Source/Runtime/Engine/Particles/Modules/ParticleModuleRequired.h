@@ -23,6 +23,11 @@ public:
 	UPROPERTY(EditAnywhere, Category="Required")
 	bool bOrientZAxisTowardCamera = false;  // Z축을 카메라로 향하게 할지
 
+	// 언리얼 엔진 호환: 파티클 정렬 모드
+	// 0: 정렬 없음, 1: Age (오래된 것부터), 2: Distance (먼 것부터 - 투명도용)
+	UPROPERTY(EditAnywhere, Category="Required")
+	int32 SortMode = 0;
+
 	UParticleModuleRequired() = default;
 	virtual ~UParticleModuleRequired() = default;
 

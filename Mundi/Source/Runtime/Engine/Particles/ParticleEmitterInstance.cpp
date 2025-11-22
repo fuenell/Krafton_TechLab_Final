@@ -403,11 +403,13 @@ FDynamicEmitterDataBase* FParticleEmitterInstance::GetDynamicData(bool bSelected
 			CurrentLODLevel->RequiredModule->ToRenderThreadData()
 		);
 		NewData->Source.MaterialInterface = NewData->Source.RequiredModule->Material;
+		NewData->Source.SortMode = CurrentLODLevel->RequiredModule->SortMode;
 	}
 	else
 	{
 		NewData->Source.RequiredModule = nullptr;
 		NewData->Source.MaterialInterface = nullptr;
+		NewData->Source.SortMode = 0;  // 정렬 없음
 	}
 
 	// 컴포넌트 스케일 설정

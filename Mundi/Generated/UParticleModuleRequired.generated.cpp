@@ -39,6 +39,7 @@ BEGIN_PROPERTIES(UParticleModuleRequired)
     ADD_PROPERTY_MATERIAL(class UMaterialInterface*, Material, "Required", true)
     ADD_PROPERTY(int32, ScreenAlignment, "Required", true)
     ADD_PROPERTY(bool, bOrientZAxisTowardCamera, "Required", true)
+    ADD_PROPERTY(int32, SortMode, "Required", true)
 END_PROPERTIES()
 
 // ===== Lua Binding =====
@@ -53,5 +54,7 @@ LUA_BIND_BEGIN(UParticleModuleRequired)
         T, "ScreenAlignment", &UParticleModuleRequired::ScreenAlignment);
     AddProperty<UParticleModuleRequired, bool>(
         T, "bOrientZAxisTowardCamera", &UParticleModuleRequired::bOrientZAxisTowardCamera);
+    AddProperty<UParticleModuleRequired, int32>(
+        T, "SortMode", &UParticleModuleRequired::SortMode);
 }
 LUA_BIND_END()
