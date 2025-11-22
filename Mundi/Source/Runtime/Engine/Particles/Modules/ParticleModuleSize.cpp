@@ -37,11 +37,11 @@ void UParticleModuleSize::Spawn(FParticleEmitterInstance* Owner, int32 Offset, f
 	ParticleBase->Size = InitialSize;
 	ParticleBase->BaseSize = InitialSize;
 
-	// 언리얼 엔진 호환: 페이로드 데이터 설정
-	// PARTICLE_ELEMENT 매크로를 사용하여 파티클별 추가 데이터 접근
-	uint8* ParticleBasePtr = reinterpret_cast<uint8*>(ParticleBase);
-	FParticleSizePayload& SizePayload =
-		PARTICLE_ELEMENT(FParticleSizePayload, ParticleBasePtr, ModuleOffsetInParticle);
+	// 언리얼 엔진 호환: CurrentOffset 초기화
+	uint32 CurrentOffset = Offset;
+
+	// 언리얼 엔진 호환: PARTICLE_ELEMENT 매크로 (CurrentOffset 자동 증가)
+	PARTICLE_ELEMENT(FParticleSizePayload, SizePayload);
 
 	SizePayload.InitialSize = InitialSize;
 	SizePayload.EndSize = EndSize;
@@ -67,9 +67,8 @@ void UParticleModuleSize::Update(FModuleUpdateContext& Context)
 	// BEGIN_UPDATE_LOOP/END_UPDATE_LOOP 매크로 사용
 	// 언리얼 엔진 표준 패턴: 역방향 순회, Freeze 자동 스킵
 	BEGIN_UPDATE_LOOP
-		// 페이로드 데이터 가져오기 (PARTICLE_ELEMENT 매크로 사용)
-		FParticleSizePayload& SizePayload =
-			PARTICLE_ELEMENT(FParticleSizePayload, ParticleBase, ModuleOffsetInParticle);
+		// 언리얼 엔진 호환: PARTICLE_ELEMENT 매크로 (CurrentOffset 자동 증가)
+		PARTICLE_ELEMENT(FParticleSizePayload, SizePayload);
 
 		// 크기 보간 (OverLife 패턴)
 		float Alpha = Particle.RelativeTime * SizePayload.SizeMultiplierOverLife;

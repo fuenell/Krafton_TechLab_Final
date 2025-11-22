@@ -359,12 +359,19 @@ FDynamicEmitterDataBase* FParticleEmitterInstance::GetDynamicData(bool bSelected
 	memcpy(NewData->Source.DataContainer.ParticleData, ParticleData, ParticleDataBytes);
 	memcpy(NewData->Source.DataContainer.ParticleIndices, ParticleIndices, ActiveParticles * sizeof(uint16));
 
-	// Required 모듈과 Material 설정 (렌더링 시 필요)
-	// TODO: FParticleRequiredModule 구조체 정의 후 변환 필요
-	NewData->Source.RequiredModule = nullptr;
+	// 언리얼 엔진 호환: Required 모듈과 Material 설정 (렌더링 시 필요)
 	if (CurrentLODLevel && CurrentLODLevel->RequiredModule)
 	{
-		NewData->Source.MaterialInterface = CurrentLODLevel->RequiredModule->Material;
+		// 렌더 스레드용 데이터로 변환하여 저장
+		FParticleRequiredModule* RenderData = new FParticleRequiredModule();
+		*RenderData = CurrentLODLevel->RequiredModule->ToRenderThreadData();
+		NewData->Source.RequiredModule = RenderData;
+		NewData->Source.MaterialInterface = RenderData->Material;
+	}
+	else
+	{
+		NewData->Source.RequiredModule = nullptr;
+		NewData->Source.MaterialInterface = nullptr;
 	}
 
 	// 컴포넌트 스케일 설정

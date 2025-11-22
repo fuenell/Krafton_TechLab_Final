@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "ParticleModuleLocation.h"
-#include <random>
+#include "../ParticleEmitterInstance.h"
+#include <cstdlib>
+#include <cmath>
 
 void UParticleModuleLocation::Spawn(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase)
 {
@@ -9,18 +11,99 @@ void UParticleModuleLocation::Spawn(FParticleEmitterInstance* Owner, int32 Offse
 		return;
 	}
 
-	// 랜덤 위치 오프셋
-	static std::random_device rd;
-	static std::mt19937 gen(rd());
-	std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
+	// 언리얼 엔진 호환: CurrentOffset 초기화
+	uint32 CurrentOffset = Offset;
 
-	FVector RandomOffset(
-		dist(gen) * StartLocationRange.X,
-		dist(gen) * StartLocationRange.Y,
-		dist(gen) * StartLocationRange.Z
+	// 페이로드 가져오기
+	PARTICLE_ELEMENT(FParticleLocationPayload, Payload);
+
+	// 분포 형태에 따라 랜덤 위치 생성
+	FVector RandomOffset;
+	switch (static_cast<ELocationDistributionShape>(DistributionShape))
+	{
+	case ELocationDistributionShape::Sphere:
+		RandomOffset = GenerateRandomLocationSphere();
+		break;
+	case ELocationDistributionShape::Cylinder:
+		RandomOffset = GenerateRandomLocationCylinder();
+		break;
+	case ELocationDistributionShape::Box:
+	default:
+		RandomOffset = GenerateRandomLocationBox();
+		break;
+	}
+
+	// 최종 스폰 위치 계산
+	Payload.SpawnLocation = StartLocation + RandomOffset;
+	ParticleBase->Location = Payload.SpawnLocation;
+	ParticleBase->OldLocation = Payload.SpawnLocation;
+}
+
+FVector UParticleModuleLocation::GenerateRandomLocationBox()
+{
+	// 박스 형태: 각 축별로 -Range ~ +Range 범위에서 균등 분포
+	return FVector(
+		(static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f) * StartLocationRange.X,
+		(static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f) * StartLocationRange.Y,
+		(static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f) * StartLocationRange.Z
 	);
+}
 
-	ParticleBase->Location = StartLocation + RandomOffset;
+FVector UParticleModuleLocation::GenerateRandomLocationSphere()
+{
+	// 언리얼 엔진 호환: 구 형태 분포
+	// 균등한 구 분포를 위해 구좌표계 사용
+	float Theta = static_cast<float>(rand()) / RAND_MAX * 2.0f * 3.14159265f;  // 0 ~ 2π
+	float Phi = acosf(2.0f * static_cast<float>(rand()) / RAND_MAX - 1.0f);    // 0 ~ π (균등 분포)
+
+	float Radius;
+	if (bSurfaceOnly)
+	{
+		// 표면에만 스폰
+		Radius = SphereRadius;
+	}
+	else
+	{
+		// 부피 전체에 균등 분포 (r^3 보정)
+		float RandomValue = static_cast<float>(rand()) / RAND_MAX;
+		Radius = SphereRadius * powf(RandomValue, 1.0f / 3.0f);
+	}
+
+	// 구좌표 -> 직교좌표 변환
+	float SinPhi = sinf(Phi);
+	return FVector(
+		Radius * SinPhi * cosf(Theta),
+		Radius * SinPhi * sinf(Theta),
+		Radius * cosf(Phi)
+	);
+}
+
+FVector UParticleModuleLocation::GenerateRandomLocationCylinder()
+{
+	// 언리얼 엔진 호환: 실린더 형태 분포 (Z축 기준)
+	float Theta = static_cast<float>(rand()) / RAND_MAX * 2.0f * 3.14159265f;  // 0 ~ 2π
+
+	float Radius;
+	if (bSurfaceOnly)
+	{
+		// 원통 표면에만 스폰
+		Radius = SphereRadius;
+	}
+	else
+	{
+		// 원통 부피 전체에 균등 분포 (r^2 보정)
+		float RandomValue = static_cast<float>(rand()) / RAND_MAX;
+		Radius = SphereRadius * sqrtf(RandomValue);
+	}
+
+	// Z 높이는 -CylinderHeight/2 ~ +CylinderHeight/2 범위
+	float Height = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * CylinderHeight;
+
+	return FVector(
+		Radius * cosf(Theta),
+		Radius * sinf(Theta),
+		Height
+	);
 }
 
 void UParticleModuleLocation::Serialize(const bool bInIsLoading, JSON& InOutHandle)

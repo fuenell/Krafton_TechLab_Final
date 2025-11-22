@@ -17,6 +17,9 @@ void UParticleModuleVelocity::Spawn(FParticleEmitterInstance* Owner, int32 Offse
 		return;
 	}
 
+	// 언리얼 엔진 호환: CurrentOffset 초기화
+	uint32 CurrentOffset = Offset;
+
 	// 랜덤 속도 오프셋
 	static std::random_device rd;
 	static std::mt19937 gen(rd());
@@ -32,11 +35,8 @@ void UParticleModuleVelocity::Spawn(FParticleEmitterInstance* Owner, int32 Offse
 	ParticleBase->Velocity = InitialVel;
 	ParticleBase->BaseVelocity = InitialVel;
 
-	// 언리얼 엔진 호환: 페이로드 데이터 설정
-	// PARTICLE_ELEMENT 매크로를 사용하여 파티클별 추가 데이터 접근
-	uint8* ParticleBasePtr = reinterpret_cast<uint8*>(ParticleBase);
-	FParticleVelocityPayload& VelPayload =
-		PARTICLE_ELEMENT(FParticleVelocityPayload, ParticleBasePtr, ModuleOffsetInParticle);
+	// 언리얼 엔진 호환: PARTICLE_ELEMENT 매크로 사용 (CurrentOffset 자동 증가)
+	PARTICLE_ELEMENT(FParticleVelocityPayload, VelPayload);
 
 	VelPayload.InitialVelocity = InitialVel;
 	VelPayload.VelocityMagnitude = std::sqrt(
@@ -58,9 +58,8 @@ void UParticleModuleVelocity::Update(FModuleUpdateContext& Context)
 	// BEGIN_UPDATE_LOOP/END_UPDATE_LOOP 매크로 사용
 	// 언리얼 엔진 표준 패턴: 역방향 순회, Freeze 자동 스킵
 	BEGIN_UPDATE_LOOP
-		// 페이로드 데이터 가져오기 (PARTICLE_ELEMENT 매크로 사용)
-		FParticleVelocityPayload& VelPayload =
-			PARTICLE_ELEMENT(FParticleVelocityPayload, ParticleBase, ModuleOffsetInParticle);
+		// 언리얼 엔진 호환: PARTICLE_ELEMENT 매크로 (CurrentOffset 자동 증가)
+		PARTICLE_ELEMENT(FParticleVelocityPayload, VelPayload);
 
 		// 속도 감쇠 적용 (OverLife 패턴)
 		float DampingFactor = 1.0f - (VelocityDamping * DeltaTime);

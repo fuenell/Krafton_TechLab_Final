@@ -5,7 +5,24 @@
 #include "UEContainer.h"
 
 class UMaterialInterface;
-struct FParticleRequiredModule;
+
+// 언리얼 엔진 호환: 렌더링에 필요한 필수 모듈 데이터
+// 렌더 스레드에서 안전하게 접근할 수 있도록 데이터를 복사
+struct FParticleRequiredModule
+{
+	UMaterialInterface* Material;       // 파티클 렌더링에 사용할 머티리얼
+	FString EmitterName;                // 이미터 이름 (디버깅용)
+	int32 ScreenAlignment;              // 화면 정렬 방식 (Billboard, Velocity aligned 등)
+	bool bOrientZAxisTowardCamera;      // Z축을 카메라 방향으로 정렬할지 여부
+
+	FParticleRequiredModule()
+		: Material(nullptr)
+		, EmitterName("Emitter")
+		, ScreenAlignment(0)
+		, bOrientZAxisTowardCamera(false)
+	{
+	}
+};
 
 // 파티클 상태 플래그 (언리얼 엔진 호환)
 #define STATE_Particle_JustSpawned            0x02000000  // 방금 생성된 파티클
