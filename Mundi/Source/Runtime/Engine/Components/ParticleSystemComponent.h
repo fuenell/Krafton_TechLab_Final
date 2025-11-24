@@ -54,9 +54,9 @@ public:
 	UParticleSystemComponent();
 	virtual ~UParticleSystemComponent();
 
-	// 초기화
-	virtual void BeginPlay() override;
-	virtual void EndPlay() override;
+	// 초기화/정리
+	virtual void OnRegister(UWorld* InWorld) override;    // 에디터/PIE 모두에서 호출
+	virtual void OnUnregister() override;                 // 에디터/PIE 모두에서 호출
 
 	// 틱
 	virtual void TickComponent(float DeltaTime) override;

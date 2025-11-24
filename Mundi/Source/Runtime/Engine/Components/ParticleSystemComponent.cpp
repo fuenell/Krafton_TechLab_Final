@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "ParticleSystemComponent.h"
 #include "SceneView.h"
 #include "MeshBatchElement.h"
@@ -13,23 +13,32 @@
 UParticleSystemComponent::UParticleSystemComponent()
 {
 	bAutoActivate = true;
-	bCanEverTick = true;  // Tick 활성화
+	bCanEverTick = true;   // Tick 활성화
+	bTickInEditor = true;  // 에디터에서도 파티클 미리보기 가능
 }
 
 UParticleSystemComponent::~UParticleSystemComponent()
 {
-	ClearEmitterInstances();
-
-	for (FDynamicEmitterDataBase* RenderData : EmitterRenderData)
+	// OnUnregister에서 이미 정리되었으므로, 안전 체크만 수행
+	// (만약 OnUnregister가 호출되지 않은 경우를 대비)
+	if (EmitterInstances.Num() > 0)
 	{
-		if (RenderData)
-		{
-			delete RenderData;
-		}
+		ClearEmitterInstances();
 	}
-	EmitterRenderData.clear();
 
-	// 버퍼 해제 추가
+	if (EmitterRenderData.Num() > 0)
+	{
+		for (FDynamicEmitterDataBase* RenderData : EmitterRenderData)
+		{
+			if (RenderData)
+			{
+				delete RenderData;
+			}
+		}
+		EmitterRenderData.Empty();
+	}
+
+	// 버퍼 해제
 	if (ParticleVertexBuffer)
 	{
 		ParticleVertexBuffer->Release();
@@ -42,20 +51,32 @@ UParticleSystemComponent::~UParticleSystemComponent()
 	}
 }
 
-void UParticleSystemComponent::BeginPlay()
+void UParticleSystemComponent::OnRegister(UWorld* InWorld)
 {
-	USceneComponent::BeginPlay();
+	Super::OnRegister(InWorld);
+
+	// DEBUG: OnRegister 호출 확인 (추후 제거)
+	UE_LOG("[ParticleSystemComponent::OnRegister] Called! World=%p, EmitterCount=%d",
+		InWorld, EmitterInstances.Num());
+
+	// 이미 초기화되어 있으면 스킵 (OnRegister는 여러 번 호출될 수 있음)
+	if (EmitterInstances.Num() > 0)
+	{
+		return;
+	}
 
 	// Template이 없으면 디버그용 기본 파티클 시스템 생성
-	// Editor 완성 시 Editor에서 제공하는 Template 사용
 	if (!Template)
 	{
 		CreateDebugParticleSystem();
 	}
 
+	// 에디터에서도 파티클 미리보기를 위해 자동 활성화
 	if (bAutoActivate)
 	{
 		ActivateSystem();
+		UE_LOG("[ParticleSystemComponent::OnRegister] ActivateSystem called, EmitterCount=%d",
+			EmitterInstances.Num());
 	}
 }
 
@@ -105,10 +126,22 @@ void UParticleSystemComponent::CreateDebugParticleSystem()
 	Template->Emitters.Add(Emitter);
 }
 
-void UParticleSystemComponent::EndPlay()
+void UParticleSystemComponent::OnUnregister()
 {
+	// 이미터 인스턴스 정리
 	DeactivateSystem();
-	USceneComponent::EndPlay();
+
+	// 렌더 데이터 정리
+	for (FDynamicEmitterDataBase* RenderData : EmitterRenderData)
+	{
+		if (RenderData)
+		{
+			delete RenderData;
+		}
+	}
+	EmitterRenderData.Empty();
+
+	Super::OnUnregister();
 }
 
 void UParticleSystemComponent::TickComponent(float DeltaTime)
@@ -159,7 +192,7 @@ void UParticleSystemComponent::SetTemplate(UParticleSystem* NewTemplate)
 		Template = NewTemplate;
 
 		// 활성 상태면 재초기화
-		if (EmitterInstances.size() > 0)
+		if (EmitterInstances.Num() > 0)
 		{
 			ClearEmitterInstances();
 			InitializeEmitterInstances();
@@ -197,7 +230,7 @@ void UParticleSystemComponent::ClearEmitterInstances()
 			delete Instance;
 		}
 	}
-	EmitterInstances.clear();
+	EmitterInstances.Empty();
 }
 
 void UParticleSystemComponent::UpdateRenderData()
@@ -210,80 +243,23 @@ void UParticleSystemComponent::UpdateRenderData()
 			delete RenderData;
 		}
 	}
-	EmitterRenderData.clear();
+	EmitterRenderData.Empty();
 
-	// 각 이미터 인스턴스에 대한 새 렌더 데이터 생성
-	for (int32 i = 0; i < EmitterInstances.size(); i++)
+	// 각 이미터 인스턴스에서 GetDynamicData() 호출 (캡슐화된 패턴)
+	for (int32 i = 0; i < EmitterInstances.Num(); i++)
 	{
 		FParticleEmitterInstance* Instance = EmitterInstances[i];
-
-
-		if (!Instance || !Instance->CurrentLODLevel)
+		if (!Instance)
 		{
 			continue;
 		}
 
-		// TypeDataModule에서 이미터 타입 결정
-		bool bIsMeshEmitter = (Instance->CurrentLODLevel->TypeDataModule != nullptr);
-
-		if (bIsMeshEmitter)
+		// EmitterInstance가 자신의 렌더 데이터를 생성
+		FDynamicEmitterDataBase* DynamicData = Instance->GetDynamicData(false);
+		if (DynamicData)
 		{
-			// 메시 이미터 데이터 생성
-			FDynamicMeshEmitterData* MeshData = new FDynamicMeshEmitterData();
-			MeshData->EmitterIndex = i;
-			// TODO: 메시 렌더 데이터 채우기
-			EmitterRenderData.Add(MeshData);
-		}
-		else
-		{
-			// 스프라이트 이미터 데이터 생성
-			FDynamicSpriteEmitterData* SpriteData = new FDynamicSpriteEmitterData();
-			SpriteData->EmitterIndex = i;
-
-			// Source 데이터 채우기
-			SpriteData->Source.ActiveParticleCount = Instance->ActiveParticles;
-			SpriteData->Source.ParticleStride = Instance->ParticleStride;
-			SpriteData->Source.Scale = GetRelativeScale();
-
-			// RequiredModule에서 Material과 렌더 설정 복사
-			UParticleModuleRequired* RequiredModule = Instance->CurrentLODLevel->RequiredModule;
-			if (RequiredModule)
-			{
-				SpriteData->Source.MaterialInterface = RequiredModule->Material;
-				// RequiredModule 데이터를 렌더 스레드용으로 복사
-				SpriteData->Source.RequiredModule = std::make_unique<FParticleRequiredModule>(
-					RequiredModule->ToRenderThreadData()
-				);
-				// SortMode는 현재 기본값 사용 (추후 RequiredModule에서 가져올 수 있음)
-				SpriteData->Source.SortMode = 2;  // Distance 정렬 (투명 렌더링용)
-			}
-
-			// 파티클 데이터 복사 (Replay 패턴 - 렌더 스레드용 스냅샷)
-			if (Instance->ActiveParticles > 0 && Instance->ParticleData)
-			{
-				// 활성 파티클만 복사하기 위해 컴팩트 복사 수행
-				// ParticleIndices가 가리키는 파티클만 연속으로 복사
-				int32 DataNumBytes = Instance->ActiveParticles * Instance->ParticleStride;
-				int32 IndicesNumShorts = Instance->ActiveParticles;
-
-				if (SpriteData->Source.DataContainer.Alloc(DataNumBytes, IndicesNumShorts))
-				{
-					uint8* DstData = SpriteData->Source.DataContainer.ParticleData;
-
-					// 활성 파티클만 컴팩트하게 복사
-					for (int32 j = 0; j < Instance->ActiveParticles; j++)
-					{
-						int32 SrcIndex = Instance->ParticleIndices[j];
-						const uint8* SrcParticle = Instance->ParticleData + SrcIndex * Instance->ParticleStride;
-						memcpy(DstData + j * Instance->ParticleStride, SrcParticle, Instance->ParticleStride);
-
-						// 인덱스는 컴팩트 복사 후 순차적으로 재매핑
-						SpriteData->Source.DataContainer.ParticleIndices[j] = static_cast<uint16>(j);
-					}
-				}
-			}
-
-			EmitterRenderData.Add(SpriteData);
+			DynamicData->EmitterIndex = i;
+			EmitterRenderData.Add(DynamicData);
 		}
 	}
 }
@@ -505,6 +481,19 @@ void UParticleSystemComponent::FillVertexBuffer(const FSceneView* View)
 		return;
 	}
 
+	// DEBUG: 위치 정보 확인 (추후 제거)
+	static int DebugCounter = 0;
+	if (DebugCounter++ % 60 == 0)  // 1초에 한 번만 출력
+	{
+		FVector WorldLoc = GetWorldLocation();
+		FVector RelLoc = GetRelativeLocation();
+		USceneComponent* Parent = GetAttachParent();
+		UE_LOG("[FillVertexBuffer] WorldLoc=(%.1f, %.1f, %.1f), RelLoc=(%.1f, %.1f, %.1f), AttachParent=%p",
+			WorldLoc.X, WorldLoc.Y, WorldLoc.Z,
+			RelLoc.X, RelLoc.Y, RelLoc.Z,
+			Parent);
+	}
+
 	ID3D11DeviceContext* Context = GEngine.GetRHIDevice()->GetDeviceContext();
 
 	// Vertex Buffer Map
@@ -569,18 +558,17 @@ void UParticleSystemComponent::FillVertexBuffer(const FSceneView* View)
 
 			// 컴포넌트 월드 트랜스폼 적용
 			FVector ParticleWorldPos = GetWorldLocation() + Particle->Location * GetRelativeScale();
+
+			// DEBUG: 첫 번째 파티클의 위치 정보 (추후 제거)
+			if (ParticleIdx == 0 && DebugCounter % 60 == 1)
+			{
+				UE_LOG("[Particle] LocalLoc=(%.1f, %.1f, %.1f), WorldPos=(%.1f, %.1f, %.1f)",
+					Particle->Location.X, Particle->Location.Y, Particle->Location.Z,
+					ParticleWorldPos.X, ParticleWorldPos.Y, ParticleWorldPos.Z);
+			}
 			FVector2D ParticleSize = FVector2D(Particle->Size.X, Particle->Size.Y) * GetRelativeScale().X;
 
-			// 디버그: 첫 번째 파티클 데이터 확인
-			if (ParticleIdx == 0 && EmitterIdx == 0)
-			{
-				UE_LOG("[Vertex] Pos=(%.1f,%.1f,%.1f) Size=(%.1f,%.1f) CompLoc=(%.1f,%.1f,%.1f)",
-					ParticleWorldPos.X, ParticleWorldPos.Y, ParticleWorldPos.Z,
-					ParticleSize.X, ParticleSize.Y,
-					GetWorldLocation().X, GetWorldLocation().Y, GetWorldLocation().Z);
-			}
-
-			// 4개 버텍스 생성 (빌보드 정렬 및 Z회전은 GPU에서 수행)
+				// 4개 버텍스 생성 (빌보드 정렬 및 Z회전은 GPU에서 수행)
 			for (int32 v = 0; v < 4; v++)
 			{
 				FParticleSpriteVertex& Vertex = Vertices[VertexOffset + v];

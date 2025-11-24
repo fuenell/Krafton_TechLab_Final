@@ -27,6 +27,9 @@ public:
 
     UPROPERTY(EditAnywhere, Category = "렌더링")
     bool bTickEnabled = true;   // 현재 틱 켜짐 여부
+
+    UPROPERTY(EditAnywhere, Category = "렌더링")
+    bool bTickInEditor = false; // 에디터에서도 틱 허용
     // ─────────────── Lifecycle (게임 수명)
     virtual void InitializeComponent();                // BeginPlay 전에 1회
     virtual void BeginPlay();                          // PIE 중에 월드에 등록 시 호출됨
@@ -47,6 +50,9 @@ public:
 
     void SetTickEnabled(bool bEnabled) { bTickEnabled = bEnabled; }
     bool IsTickEnabled() const { return bTickEnabled; }
+
+    void SetTickInEditor(bool bEnabled) { bTickInEditor = bEnabled; }
+    bool CanTickInEditor() const { return bTickInEditor; }
 
     void SetEditability(bool InEditable) { bIsEditable = InEditable; }
     bool IsEditable() const { return bIsEditable; }

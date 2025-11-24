@@ -57,14 +57,29 @@ void AActor::BeginPlay()
 
 void AActor::Tick(float DeltaSeconds)
 {
-	// 에디터에서 틱 Off면 스킵
+	// Actor 레벨 에디터 틱 체크
 	if (!bTickInEditor && World->bPie == false) return;
-	
+
 	for (UActorComponent* Comp : OwnedComponents)
 	{
 		if (Comp && Comp->IsComponentTickEnabled())
 		{
-			Comp->TickComponent(DeltaSeconds /*, … 필요 인자*/);
+			// 에디터 모드일 때 컴포넌트별 bTickInEditor 체크
+			bool bShouldTick = World->bPie || Comp->CanTickInEditor();
+
+			// DEBUG: 컴포넌트 틱 조건 확인 (추후 제거)
+			static bool bLoggedComp = false;
+			if (!bLoggedComp && !World->bPie)
+			{
+				UE_LOG("[Actor::Tick] Comp=%s, bShouldTick=%d, CanTickInEditor=%d",
+					Comp->ObjectName.ToString(), bShouldTick, Comp->CanTickInEditor());
+				bLoggedComp = true;
+			}
+
+			if (bShouldTick)
+			{
+				Comp->TickComponent(DeltaSeconds);
+			}
 		}
 	}
 }

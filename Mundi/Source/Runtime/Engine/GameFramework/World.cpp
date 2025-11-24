@@ -182,8 +182,15 @@ bool UWorld::LoadLevelFromFile(const FWideString& Path)
 
 // 함수 내부 코드 순서 유지 필요
 void UWorld::Tick(float DeltaSeconds)
-{	
-	// GameDelat: Unscaled * finalScale  
+{
+	// DEBUG: World::Tick 호출 확인 (매 프레임 출력 - 추후 제거)
+	static int32 TickCount = 0;
+	if (TickCount++ % 300 == 0)  // 5초마다 출력 (60fps 기준)
+	{
+		UE_LOG("[World::Tick] Called! bPie=%d, Level=%p, TickCount=%d", bPie, Level.get(), TickCount);
+	}
+
+	// GameDelat: Unscaled * finalScale
 	float UnscaledDeltaSeconds = DeltaSeconds;
 
 	// Time Stop 
@@ -253,6 +260,30 @@ void UWorld::Tick(float DeltaSeconds)
 	{
 		// Tick 중에 새로운 actor가 추가될 수도 있어서 복사 후 호출
 		TArray<AActor*> LevelActors = Level->GetActors();
+
+		// DEBUG: 틱 조건 확인용 (추후 제거)
+		static bool bLoggedOnce = false;
+		if (!bLoggedOnce && LevelActors.Num() > 0)
+		{
+			UE_LOG("[World::Tick] bPie=%d, ActorCount=%d", bPie, LevelActors.Num());
+			bLoggedOnce = true;
+		}
+
+		// DEBUG: Actor 틱 조건 확인 (추후 제거)
+		static bool bLoggedActors = false;
+		if (!bLoggedActors && LevelActors.Num() > 0)
+		{
+			for (AActor* Actor : LevelActors)
+			{
+				if (Actor)
+				{
+					UE_LOG("[World::Tick] Actor=%s, IsActive=%d, CanEverTick=%d, CanTickInEditor=%d",
+						Actor->ObjectName.ToString(), Actor->IsActorActive(), Actor->CanEverTick(), Actor->CanTickInEditor());
+				}
+			}
+			bLoggedActors = true;
+		}
+
 		for (AActor* Actor : LevelActors)
 		{
 			if (Actor && Actor->IsActorActive())
