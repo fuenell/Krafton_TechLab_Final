@@ -115,7 +115,7 @@ struct ParticleEditorState : public ViewerState
 
     // 뷰포트 표시 옵션
     bool bShowBounds = false;
-    bool bShowOriginAxis = true;
+    bool bShowOriginAxis = false;
     FLinearColor BackgroundColor = FLinearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
     // LOD 제어

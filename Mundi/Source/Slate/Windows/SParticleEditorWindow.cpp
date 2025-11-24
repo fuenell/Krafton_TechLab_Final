@@ -9,6 +9,7 @@
 #include "ParticleModule.h"
 #include "ParticleSystemComponent.h"
 #include "FViewport.h"
+#include "Source/Runtime/Engine/Components/LineComponent.h"
 
 SParticleEditorWindow::SParticleEditorWindow()
 {
@@ -16,10 +17,22 @@ SParticleEditorWindow::SParticleEditorWindow()
 	LeftPanelRatio = 0.2f;   // 20% 왼쪽 (뷰포트 + 디테일)
 	RightPanelRatio = 0.6f;  // 60% 오른쪽 (이미터 패널)
 	bHasBottomPanel = true;
+
+	// 원점축 LineComponent 생성
+	OriginAxisLineComponent = NewObject<ULineComponent>();
+	OriginAxisLineComponent->SetAlwaysOnTop(true); // 항상 위에 표시
+	CreateOriginAxisLines();
 }
 
 SParticleEditorWindow::~SParticleEditorWindow()
 {
+	// LineComponent 정리
+	if (OriginAxisLineComponent)
+	{
+		DeleteObject(OriginAxisLineComponent);
+		OriginAxisLineComponent = nullptr;
+	}
+
 	// 탭 정리
 	for (int i = 0; i < Tabs.Num(); ++i)
 	{
@@ -145,8 +158,20 @@ void SParticleEditorWindow::OnUpdate(float DeltaSeconds)
 
 void SParticleEditorWindow::PreRenderViewportUpdate()
 {
-	// 파티클 시스템 업데이트는 ParticleSystemComponent에서 자동으로 처리됨
-	// 필요시 추가 업데이트 로직 구현
+	// 원점축 LineComponent 처리
+	ParticleEditorState* State = GetActiveParticleState();
+	if (State && State->PreviewActor && OriginAxisLineComponent)
+	{
+		// LineComponent가 아직 PreviewActor에 연결되지 않았으면 연결
+		if (OriginAxisLineComponent->GetOwner() != State->PreviewActor)
+		{
+			State->PreviewActor->AddOwnedComponent(OriginAxisLineComponent);
+			OriginAxisLineComponent->RegisterComponent(State->World);
+		}
+
+		// bShowOriginAxis 플래그에 따라 가시성 제어
+		OriginAxisLineComponent->SetLineVisible(State->bShowOriginAxis);
+	}
 }
 
 void SParticleEditorWindow::LoadToolbarIcons()
@@ -350,11 +375,29 @@ void SParticleEditorWindow::RenderToolbar()
 	// Bounds 버튼
 	if (IconBounds && IconBounds->GetShaderResourceView())
 	{
-		ImVec4 tint = State->bShowBounds ? ImVec4(0.4f, 0.8f, 1.0f, 1.0f) : ImVec4(1, 1, 1, 1);
-		if (ImGui::ImageButton("##Bounds", (void*)IconBounds->GetShaderResourceView(), IconSizeVec, ImVec2(0, 0), ImVec2(1, 1), ImVec4(0, 0, 0, 0), tint))
+		// 활성 상태에 따른 스타일 설정
+		ImVec4 bgColor = State->bShowBounds
+			? ImVec4(0.15f, 0.35f, 0.45f, 0.8f)  // 어두운 청록 배경
+			: ImVec4(0, 0, 0, 0);                 // 투명
+		ImVec4 tint = State->bShowBounds
+			? ImVec4(0.6f, 1.0f, 1.0f, 1.0f)     // 밝은 청록 틴트
+			: ImVec4(0.7f, 0.7f, 0.7f, 1.0f);    // 회색 (비활성)
+
+		if (ImGui::ImageButton("##Bounds", (void*)IconBounds->GetShaderResourceView(), IconSizeVec, ImVec2(0, 0), ImVec2(1, 1), bgColor, tint))
 		{
 			State->bShowBounds = !State->bShowBounds;
 		}
+
+		// 활성 상태일 때 테두리 추가
+		if (State->bShowBounds)
+		{
+			ImDrawList* draw_list = ImGui::GetWindowDrawList();
+			ImVec2 p_min = ImGui::GetItemRectMin();
+			ImVec2 p_max = ImGui::GetItemRectMax();
+			ImU32 borderColor = IM_COL32(102, 204, 255, 200);
+			draw_list->AddRect(p_min, p_max, borderColor, 3.0f, 0, 2.5f);
+		}
+
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("파티클 시스템 경계 표시");
 	}
@@ -364,11 +407,29 @@ void SParticleEditorWindow::RenderToolbar()
 	// Origin Axis 버튼
 	if (IconOriginAxis && IconOriginAxis->GetShaderResourceView())
 	{
-		ImVec4 tint = State->bShowOriginAxis ? ImVec4(0.4f, 0.8f, 1.0f, 1.0f) : ImVec4(1, 1, 1, 1);
-		if (ImGui::ImageButton("##OriginAxis", (void*)IconOriginAxis->GetShaderResourceView(), IconSizeVec, ImVec2(0, 0), ImVec2(1, 1), ImVec4(0, 0, 0, 0), tint))
+		// 활성 상태에 따른 스타일 설정
+		ImVec4 bgColor = State->bShowOriginAxis
+			? ImVec4(0.15f, 0.35f, 0.45f, 0.8f)  // 어두운 청록 배경
+			: ImVec4(0, 0, 0, 0);                 // 투명
+		ImVec4 tint = State->bShowOriginAxis
+			? ImVec4(0.6f, 1.0f, 1.0f, 1.0f)     // 밝은 청록 틴트
+			: ImVec4(0.7f, 0.7f, 0.7f, 1.0f);    // 회색 (비활성)
+
+		if (ImGui::ImageButton("##OriginAxis", (void*)IconOriginAxis->GetShaderResourceView(), IconSizeVec, ImVec2(0, 0), ImVec2(1, 1), bgColor, tint))
 		{
 			State->bShowOriginAxis = !State->bShowOriginAxis;
 		}
+
+		// 활성 상태일 때 테두리 추가
+		if (State->bShowOriginAxis)
+		{
+			ImDrawList* draw_list = ImGui::GetWindowDrawList();
+			ImVec2 p_min = ImGui::GetItemRectMin();
+			ImVec2 p_max = ImGui::GetItemRectMax();
+			ImU32 borderColor = IM_COL32(102, 204, 255, 200);
+			draw_list->AddRect(p_min, p_max, borderColor, 3.0f, 0, 2.5f);
+		}
+
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("원점 축 표시");
 	}
@@ -743,4 +804,37 @@ void SParticleEditorWindow::RenderRightCurveArea()
 		RenderBottomPanel();
 	}
 	ImGui::EndChild();
+}
+
+void SParticleEditorWindow::CreateOriginAxisLines()
+{
+	if (!OriginAxisLineComponent) return;
+
+	// 기존 라인 제거
+	OriginAxisLineComponent->ClearLines();
+
+	// 축 길이 설정
+	const float AxisLength = 10.0f;
+	const FVector Origin = FVector(0.0f, 0.0f, 0.0f);
+
+	// X축 - 빨강
+	OriginAxisLineComponent->AddLine(
+		Origin,
+		Origin + FVector(AxisLength, 0.0f, 0.0f),
+		FVector4(0.796f, 0.086f, 0.105f, 1.0f)
+	);
+
+	// Y축 - 초록
+	OriginAxisLineComponent->AddLine(
+		Origin,
+		Origin + FVector(0.0f, AxisLength, 0.0f),
+		FVector4(0.125f, 0.714f, 0.113f, 1.0f)
+	);
+
+	// Z축 - 파랑
+	OriginAxisLineComponent->AddLine(
+		Origin,
+		Origin + FVector(0.0f, 0.0f, AxisLength),
+		FVector4(0.054f, 0.155f, 0.527f, 1.0f)
+	);
 }
