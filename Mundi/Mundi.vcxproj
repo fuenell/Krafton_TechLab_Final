@@ -373,6 +373,7 @@ powershell.exe -ExecutionPolicy Bypass -File "$(ProjectDir)BuildTools\SymbolServ
     <ClCompile Include="Source\Runtime\Engine\GameFramework\Info.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\PointLightActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\SpotLightActor.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Particles\Distribution.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particles\Modules\ParticleModuleMeshRotation.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particles\ParticleDefinitions.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Scripting\GameObject.cpp" />

@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <ItemGroup>
     <FxCompile Include="Shaders\Materials\Fireball.hlsl">
@@ -62,6 +62,24 @@
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Source\Runtime\Core\Misc\DebugUtils.cpp">
+      <Filter>Source\Runtime\Core\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Runtime\Engine\Particles\Modules\ParticleModuleMeshRotation.cpp">
+      <Filter>Source\Runtime\Engine\Particles\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Runtime\Engine\Viewer\ParticleEditorBootstrap.cpp">
+      <Filter>Source\Runtime\Engine\Viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Slate\Windows\SParticleEditorWindow.cpp">
+      <Filter>Source\Slate\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Runtime\Engine\Particles\Modules\ParticleModuleSizeScaleBySpeed.cpp">
+      <Filter>Source\Runtime\Engine\Particles\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Runtime\Engine\Particles\Distribution.cpp">
+      <Filter>Source\Runtime\Engine\Particles</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Runtime\Engine\Particles\ParticleDefinitions.cpp">
       <Filter>Source\Runtime\Engine\Particles</Filter>
     </ClCompile>
@@ -959,6 +977,12 @@
     <ClCompile Include="Generated\UParticleSystem.generated.cpp">
       <Filter>Generated</Filter>
     </ClCompile>
+    <ClCompile Include="Generated\UParticleModuleSizeScaleBySpeed.generated.cpp">
+      <Filter>Generated</Filter>
+    </ClCompile>
+    <ClCompile Include="Generated\UParticleModuleMeshRotation.generated.cpp">
+      <Filter>Generated</Filter>
+    </ClCompile>
     <ClCompile Include="ThirdParty\include\ImGui\imgui.cpp">
       <Filter>ThirdParty\include\ImGui</Filter>
     </ClCompile>
@@ -980,15 +1004,27 @@
     <ClCompile Include="ThirdParty\include\ImGui\imgui_widgets.cpp">
       <Filter>ThirdParty\include\ImGui</Filter>
     </ClCompile>
-    <ClCompile Include="Generated\UParticleModuleSizeScaleBySpeed.generated.cpp">
-      <Filter>Generated</Filter>
-    </ClCompile>
-    <ClCompile Include="Generated\UParticleModuleMeshRotation.generated.cpp">
-      <Filter>Generated</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Source\Runtime\Core\Misc\DebugUtils.h">
+      <Filter>Source\Runtime\Core\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Runtime\Engine\Particles\Distribution.h">
+      <Filter>Source\Runtime\Engine\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Runtime\Engine\Particles\Modules\ParticleModuleMeshRotation.h">
+      <Filter>Source\Runtime\Engine\Particles\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Runtime\Engine\Viewer\ParticleEditorBootstrap.h">
+      <Filter>Source\Runtime\Engine\Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Slate\Windows\SParticleEditorWindow.h">
+      <Filter>Source\Slate\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Runtime\Engine\Particles\Modules\ParticleModuleSizeScaleBySpeed.h">
+      <Filter>Source\Runtime\Engine\Particles\Modules</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Runtime\Engine\Particles\ParticleRandomStream.h">
       <Filter>Source\Runtime\Engine\Particles</Filter>
     </ClInclude>
@@ -1964,6 +2000,12 @@
     <ClInclude Include="Generated\UParticleSystem.generated.h">
       <Filter>Generated</Filter>
     </ClInclude>
+    <ClInclude Include="Generated\UParticleModuleSizeScaleBySpeed.generated.h">
+      <Filter>Generated</Filter>
+    </ClInclude>
+    <ClInclude Include="Generated\UParticleModuleMeshRotation.generated.h">
+      <Filter>Generated</Filter>
+    </ClInclude>
     <ClInclude Include="ThirdParty\include\ImGui\imconfig.h">
       <Filter>ThirdParty\include\ImGui</Filter>
     </ClInclude>
@@ -2069,13 +2111,6 @@
     <ClInclude Include="ThirdParty\include\Lua\lualib.h">
       <Filter>ThirdParty\include\Lua</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Runtime\Engine\Particles\Distribution.h" />
-    <ClInclude Include="Generated\UParticleModuleSizeScaleBySpeed.generated.h">
-      <Filter>Generated</Filter>
-    </ClInclude>
-    <ClInclude Include="Generated\UParticleModuleMeshRotation.generated.h">
-      <Filter>Generated</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="BuildTools\CodeGenerator\generate.py">
@@ -2093,154 +2128,154 @@
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source">
-      <UniqueIdentifier>{491ab6b1-1136-41c5-986f-d94c55b472df}</UniqueIdentifier>
+      <UniqueIdentifier>{7c06f043-0658-4d19-8779-99bd57115ce2}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Runtime">
-      <UniqueIdentifier>{40a72085-7bb1-441a-b505-7eae8195c4cb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Runtime\Engine">
-      <UniqueIdentifier>{b177d90d-3d91-41cb-8d31-814a48b4b374}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Runtime\Engine\Particles">
-      <UniqueIdentifier>{be8573be-a94c-433f-8f33-4ec7ca6339d7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Runtime\Engine\Particles\Modules">
-      <UniqueIdentifier>{3ec0ab0a-4b80-4da1-862e-39d7c11b886f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Runtime\Engine\Animation">
-      <UniqueIdentifier>{b072b04c-e06f-4812-8d3b-76f520295833}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Runtime\Engine\Components">
-      <UniqueIdentifier>{ecd3973a-8327-4415-a297-52fdc2a2f05f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Runtime\Engine\GameFramework">
-      <UniqueIdentifier>{b754e11c-90d5-473c-abfa-f1405a8f19f5}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Runtime\Engine\GameFramework\Camera">
-      <UniqueIdentifier>{bf37bac9-134c-4ea8-9048-747333ada5fc}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Runtime\Engine\Audio">
-      <UniqueIdentifier>{e3a0d826-7c06-4b14-b0cd-eb0903933bd5}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Runtime\Engine\Scripting">
-      <UniqueIdentifier>{1a56ab3c-eb0a-4a0e-9856-c5458cc4dc9e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Runtime\Engine\Viewer">
-      <UniqueIdentifier>{7572c4fc-b409-41cb-8d3b-575f3047fbe8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Runtime\Engine\Collision">
-      <UniqueIdentifier>{83f948e4-fc84-4494-9443-1655f949c853}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Runtime\Engine\Spatial">
-      <UniqueIdentifier>{18b3d243-4a1c-4c5e-b9d7-659462eb49b2}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Runtime\AssetManagement">
-      <UniqueIdentifier>{0433bd61-526e-4a9d-9e38-156aa6e8b789}</UniqueIdentifier>
+      <UniqueIdentifier>{35b38585-9bb6-4a41-a5e7-ae0bc5a4bc9c}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Runtime\Core">
-      <UniqueIdentifier>{f07614f5-8c99-46c4-a866-a57d80c54d9c}</UniqueIdentifier>
+      <UniqueIdentifier>{1d5feb67-fd1a-4f39-ba63-ccc0accc98fb}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Runtime\Core\Misc">
-      <UniqueIdentifier>{316d90ca-d0ee-42a6-8129-03404ccdfec5}</UniqueIdentifier>
+      <UniqueIdentifier>{80b1dadc-d0b7-41c0-ac81-4b4208193440}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Runtime\Core\Math">
-      <UniqueIdentifier>{09f12632-a270-4f9a-9849-12998bd2c437}</UniqueIdentifier>
+    <Filter Include="Source\Runtime\Engine">
+      <UniqueIdentifier>{0645cf3d-0ede-4c2c-b3b9-db25f1b79deb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Runtime\Core\Object">
-      <UniqueIdentifier>{9e009086-b2b3-4d25-86b2-7aa53ac64ad7}</UniqueIdentifier>
+    <Filter Include="Source\Runtime\Engine\Particles">
+      <UniqueIdentifier>{d05ce14f-e0f3-48f0-b2b4-d805efb8456c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Runtime\Core\Containers">
-      <UniqueIdentifier>{b07b4f15-7dfa-4fdc-af51-8b85528a730e}</UniqueIdentifier>
+    <Filter Include="Source\Runtime\Engine\Particles\Modules">
+      <UniqueIdentifier>{3023928c-e794-4110-a351-2722fe36fa99}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Runtime\Core\Memory">
-      <UniqueIdentifier>{e23fdb50-f9ab-42c1-8efe-8c91dabe48c3}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Runtime\Renderer">
-      <UniqueIdentifier>{59800770-c502-49ac-bbd6-1adf37840681}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Runtime\Renderer\PostProcessing">
-      <UniqueIdentifier>{ec326603-06f9-4941-ba7a-67c51ef82a43}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Runtime\InputCore">
-      <UniqueIdentifier>{97f2dbd4-f974-45ec-b303-f44f141c585a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Runtime\RHI">
-      <UniqueIdentifier>{7c1d37d2-2671-44d6-991c-152f9d5c3805}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Editor">
-      <UniqueIdentifier>{2d019316-7500-484c-a92c-82e30aa57179}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Editor\Clipboard">
-      <UniqueIdentifier>{1ea97248-e139-4e14-9c87-69dfcadc567c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Editor\Gizmo">
-      <UniqueIdentifier>{767d8a55-9b71-4d3e-87dd-8c1ae9b206c4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Editor\Grid">
-      <UniqueIdentifier>{62ea75e5-68ad-470b-9224-3ab6babb98cf}</UniqueIdentifier>
+    <Filter Include="Source\Runtime\Engine\Viewer">
+      <UniqueIdentifier>{7b431d30-8417-4a46-ba88-479b9f99c0ef}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Slate">
-      <UniqueIdentifier>{fc92bb6e-894f-4c96-b0f5-42d487481bcb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Slate\Widgets">
-      <UniqueIdentifier>{c79e9a99-6daf-423e-a9cd-7b82f8551694}</UniqueIdentifier>
+      <UniqueIdentifier>{dcef87aa-aa35-496e-8f52-cf8512050b6e}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Slate\Windows">
-      <UniqueIdentifier>{4c3b22a7-7499-4465-8d7f-13e28d97220c}</UniqueIdentifier>
+      <UniqueIdentifier>{5da14031-8d12-4d32-99e3-bef569e09152}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Runtime\Engine\Animation">
+      <UniqueIdentifier>{116b3959-c4d8-4d0c-9ea8-cd0fe9a9df5f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Runtime\Engine\Components">
+      <UniqueIdentifier>{54d8ad3f-334b-4f3e-847c-b75eb072dc73}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Runtime\Engine\GameFramework">
+      <UniqueIdentifier>{98ddc663-51e0-41b8-b4e2-b7f175d273e2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Runtime\Engine\GameFramework\Camera">
+      <UniqueIdentifier>{22c65f12-e7dd-4e09-a3bb-7047c79a1595}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Runtime\Engine\Audio">
+      <UniqueIdentifier>{660287c2-799a-4c50-8915-c167f592098f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Runtime\Engine\Scripting">
+      <UniqueIdentifier>{de776c14-ab15-4763-934e-f8c90f2964d3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Runtime\Engine\Collision">
+      <UniqueIdentifier>{e246dc55-4923-4bc7-8d20-41561aaabf98}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Runtime\Engine\Spatial">
+      <UniqueIdentifier>{93277f9d-c3c4-447c-b463-e2617b52ca38}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Runtime\AssetManagement">
+      <UniqueIdentifier>{a2089ff6-547e-4cfd-b5a5-707d0b84cf43}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Runtime\Core\Math">
+      <UniqueIdentifier>{b7af0878-aaa7-4cb5-b61e-f467fbc2cbea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Runtime\Core\Object">
+      <UniqueIdentifier>{56203202-6b81-4b48-a8ff-0acf66260f27}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Runtime\Core\Containers">
+      <UniqueIdentifier>{4d982cff-519b-4f1a-a714-ed0a68de5fda}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Runtime\Core\Memory">
+      <UniqueIdentifier>{99b331b0-14a4-4451-ab06-f54b101af444}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Runtime\Renderer">
+      <UniqueIdentifier>{a0dc068c-4b7f-4278-85e1-c8279e0bd497}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Runtime\Renderer\PostProcessing">
+      <UniqueIdentifier>{422b2764-371f-4df8-9648-3b7c0a67ffa9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Runtime\InputCore">
+      <UniqueIdentifier>{814e20d0-18d4-45d0-9be9-eb96bf2daaf5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Runtime\RHI">
+      <UniqueIdentifier>{cac51a02-f20e-4fe5-a5cd-8cd5a8320171}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor">
+      <UniqueIdentifier>{a1e94a0a-16b3-4b5d-a56a-6050804e9d43}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Clipboard">
+      <UniqueIdentifier>{daf26ac0-31ca-4bd2-bd6a-5cc3065794e5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Gizmo">
+      <UniqueIdentifier>{1befdc31-3ab9-433f-ba6b-7a022a9bc704}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\Grid">
+      <UniqueIdentifier>{997fdee6-db06-4889-8ef3-39410b416958}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Slate\Widgets">
+      <UniqueIdentifier>{485ea8d6-f947-4d80-b177-1efc87d3dca6}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Slate\Factory">
-      <UniqueIdentifier>{0ea3e588-f125-4804-b2df-442e84fbaa31}</UniqueIdentifier>
+      <UniqueIdentifier>{5f789426-9ecb-4d2e-9741-62a274bbf2a3}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Slate\ImGui">
-      <UniqueIdentifier>{1ed89a3d-fcaf-4ec8-8d28-9f19436545f0}</UniqueIdentifier>
+      <UniqueIdentifier>{2a1c3667-25b0-4eaf-820a-a4adc0efa188}</UniqueIdentifier>
     </Filter>
     <Filter Include="Shaders">
-      <UniqueIdentifier>{e5bf2729-8c1e-4632-a6d0-156beaa4e5d5}</UniqueIdentifier>
+      <UniqueIdentifier>{0afc361a-cf05-44c0-bfe5-73f7d861a938}</UniqueIdentifier>
     </Filter>
     <Filter Include="Shaders\Materials">
-      <UniqueIdentifier>{55ae7117-c021-4898-813e-629781ad42fd}</UniqueIdentifier>
+      <UniqueIdentifier>{61c7888a-cd6b-4aee-a373-4f79d9b7c697}</UniqueIdentifier>
     </Filter>
     <Filter Include="Shaders\PostProcess">
-      <UniqueIdentifier>{9bfb8329-6f10-4568-a72d-457581ebc76d}</UniqueIdentifier>
+      <UniqueIdentifier>{b7cf8c59-631d-4f23-bb98-c7d131c60aa3}</UniqueIdentifier>
     </Filter>
     <Filter Include="Shaders\Shadows">
-      <UniqueIdentifier>{7aa9cbfb-b040-4286-901b-345b76496b34}</UniqueIdentifier>
+      <UniqueIdentifier>{7c389a04-1dc5-42da-acc7-0a483ecc43e0}</UniqueIdentifier>
     </Filter>
     <Filter Include="Shaders\Common">
-      <UniqueIdentifier>{1f86e051-31c8-4290-9b7a-bb0c142f3510}</UniqueIdentifier>
+      <UniqueIdentifier>{ac9f1ebe-43dd-47e4-a5a1-9cc4ebcc35d7}</UniqueIdentifier>
     </Filter>
     <Filter Include="Shaders\UI">
-      <UniqueIdentifier>{5f2ff261-d746-4d0b-adfa-aa168dcf0267}</UniqueIdentifier>
+      <UniqueIdentifier>{2dd33f2e-7ee1-480f-8342-1483b59e2194}</UniqueIdentifier>
     </Filter>
     <Filter Include="Shaders\Effects">
-      <UniqueIdentifier>{a858882c-668f-4e72-aa7a-d29e299810d9}</UniqueIdentifier>
+      <UniqueIdentifier>{ea7c46be-8515-4f2c-a6b5-c4f1136977d3}</UniqueIdentifier>
     </Filter>
     <Filter Include="Shaders\Utility">
-      <UniqueIdentifier>{03b63b66-db8b-458f-b165-8fa1c5ed6637}</UniqueIdentifier>
+      <UniqueIdentifier>{7d26e561-ad66-4c6b-bb22-ef763c16d703}</UniqueIdentifier>
     </Filter>
     <Filter Include="Generated">
-      <UniqueIdentifier>{f1b3e16f-2aa1-4d2b-a1aa-3215312650d3}</UniqueIdentifier>
+      <UniqueIdentifier>{8167e510-1f3b-4eae-9f2d-ee8a704fa7df}</UniqueIdentifier>
     </Filter>
     <Filter Include="ThirdParty">
-      <UniqueIdentifier>{6a4d8d59-3c27-4c96-84c7-bf5ce76ec453}</UniqueIdentifier>
+      <UniqueIdentifier>{35431b02-a435-4160-8cd6-745613c9af02}</UniqueIdentifier>
     </Filter>
     <Filter Include="ThirdParty\include">
-      <UniqueIdentifier>{8abf973a-36b1-4744-a6dd-8dd143ada211}</UniqueIdentifier>
+      <UniqueIdentifier>{3414cc42-e82a-4cfb-bed9-05f8fcaa8d37}</UniqueIdentifier>
     </Filter>
     <Filter Include="ThirdParty\include\ImGui">
-      <UniqueIdentifier>{90b5233c-8142-4053-9cd6-1010a114648b}</UniqueIdentifier>
+      <UniqueIdentifier>{29b0ac88-8498-4930-a70b-d62af1cfe4af}</UniqueIdentifier>
     </Filter>
     <Filter Include="ThirdParty\include\DirectXTK">
-      <UniqueIdentifier>{f00736c4-60b5-47c8-bcf4-e10f36dc71cb}</UniqueIdentifier>
+      <UniqueIdentifier>{be2599c5-c7ae-4e89-87c7-5456a9714bf0}</UniqueIdentifier>
     </Filter>
     <Filter Include="ThirdParty\include\Lua">
-      <UniqueIdentifier>{22fd5504-fc4f-40e9-b0d0-7dfb076148b5}</UniqueIdentifier>
+      <UniqueIdentifier>{9a9733dd-7bcc-49e8-b287-5ef1f50d7d8a}</UniqueIdentifier>
     </Filter>
     <Filter Include="BuildTools">
-      <UniqueIdentifier>{dc965ea3-3142-43eb-9046-917ef7f1c0a3}</UniqueIdentifier>
+      <UniqueIdentifier>{74f31945-c647-4c71-9b15-c33ae8095f79}</UniqueIdentifier>
     </Filter>
     <Filter Include="BuildTools\CodeGenerator">
-      <UniqueIdentifier>{4c1525f6-b03f-4a97-ad19-5801f609610c}</UniqueIdentifier>
+      <UniqueIdentifier>{29e91712-b847-4488-b3f1-4ea4f274df95}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

@@ -17,6 +17,7 @@
 #include "Modules/ParticleModuleColor.h"
 #include "Modules/ParticleModuleRotation.h"
 #include "Modules/ParticleModuleRotationRate.h"
+#include "Modules/ParticleModuleLocation.h"
 
 // Static 멤버 정의
 ID3D11Buffer* UParticleSystemComponent::SpriteQuadVertexBuffer = nullptr;
@@ -203,6 +204,14 @@ void UParticleSystemComponent::CreateDebugParticleSystem()
 	MeshRotModule->RotationRateRandomness = FVector(0.5f, 0.3f, 1.0f);  // 랜덤 회전 속도
 	LODLevel->Modules.Add(MeshRotModule);
 
+	// 위치 모듈 생성
+	UParticleModuleLocation* LocationModule = NewObject<UParticleModuleLocation>();
+	LODLevel->Modules.Add(LocationModule);
+
+	// 크기 모듈 생성
+	UParticleModuleSize* SizeModule = NewObject<UParticleModuleSize>();
+	LODLevel->Modules.Add(SizeModule);
+
 	// 모듈 캐싱
 	LODLevel->CacheModuleInfo();
 
@@ -288,6 +297,10 @@ void UParticleSystemComponent::CreateDebugSpriteParticleSystem()
 	UParticleModuleRotationRate* RotRateModule = NewObject<UParticleModuleRotationRate>();
 	RotRateModule->StartRotationRate = 3.0f;  // 천천히 회전
 	LODLevel->Modules.Add(RotRateModule);
+
+	// 위치 모듈 생성
+	UParticleModuleLocation* LocationModule = NewObject<UParticleModuleLocation>();
+	LODLevel->Modules.Add(LocationModule);
 
 	// 모듈 캐싱
 	LODLevel->CacheModuleInfo();
@@ -702,10 +715,6 @@ void UParticleSystemComponent::FillMeshInstanceBuffer(uint32 TotalInstances)
 		if (!ParticleData || ParticleCount == 0)
 			continue;
 
-		// 컴포넌트 월드 트랜스폼
-		FVector ComponentLocation = GetWorldLocation();
-		FVector ComponentScale = GetRelativeScale();
-
 		// 각 파티클의 인스턴스 데이터 생성
 		for (int32 ParticleIdx = 0; ParticleIdx < ParticleCount; ParticleIdx++)
 		{
@@ -716,8 +725,8 @@ void UParticleSystemComponent::FillMeshInstanceBuffer(uint32 TotalInstances)
 			FMeshParticleInstanceVertex& Instance = Instances[InstanceOffset];
 
 			// 컴포넌트 트랜스폼 적용
-			FVector WorldPos = ComponentLocation + Particle->Location * ComponentScale;
-			FVector Scale = Particle->Size * ComponentScale;
+			FVector WorldPos = Particle->Location;
+			FVector Scale = Particle->Size;
 
 			// 3D 회전 데이터 가져오기
 			FVector Rotation(0.0f, 0.0f, Particle->Rotation);  // 기본값: Z축만
@@ -912,10 +921,6 @@ void UParticleSystemComponent::FillSpriteInstanceBuffer(uint32 TotalInstances)
 	FSpriteParticleInstanceVertex* Instances = static_cast<FSpriteParticleInstanceVertex*>(MappedData.pData);
 	uint32 InstanceOffset = 0;
 
-	// 컴포넌트 월드 트랜스폼
-	FVector ComponentLocation = GetWorldLocation();
-	FVector ComponentScale = GetRelativeScale();
-
 	// 스프라이트 이미터 순회
 	for (FDynamicEmitterDataBase* EmitterData : EmitterRenderData)
 	{
@@ -945,14 +950,13 @@ void UParticleSystemComponent::FillSpriteInstanceBuffer(uint32 TotalInstances)
 			FSpriteParticleInstanceVertex& Instance = Instances[InstanceOffset];
 
 			// 월드 위치
-			Instance.WorldPosition = ComponentLocation + Particle->Location * ComponentScale;
+			Instance.WorldPosition =  Particle->Location;
 
 			// 회전 (Z축만)
 			Instance.Rotation = Particle->Rotation;
 
 			// 크기 (XY만)
-			Instance.Size = FVector2D(Particle->Size.X * ComponentScale.X,
-			                          Particle->Size.Y * ComponentScale.Y);
+			Instance.Size = FVector2D(Particle->Size.X, Particle->Size.Y);
 
 			// 색상
 			Instance.Color = Particle->Color;
