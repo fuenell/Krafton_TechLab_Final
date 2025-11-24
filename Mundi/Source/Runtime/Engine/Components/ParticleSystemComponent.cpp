@@ -11,7 +11,12 @@
 #include "Modules/ParticleModuleLifetime.h"
 #include "Modules/ParticleModuleVelocity.h"
 #include "Modules/ParticleModuleTypeDataMesh.h"
+#include "Modules/ParticleModuleTypeDataSprite.h"
 #include "Modules/ParticleModuleMeshRotation.h"
+#include "Modules/ParticleModuleSize.h"
+#include "Modules/ParticleModuleColor.h"
+#include "Modules/ParticleModuleRotation.h"
+#include "Modules/ParticleModuleRotationRate.h"
 
 // Static 멤버 정의
 ID3D11Buffer* UParticleSystemComponent::SpriteQuadVertexBuffer = nullptr;
@@ -137,7 +142,8 @@ void UParticleSystemComponent::OnRegister(UWorld* InWorld)
 	// Template이 없으면 디버그용 기본 파티클 시스템 생성
 	if (!Template)
 	{
-		CreateDebugParticleSystem();
+		// CreateDebugParticleSystem();        // 메시 파티클 테스트
+		CreateDebugSpriteParticleSystem();  // 스프라이트 파티클 테스트
 	}
 
 	// 에디터에서도 파티클 미리보기를 위해 자동 활성화
@@ -172,7 +178,7 @@ void UParticleSystemComponent::CreateDebugParticleSystem()
 
 	// 스폰 모듈 생성
 	UParticleModuleSpawn* SpawnModule = NewObject<UParticleModuleSpawn>();
-	SpawnModule->SpawnRate = 100.0f;   // 초당 100개 파티클 (메시는 무거우므로 줄임)
+	SpawnModule->SpawnRate = 10000.0f;   // 초당 100개 파티클 (메시는 무거우므로 줄임)
 	SpawnModule->BurstCount = 100;     // 시작 시 100개 버스트
 	LODLevel->SpawnModule = SpawnModule;
 	LODLevel->Modules.Add(SpawnModule);
@@ -196,6 +202,92 @@ void UParticleSystemComponent::CreateDebugParticleSystem()
 	MeshRotModule->StartRotationRate = FVector(1.0f, 0.5f, 2.0f);  // 회전 속도 (라디안/초)
 	MeshRotModule->RotationRateRandomness = FVector(0.5f, 0.3f, 1.0f);  // 랜덤 회전 속도
 	LODLevel->Modules.Add(MeshRotModule);
+
+	// 모듈 캐싱
+	LODLevel->CacheModuleInfo();
+
+	// LOD 레벨을 이미터에 추가
+	Emitter->LODLevels.Add(LODLevel);
+	Emitter->CacheEmitterModuleInfo();
+
+	// 이미터를 시스템에 추가
+	Template->Emitters.Add(Emitter);
+}
+
+void UParticleSystemComponent::CreateDebugSpriteParticleSystem()
+{
+	// 디버그/테스트용 스프라이트 파티클 시스템 생성
+	Template = NewObject<UParticleSystem>();
+
+	// 이미터 생성
+	UParticleEmitter* Emitter = NewObject<UParticleEmitter>();
+
+	// LOD 레벨 생성
+	UParticleLODLevel* LODLevel = NewObject<UParticleLODLevel>();
+	LODLevel->bEnabled = true;
+
+	// 필수 모듈 생성
+	LODLevel->RequiredModule = NewObject<UParticleModuleRequired>();
+
+	// 스프라이트용 Material 설정
+	UMaterial* SpriteMaterial = NewObject<UMaterial>();
+	UShader* SpriteShader = UResourceManager::GetInstance().Load<UShader>("Shaders/Particle/ParticleSprite.hlsl");
+	SpriteMaterial->SetShader(SpriteShader);
+
+	// 스프라이트 텍스처 설정 (불꽃/연기 등)
+	FMaterialInfo MatInfo;
+	MatInfo.DiffuseTextureFileName = GDataDir + "/Particles/Smoke.png";
+	SpriteMaterial->SetMaterialInfo(MatInfo);
+	SpriteMaterial->ResolveTextures();
+
+	LODLevel->RequiredModule->Material = SpriteMaterial;
+
+	// 스프라이트 타입 데이터 모듈 (TypeDataModule이 nullptr이면 기본적으로 스프라이트)
+	UParticleModuleTypeDataSprite* SpriteTypeData = NewObject<UParticleModuleTypeDataSprite>();
+	LODLevel->TypeDataModule = SpriteTypeData;
+
+	// 스폰 모듈 생성
+	UParticleModuleSpawn* SpawnModule = NewObject<UParticleModuleSpawn>();
+	SpawnModule->SpawnRate = 50.0f;    // 초당 50개 파티클
+	SpawnModule->BurstCount = 20;      // 시작 시 20개 버스트
+	LODLevel->SpawnModule = SpawnModule;
+	LODLevel->Modules.Add(SpawnModule);
+
+	// 라이프타임 모듈 생성
+	UParticleModuleLifetime* LifetimeModule = NewObject<UParticleModuleLifetime>();
+	LifetimeModule->MinLifetime = 1.5f;
+	LifetimeModule->MaxLifetime = 2.5f;
+	LODLevel->Modules.Add(LifetimeModule);
+
+	// 속도 모듈 생성 (위쪽으로 퍼지는 연기 효과)
+	UParticleModuleVelocity* VelocityModule = NewObject<UParticleModuleVelocity>();
+	VelocityModule->StartVelocity = FVector(0.0f, 0.0f, 30.0f);      // 위쪽 속도
+	VelocityModule->StartVelocityRange = FVector(15.0f, 15.0f, 10.0f); // XYZ 랜덤 범위
+	LODLevel->Modules.Add(VelocityModule);
+
+	// 크기 모듈 (시간에 따라 커지는 효과)
+	UParticleModuleSize* SizeModule = NewObject<UParticleModuleSize>();
+	SizeModule->StartSize = FVector(5.0f, 5.0f, 5.0f);
+	SizeModule->EndSize = FVector(15.0f, 15.0f, 15.0f);
+	SizeModule->bUseSizeOverLife = true;
+	LODLevel->Modules.Add(SizeModule);
+
+	// 색상 모듈 (페이드 아웃 효과 - bUpdateModule이 기본 true라 자동 보간)
+	UParticleModuleColor* ColorModule = NewObject<UParticleModuleColor>();
+	ColorModule->StartColor = FLinearColor(1.0f, 0.8f, 0.3f, 1.0f);  // 주황색
+	ColorModule->EndColor = FLinearColor(0.5f, 0.5f, 0.5f, 0.0f);    // 회색 + 투명
+	LODLevel->Modules.Add(ColorModule);
+
+	// 회전 모듈 (2D 회전)
+	UParticleModuleRotation* RotationModule = NewObject<UParticleModuleRotation>();
+	RotationModule->StartRotation = 0.0f;
+	RotationModule->RotationRandomness = 3.14159f;  // 랜덤 초기 회전
+	LODLevel->Modules.Add(RotationModule);
+
+	// 회전 속도 모듈
+	UParticleModuleRotationRate* RotRateModule = NewObject<UParticleModuleRotationRate>();
+	RotRateModule->StartRotationRate = 0.5f;  // 천천히 회전
+	LODLevel->Modules.Add(RotRateModule);
 
 	// 모듈 캐싱
 	LODLevel->CacheModuleInfo();

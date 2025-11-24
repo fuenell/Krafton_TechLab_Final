@@ -109,5 +109,6 @@ private:
 	void UpdateRenderData();
 
 	// 테스트용 디버그 파티클 시스템 생성
-	void CreateDebugParticleSystem();
+	void CreateDebugParticleSystem();        // 메시 파티클 테스트
+	void CreateDebugSpriteParticleSystem();  // 스프라이트 파티클 테스트
 };
