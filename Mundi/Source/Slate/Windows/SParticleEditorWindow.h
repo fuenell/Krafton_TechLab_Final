@@ -81,6 +81,9 @@ private:
 	// 툴바 상태
 	void LoadToolbarIcons();
 
+	// 타입데이터 중복 팝업 상태
+	bool bShowTypeDataExistsPopup = false;
+
 	// 헬퍼 함수
 	ParticleEditorState* GetActiveParticleState() const
 	{

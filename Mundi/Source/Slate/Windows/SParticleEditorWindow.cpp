@@ -221,6 +221,25 @@ void SParticleEditorWindow::OnRender()
 			RenderRightCurveArea();
 		}
 		ImGui::EndChild();
+
+		// 타입데이터 중복 팝업
+		if (bShowTypeDataExistsPopup)
+		{
+			ImGui::OpenPopup("TypeDataExistsPopup");
+			bShowTypeDataExistsPopup = false;
+		}
+
+		if (ImGui::BeginPopupModal("TypeDataExistsPopup", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::Text("타입데이터 모듈이 이미 존재합니다.\n먼저 제거해주세요.");
+			ImGui::Separator();
+
+			if (ImGui::Button("확인", ImVec2(120, 0)))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::EndPopup();
+		}
 	}
 	ImGui::End();
 }
@@ -836,6 +855,13 @@ static void AddModuleToLOD(UParticleLODLevel* LOD, ParticleEditorState* State)
 template<typename T>
 static void SetTypeDataModule(UParticleLODLevel* LOD, ParticleEditorState* State)
 {
+	// 기존 타입 데이터가 있으면 Modules 배열에서 제거
+	if (LOD->TypeDataModule)
+	{
+		LOD->Modules.Remove(LOD->TypeDataModule);
+	}
+
+	// 새 타입 데이터 생성 및 설정
 	T* NewModule = NewObject<T>();
 	LOD->TypeDataModule = NewModule;
 	LOD->Modules.Add(NewModule);
@@ -1062,17 +1088,44 @@ void SParticleEditorWindow::RenderEmitterColumn(int32 EmitterIndex, UParticleEmi
 
 		ImGui::Separator();
 
-		// 타입 데이터
+		// 타입 데이터 (스프라이트가 아닌 경우에만 변경 가능)
+		// 스프라이트 타입데이터는 기본값이므로 메뉴에 표시하지 않음
+		bool bHasNonSpriteTypeData = LOD->TypeDataModule && !Cast<UParticleModuleTypeDataSprite>(LOD->TypeDataModule);
 		if (ImGui::BeginMenu("타입 데이터"))
 		{
-			if (ImGui::MenuItem("스프라이트"))
-				SetTypeDataModule<UParticleModuleTypeDataSprite>(LOD, State);
 			if (ImGui::MenuItem("메시"))
-				SetTypeDataModule<UParticleModuleTypeDataMesh>(LOD, State);
+			{
+				if (bHasNonSpriteTypeData)
+				{
+					bShowTypeDataExistsPopup = true;
+				}
+				else
+				{
+					SetTypeDataModule<UParticleModuleTypeDataMesh>(LOD, State);
+				}
+			}
 			if (ImGui::MenuItem("리본"))
-				SetTypeDataModule<UParticleModuleTypeDataRibbon>(LOD, State);
+			{
+				if (bHasNonSpriteTypeData)
+				{
+					bShowTypeDataExistsPopup = true;
+				}
+				else
+				{
+					SetTypeDataModule<UParticleModuleTypeDataRibbon>(LOD, State);
+				}
+			}
 			if (ImGui::MenuItem("빔"))
-				SetTypeDataModule<UParticleModuleTypeDataBeam>(LOD, State);
+			{
+				if (bHasNonSpriteTypeData)
+				{
+					bShowTypeDataExistsPopup = true;
+				}
+				else
+				{
+					SetTypeDataModule<UParticleModuleTypeDataBeam>(LOD, State);
+				}
+			}
 			ImGui::EndMenu();
 		}
 
@@ -1080,7 +1133,9 @@ void SParticleEditorWindow::RenderEmitterColumn(int32 EmitterIndex, UParticleEmi
 		if (ImGui::BeginMenu("가속"))
 		{
 			if (ImGui::MenuItem("가속"))
+			{
 				AddModuleToLOD<UParticleModuleAcceleration>(LOD, State);
+			}
 			ImGui::EndMenu();
 		}
 
@@ -1088,7 +1143,9 @@ void SParticleEditorWindow::RenderEmitterColumn(int32 EmitterIndex, UParticleEmi
 		if (ImGui::BeginMenu("컬러"))
 		{
 			if (ImGui::MenuItem("컬러 오버 라이프"))
+			{
 				AddModuleToLOD<UParticleModuleColor>(LOD, State);
+			}
 			ImGui::EndMenu();
 		}
 
@@ -1096,7 +1153,9 @@ void SParticleEditorWindow::RenderEmitterColumn(int32 EmitterIndex, UParticleEmi
 		if (ImGui::BeginMenu("수명"))
 		{
 			if (ImGui::MenuItem("수명"))
+			{
 				AddModuleToLOD<UParticleModuleLifetime>(LOD, State);
+			}
 			ImGui::EndMenu();
 		}
 
@@ -1104,7 +1163,9 @@ void SParticleEditorWindow::RenderEmitterColumn(int32 EmitterIndex, UParticleEmi
 		if (ImGui::BeginMenu("위치"))
 		{
 			if (ImGui::MenuItem("초기 위치"))
+			{
 				AddModuleToLOD<UParticleModuleLocation>(LOD, State);
+			}
 			ImGui::EndMenu();
 		}
 
@@ -1112,9 +1173,13 @@ void SParticleEditorWindow::RenderEmitterColumn(int32 EmitterIndex, UParticleEmi
 		if (ImGui::BeginMenu("회전"))
 		{
 			if (ImGui::MenuItem("초기 회전"))
+			{
 				AddModuleToLOD<UParticleModuleRotation>(LOD, State);
+			}
 			if (ImGui::MenuItem("메시 회전"))
+			{
 				AddModuleToLOD<UParticleModuleMeshRotation>(LOD, State);
+			}
 			ImGui::EndMenu();
 		}
 
@@ -1122,7 +1187,9 @@ void SParticleEditorWindow::RenderEmitterColumn(int32 EmitterIndex, UParticleEmi
 		if (ImGui::BeginMenu("회전 속도"))
 		{
 			if (ImGui::MenuItem("초기 회전 속도"))
+			{
 				AddModuleToLOD<UParticleModuleRotationRate>(LOD, State);
+			}
 			ImGui::EndMenu();
 		}
 
@@ -1130,9 +1197,13 @@ void SParticleEditorWindow::RenderEmitterColumn(int32 EmitterIndex, UParticleEmi
 		if (ImGui::BeginMenu("크기"))
 		{
 			if (ImGui::MenuItem("초기 크기"))
+			{
 				AddModuleToLOD<UParticleModuleSize>(LOD, State);
+			}
 			if (ImGui::MenuItem("속도 크기 스케일"))
+			{
 				AddModuleToLOD<UParticleModuleSizeScaleBySpeed>(LOD, State);
+			}
 			ImGui::EndMenu();
 		}
 
@@ -1140,7 +1211,9 @@ void SParticleEditorWindow::RenderEmitterColumn(int32 EmitterIndex, UParticleEmi
 		if (ImGui::BeginMenu("속도"))
 		{
 			if (ImGui::MenuItem("초기 속도"))
+			{
 				AddModuleToLOD<UParticleModuleVelocity>(LOD, State);
+			}
 			ImGui::EndMenu();
 		}
 
@@ -1301,9 +1374,11 @@ void SParticleEditorWindow::RenderModuleBlock(int32 EmitterIdx, int32 ModuleIdx,
 	}
 
 	// 클릭 감지 (전체 영역)
+	// 스프라이트 타입데이터는 선택 불가
+	bool bIsSpriteTypeData = Cast<UParticleModuleTypeDataSprite>(Module) != nullptr;
 	ImVec2 BlockMin = ImGui::GetWindowPos();
 	ImVec2 BlockMax = ImVec2(BlockMin.x + ImGui::GetWindowWidth(), BlockMin.y + ModuleHeight);
-	if (ImGui::IsMouseClicked(0) && ImGui::IsMouseHoveringRect(BlockMin, BlockMax))
+	if (ImGui::IsMouseClicked(0) && ImGui::IsMouseHoveringRect(BlockMin, BlockMax) && !bIsSpriteTypeData)
 	{
 		State->SelectedEmitterIndex = EmitterIdx;
 		State->SelectedModuleIndex = ModuleIdx;
@@ -1319,7 +1394,7 @@ void SParticleEditorWindow::RenderModuleBlock(int32 EmitterIdx, int32 ModuleIdx,
 
 	if (ImGui::BeginPopupContextItem(ContextMenuId))
 	{
-		// 삭제 (Required, Spawn 모듈은 삭제 불가)
+		// 삭제 (Required, Spawn, 스프라이트 타입데이터 모듈은 삭제 불가)
 		bool bCanDelete = true;
 		UParticleLODLevel* LOD = nullptr;
 		if (State->EditingTemplate && EmitterIdx < State->EditingTemplate->Emitters.Num())
@@ -1330,7 +1405,13 @@ void SParticleEditorWindow::RenderModuleBlock(int32 EmitterIdx, int32 ModuleIdx,
 				LOD = Emitter->GetLODLevel(State->CurrentLODLevel);
 				if (LOD)
 				{
+					// Required, Spawn 모듈은 삭제 불가
 					if (Module == LOD->RequiredModule || Module == LOD->SpawnModule)
+					{
+						bCanDelete = false;
+					}
+					// 스프라이트 타입데이터는 삭제 불가 (기본 타입이므로)
+					if (Cast<UParticleModuleTypeDataSprite>(Module))
 					{
 						bCanDelete = false;
 					}
@@ -1344,10 +1425,16 @@ void SParticleEditorWindow::RenderModuleBlock(int32 EmitterIdx, int32 ModuleIdx,
 			{
 				if (LOD)
 				{
-					// TypeDataModule인 경우
+					// TypeDataModule인 경우 (메시/리본/빔 삭제 시 스프라이트로 복원)
 					if (Module == LOD->TypeDataModule)
 					{
-						LOD->TypeDataModule = nullptr;
+						// 기존 타입 데이터를 Modules 배열에서도 제거
+						LOD->Modules.Remove(Module);
+
+						// 스프라이트 타입 데이터로 복원
+						UParticleModuleTypeDataSprite* SpriteTypeData = NewObject<UParticleModuleTypeDataSprite>();
+						LOD->TypeDataModule = SpriteTypeData;
+						LOD->Modules.Add(SpriteTypeData);
 					}
 					else
 					{
@@ -1355,7 +1442,7 @@ void SParticleEditorWindow::RenderModuleBlock(int32 EmitterIdx, int32 ModuleIdx,
 						LOD->Modules.Remove(Module);
 					}
 					LOD->CacheModuleInfo();
-					
+
 					State->SelectedModule = nullptr;
 					State->SelectedModuleIndex = -1;
 					State->bIsDirty = true;
