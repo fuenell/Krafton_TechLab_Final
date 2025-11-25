@@ -363,8 +363,8 @@ void UParticleSystemComponent::CreateDebugBeamParticleSystem()
 
 	// 라이프타임 모듈 생성 (빔의 전체 수명)
 	UParticleModuleLifetime* LifetimeModule = NewObject<UParticleModuleLifetime>();
-	LifetimeModule->MinLifetime = 2.0f;
-	LifetimeModule->MaxLifetime = 2.0f;
+	LifetimeModule->MinLifetime = 0.0f;
+	LifetimeModule->MaxLifetime = 0.0f;
 	LODLevel->Modules.Add(LifetimeModule);
 
 	// 속도 모듈 생성 (시작점과 끝점이 다른 위치로 이동하도록)
@@ -1269,51 +1269,48 @@ void UParticleSystemComponent::FillBeamBuffers(const FSceneView* View)
 	uint32 IndexOffset = 0;
 
 	FVector ViewDirection = View->ViewRotation.RotateVector(FVector(1.f, 0.f, 0.f));
-	FVector ViewOrigin = View->ViewLocation;
-
-	// 4. 이미터 순회하며 버퍼 채우기
+	
+	// 4. 이미터 순회하며 버퍼 채우기 (단순화된 디버그 버전)
 	for (FDynamicEmitterDataBase* EmitterData : EmitterRenderData)
 	{
 		if (!EmitterData || EmitterData->GetSource().eEmitterType != EDynamicEmitterType::Beam)
 			continue;
 
 		const auto& BeamSource = static_cast<const FDynamicBeamEmitterReplayDataBase&>(EmitterData->GetSource());
-		const TArray<FVector>& BeamPoints = BeamSource.BeamPoints;
-		const float BeamWidth = BeamSource.Width;
-
-		if (BeamPoints.Num() < 2)
+		if (BeamSource.BeamPoints.Num() < 2)
 			continue;
 
-		for (int32 i = 0; i < BeamPoints.Num() - 1; ++i)
-		{
-			const FVector& P1 = BeamPoints[i];
-			const FVector& P2 = BeamPoints[i + 1];
+		const FVector& P1 = BeamSource.BeamPoints[0];
+		const FVector& P2 = BeamSource.BeamPoints[1];
+		const float BeamWidth = BeamSource.Width;
+		const FLinearColor BeamColor = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f); // 흰색
 
-			FVector SegmentDir = P2 - P1;
-			SegmentDir.Normalize();
+		FVector SegmentDir = P2 - P1;
+		SegmentDir.Normalize();
 
-			// 카메라에 수직인 Up 벡터 계산
-			FVector Up = FVector::Cross(SegmentDir, ViewDirection);
-			Up.Normalize();
+		FVector Up = FVector::Cross(SegmentDir, ViewDirection);
+		Up.Normalize();
 
-			float HalfWidth = BeamWidth * 0.5f;
+		float HalfWidth = BeamWidth * 0.5f;
+		
+		uint32 BaseVertexIndex = VertexOffset;
 
-			uint32 BaseVertexIndex = VertexOffset;
+		// 단일 Quad 정점 생성
+		Vertices[VertexOffset++] = { P1 - Up * HalfWidth, FVector2D(0.0f, 0.0f), BeamColor, BeamWidth };
+		Vertices[VertexOffset++] = { P1 + Up * HalfWidth, FVector2D(1.0f, 0.0f), BeamColor, BeamWidth };
+		Vertices[VertexOffset++] = { P2 - Up * HalfWidth, FVector2D(0.0f, 1.0f), BeamColor, BeamWidth };
+		Vertices[VertexOffset++] = { P2 + Up * HalfWidth, FVector2D(1.0f, 1.0f), BeamColor, BeamWidth };
+		
+		// 단일 Quad 인덱스 생성
+		Indices[IndexOffset++] = BaseVertexIndex + 0;
+		Indices[IndexOffset++] = BaseVertexIndex + 2;
+		Indices[IndexOffset++] = BaseVertexIndex + 1;
+		Indices[IndexOffset++] = BaseVertexIndex + 1;
+		Indices[IndexOffset++] = BaseVertexIndex + 2;
+		Indices[IndexOffset++] = BaseVertexIndex + 3;
 
-			// 정점 4개 생성 (좌하, 좌상, 우하, 우상)
-			Vertices[VertexOffset++] = { P1 - Up * HalfWidth, FVector2D(0.0f, (float)i / (BeamPoints.Num() - 1)), FLinearColor(1.0f, 1.0f, 1.0f, 1.0f), BeamWidth };
-			Vertices[VertexOffset++] = { P1 + Up * HalfWidth, FVector2D(1.0f, (float)i / (BeamPoints.Num() - 1)), FLinearColor(1.0f, 1.0f, 1.0f, 1.0f), BeamWidth };
-			Vertices[VertexOffset++] = { P2 - Up * HalfWidth, FVector2D(0.0f, (float)(i + 1) / (BeamPoints.Num() - 1)), FLinearColor(1.0f, 1.0f, 1.0f, 1.0f), BeamWidth };
-			Vertices[VertexOffset++] = { P2 + Up * HalfWidth, FVector2D(1.0f, (float)(i + 1) / (BeamPoints.Num() - 1)), FLinearColor(1.0f, 1.0f, 1.0f, 1.0f), BeamWidth };
-
-			// 인덱스 6개 생성
-			Indices[IndexOffset++] = BaseVertexIndex + 0;
-			Indices[IndexOffset++] = BaseVertexIndex + 1;
-			Indices[IndexOffset++] = BaseVertexIndex + 2;
-			Indices[IndexOffset++] = BaseVertexIndex + 2;
-			Indices[IndexOffset++] = BaseVertexIndex + 1;
-			Indices[IndexOffset++] = BaseVertexIndex + 3;
-		}
+		// 디버깅이므로 첫 번째 빔 이미터만 처리하고 중단
+		break;
 	}
 
 	Context->Unmap(BeamVertexBuffer, 0);

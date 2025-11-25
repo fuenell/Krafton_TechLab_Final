@@ -1,24 +1,26 @@
+// ------------------------------------------------------------
 // Global constants
-cbuffer PerFrameConstants : register(b0)
+// ------------------------------------------------------------
+
+// b1: ViewProjBuffer (VS)
+cbuffer ViewProjBuffer : register(b1)
 {
-    float4x4 ViewProjectionMatrix;
-    float3 ViewOrigin;
-    float Time;
+    row_major float4x4 ViewMatrix;
+    row_major float4x4 ProjectionMatrix;
+    row_major float4x4 InverseViewMatrix;
+    row_major float4x4 InverseProjectionMatrix;
 };
 
-cbuffer PerObjectConstants : register(b1)
-{
-    float4x4 WorldMatrix;
-    float4 ObjectID;
-    float CustomTime;
-};
-
+// ------------------------------------------------------------
 // Vertex Shader
+// ------------------------------------------------------------
+
 struct VS_INPUT
 {
-    float3 Position : POSITION;
-    float2 UV : TEXCOORD0;
-    float4 Color : COLOR0;
+    float3 Position : POSITION; // Beam quad world position
+    float2 UV : TEXCOORD0; // Can be kept for procedural effects
+    float4 Color : COLOR0; // Vertex color
+    float Width : TEXCOORD1; // Optional (not used here)
 };
 
 struct PS_INPUT
@@ -28,25 +30,28 @@ struct PS_INPUT
     float4 Color : COLOR0;
 };
 
-PS_INPUT VS_Main(VS_INPUT input)
+PS_INPUT mainVS(VS_INPUT input)
 {
     PS_INPUT output;
-    // The incoming position is already in world space
-    output.Position = mul(float4(input.Position, 1.0f), ViewProjectionMatrix);
+
+    float4 worldPos = float4(input.Position, 1.0f);
+
+    // World → View → Projection
+    float4 viewPos = mul(worldPos, ViewMatrix);
+    output.Position = mul(viewPos, ProjectionMatrix);
+
     output.UV = input.UV;
     output.Color = input.Color;
+
     return output;
 }
 
+// ------------------------------------------------------------
 // Pixel Shader
-Texture2D DiffuseTexture : register(t0);
-SamplerState DefaultSampler : register(s0);
+// ------------------------------------------------------------
 
-float4 PS_Main(PS_INPUT input) : SV_Target
+float4 mainPS(PS_INPUT input) : SV_Target
 {
-    // For now, just use vertex color multiplied by a simple texture lookup.
-    // If texture is not bound, it might return black. For initial test, just returning color might be safer.
-    // return input.Color;
-    float4 Albedo = DiffuseTexture.Sample(DefaultSampler, input.UV);
-    return input.Color * Albedo;
+    // Pure color beam: ignore UV, ignore textures
+    return input.Color;
 }
