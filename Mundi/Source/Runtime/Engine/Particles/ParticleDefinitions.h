@@ -272,11 +272,13 @@ struct FDynamicBeamEmitterReplayDataBase : public FDynamicEmitterReplayDataBase
 struct FDynamicRibbonEmitterReplayDataBase : public FDynamicEmitterReplayDataBase
 {
 	TArray<FVector> RibbonPoints;
+	TArray<FLinearColor> RibbonColors;  // 각 포인트의 색상 (알파 페이드 포함)
 	float Width;
 	UMaterialInterface* Material;
 
 	FDynamicRibbonEmitterReplayDataBase()
 		: RibbonPoints()
+		, RibbonColors()
 		, Width(0)
 		, Material(nullptr)
 	{

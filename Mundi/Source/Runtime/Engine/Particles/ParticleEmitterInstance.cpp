@@ -951,14 +951,25 @@ bool FParticleEmitterInstance::BuildRibbonDynamicData(FDynamicRibbonEmitterData*
 		return ParticleA->RelativeTime > ParticleB->RelativeTime; // 내림차순 정렬 (오래된 것이 먼저)
 	});
 
-	// 정렬된 순서대로 RibbonPoints 배열 채우기
+	// 정렬된 순서대로 RibbonPoints와 RibbonColors 배열 채우기
 	Data->Source.RibbonPoints.Empty();
 	Data->Source.RibbonPoints.Reserve(ActiveParticles);
+	Data->Source.RibbonColors.Empty();
+	Data->Source.RibbonColors.Reserve(ActiveParticles);
 
 	for (int32 i = 0; i < ActiveParticles; i++)
 	{
 		const FBaseParticle* P = reinterpret_cast<const FBaseParticle*>(ParticleData + SortedIndices[i] * ParticleStride);
+
+		// 위치 추가
 		Data->Source.RibbonPoints.Add(P->Location);
+
+		// 색상 추가 (페이드 아웃 효과: 오래된 파티클일수록 투명)
+		FLinearColor ParticleColor = P->Color;
+		// RelativeTime: 0 (새로 생성) → 1 (소멸 직전)
+		// 알파: 1.0 (새 파티클) → 0.0 (오래된 파티클)
+		ParticleColor.A *= (1.0f - P->RelativeTime);
+		Data->Source.RibbonColors.Add(ParticleColor);
 	}
 
 	return true;

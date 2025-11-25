@@ -175,8 +175,8 @@ void UParticleSystemComponent::OnRegister(UWorld* InWorld)
 	{
 		//CreateDebugMeshParticleSystem();        // 메시 파티클 테스트
 		//CreateDebugSpriteParticleSystem();  // 스프라이트 파티클 테스트
-		CreateDebugBeamParticleSystem();		// 빔 파티클 테스트
-		//CreateDebugRibbonParticleSystem(); // 리본 파티클 테스트
+		//CreateDebugBeamParticleSystem();		// 빔 파티클 테스트
+		CreateDebugRibbonParticleSystem(); // 리본 파티클 테스트
 	}
 
 	// 에디터에서도 파티클 미리보기를 위해 자동 활성화
@@ -458,18 +458,18 @@ void UParticleSystemComponent::CreateDebugRibbonParticleSystem()
 
 	// 스폰 모듈 생성 - 리본은 연속적인 파티클 스트림이 필요
 	UParticleModuleSpawn* SpawnModule = NewObject<UParticleModuleSpawn>();
-	SpawnModule->SpawnRate = FDistributionFloat(10.0f); // 초당 30개 파티클
-	SpawnModule->BurstList.Add(FParticleBurst(1, 0.0f));  // 시작 시 2개(시작점, 끝점) 버스트
+	SpawnModule->SpawnRate = FDistributionFloat(30.0f);  // 초당 30개 (부드러운 트레일)
+	SpawnModule->BurstList.Add(FParticleBurst(1, 0.0f));  // 시작 시 1개 버스트
 	LODLevel->Modules.Add(SpawnModule);
 
 	// 라이프타임 모듈 생성
 	UParticleModuleLifetime* LifetimeModule = NewObject<UParticleModuleLifetime>();
-	LifetimeModule->Lifetime = FDistributionFloat(2.0f); // 모든 파티클이 2초 동안 생존
+	LifetimeModule->Lifetime = FDistributionFloat(1.0f);  // 1초 생존 (짧은 트레일)
 	LODLevel->Modules.Add(LifetimeModule);
 
-	// 속도 모듈 생성 (파티클이 움직이며 궤적을 남기도록)
+	// 속도 모듈 생성 - 트레일 효과를 위해 속도 0 (파티클이 생성된 위치에 고정)
 	UParticleModuleVelocity* VelocityModule = NewObject<UParticleModuleVelocity>();
-	VelocityModule->StartVelocity = FDistributionVector(FVector(5.0f, 0.0f, 50.0f));
+	VelocityModule->StartVelocity = FDistributionVector(FVector(0.0f, 0.0f, 0.0f));  // 속도 0 = 트레일
 	LODLevel->Modules.Add(VelocityModule);
     
     // 위치 모듈 생성 (기즈모 조작 지원)
@@ -1623,18 +1623,21 @@ void UParticleSystemComponent::FillRibbonBuffers(const FSceneView* View)
 	
 		const auto& RibbonSource = static_cast<const FDynamicRibbonEmitterReplayDataBase&>(EmitterData->GetSource());
 		const TArray<FVector>& RibbonPoints = RibbonSource.RibbonPoints;
+		const TArray<FLinearColor>& RibbonColors = RibbonSource.RibbonColors;
 		const float RibbonWidth = RibbonSource.Width;
 		const int32 NumPoints = RibbonPoints.Num();
-	
-		if (NumPoints < 2)
+
+		if (NumPoints < 2 || RibbonColors.Num() != NumPoints)
 			continue;
-	
+
 		uint32 EmitterBaseVertexIndex = VertexOffset;
-	
+
 		// 1. 모든 정점을 먼저 생성 (Triangle Strip 방식)
 		for (int32 i = 0; i < NumPoints; ++i)
 		{
 			const FVector& P = RibbonPoints[i];
+			const FLinearColor& Color = RibbonColors[i];  // 파티클 색상 (페이드 아웃 포함)
+
 			FVector SegmentDir;
 			if (i < NumPoints - 1)
 			{
@@ -1645,30 +1648,29 @@ void UParticleSystemComponent::FillRibbonBuffers(const FSceneView* View)
 				SegmentDir = P - RibbonPoints[i - 1];
 			}
 			SegmentDir.Normalize();
-	
+
 			FVector Up = FVector::Cross(SegmentDir, ViewDirection);
 			Up.Normalize();
-				
+
 			float HalfWidth = RibbonWidth * 0.5f;
-	
+
 			// UV의 V좌표는 리본의 길이에 따라 0에서 1까지 변함
 			float V = (float)i / (float)(NumPoints - 1);
-							
+
 			// 각 포인트마다 2개의 정점(좌, 우) 생성
-			// TODO: 파티클별 색상/크기 적용
-			Vertices[VertexOffset++] = { 
-				P - Up * HalfWidth,						// Position
-				P,										// ControlPoint (use particle position as default)
-				SegmentDir,								// Tangent
-				FLinearColor(1.0f, 1.0f, 1.0f, 1.0f),	// Color
-				FVector2D(0.0f, V)						// UV
+			Vertices[VertexOffset++] = {
+				P - Up * HalfWidth,		// Position
+				P,						// ControlPoint
+				SegmentDir,				// Tangent
+				Color,					// Color (페이드 아웃 알파 포함)
+				FVector2D(0.0f, V)		// UV
 			};
-			Vertices[VertexOffset++] = { 
-				P + Up * HalfWidth,						// Position
-				P,										// ControlPoint
-				SegmentDir,								// Tangent
-				FLinearColor(1.0f, 1.0f, 1.0f, 1.0f),	// Color
-				FVector2D(1.0f, V)						// UV
+			Vertices[VertexOffset++] = {
+				P + Up * HalfWidth,		// Position
+				P,						// ControlPoint
+				SegmentDir,				// Tangent
+				Color,					// Color (페이드 아웃 알파 포함)
+				FVector2D(1.0f, V)		// UV
 			};
 		}		
 		// 2. 정점들을 연결하여 인덱스 생성
@@ -1753,6 +1755,9 @@ void UParticleSystemComponent::CreateRibbonParticleBatch(TArray<FMeshBatchElemen
 		BatchElement.WorldMatrix = FMatrix::Identity();
 		BatchElement.ObjectID = InternalIndex;
 		BatchElement.PrimitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+		// 리본 파티클: 반투명 렌더링 (알파 블렌딩, 깊이 읽기 전용)
+		BatchElement.RenderMode = EBatchRenderMode::Translucent;
 
 		OutMeshBatchElements.Add(BatchElement);
 
