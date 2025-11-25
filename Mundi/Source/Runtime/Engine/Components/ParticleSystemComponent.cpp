@@ -638,7 +638,8 @@ void UParticleSystemComponent::CollectMeshBatches(TArray<FMeshBatchElement>& Out
 			// 스프라이트 이미터에 대해 정렬 수행
 			auto* SpriteData = static_cast<FDynamicSpriteEmitterDataBase*>(EmitterData);
 			FVector ViewOrigin = View ? View->ViewLocation : FVector(0.0f, 0.0f, 0.0f);
-			SpriteData->SortSpriteParticles(Source.SortMode, ViewOrigin);
+			FVector ViewDirection = View ? View->ViewRotation.GetForwardVector() : FVector(1.0f, 0.0f, 0.0f);
+			SpriteData->SortSpriteParticles(Source.SortMode, ViewOrigin, ViewDirection);
 		}
 	}
 

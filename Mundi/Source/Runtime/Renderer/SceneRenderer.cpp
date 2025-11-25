@@ -239,8 +239,15 @@ void FSceneRenderer::RenderWireframePath()
 
     RenderOpaquePass(EViewMode::VMI_Unlit);
 
-	// 상태 복구
+	// 상태 복구 (그리드 등 디버그 요소는 Solid로 렌더링)
 	RHIDevice->RSSetState(ERasterizerMode::Solid);
+
+	// 디버그 요소 렌더링 (그리드, 선택 박스 등)
+	if (!World->bPie)
+	{
+		RenderDebugPass();
+	}
+
 	RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTargetWithId);
 }
 

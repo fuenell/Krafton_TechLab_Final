@@ -302,7 +302,8 @@ struct FDynamicSpriteEmitterDataBase : public FDynamicEmitterDataBase
 
 	// 언리얼 엔진 호환: 파티클 정렬 (투명 렌더링을 위해 필수)
 	// SortMode: 0 = 정렬 없음, 1 = Age (오래된 것부터), 2 = Distance (먼 것부터)
-	virtual void SortSpriteParticles(int32 SortMode, const FVector& ViewOrigin)
+	// ViewDirection: 카메라가 바라보는 방향 (forward vector)
+	virtual void SortSpriteParticles(int32 SortMode, const FVector& ViewOrigin, const FVector& ViewDirection)
 	{
 		const FDynamicEmitterReplayDataBase& SourceData = GetSource();
 
@@ -331,11 +332,12 @@ struct FDynamicSpriteEmitterDataBase : public FDynamicEmitterDataBase
 				{
 					return PA->RelativeTime > PB->RelativeTime;
 				}
-				else if (SortMode == 2)  // Distance 정렬 (먼 것부터 - 투명도 렌더링)
+				else if (SortMode == 2)  // Depth 정렬 (먼 것부터 - 투명도 렌더링)
 				{
-					float DistA = (PA->Location - ViewOrigin).SizeSquared();
-					float DistB = (PB->Location - ViewOrigin).SizeSquared();
-					return DistA > DistB;  // 먼 것을 먼저 렌더링
+					// 뷰 방향에 대한 내적으로 깊이 계산 (유클리드 거리보다 정확)
+					float DepthA = FVector::Dot(PA->Location - ViewOrigin, ViewDirection);
+					float DepthB = FVector::Dot(PB->Location - ViewOrigin, ViewDirection);
+					return DepthA > DepthB;  // 먼 것(깊이가 큰 것)을 먼저 렌더링
 				}
 
 				return false;
