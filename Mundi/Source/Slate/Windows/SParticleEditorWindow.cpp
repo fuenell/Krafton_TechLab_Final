@@ -2969,12 +2969,23 @@ void SParticleEditorWindow::SaveParticleSystemAs()
 	// 파일로 저장
 	if (ParticleEditorBootstrap::SaveParticleSystem(State->EditingTemplate, SavePathStr))
 	{
-		// 저장 성공 - 파일 경로 설정 및 Dirty 플래그 해제
+		// SaveAs는 새로운 인스턴스를 생성해야 함 (기존 파일과 분리)
+		UParticleSystem* NewTemplate = State->EditingTemplate->Duplicate();
+		NewTemplate->SetFilePath(SavePathStr);
+
+		// ResourceManager에 새 인스턴스 등록
+		UResourceManager::GetInstance().AddOrReplace<UParticleSystem>(SavePathStr, NewTemplate);
+
+		// 에디터 상태를 새 인스턴스로 교체
+		State->EditingTemplate = NewTemplate;
 		State->CurrentFilePath = SavePathStr;
 		State->bIsDirty = false;
 
-		// ResourceManager에 등록/갱신 (새 파일이므로 AddOrReplace 사용)
-		UResourceManager::GetInstance().AddOrReplace<UParticleSystem>(SavePathStr, State->EditingTemplate);
+		// PreviewComponent도 새 인스턴스로 교체
+		if (State->PreviewComponent)
+		{
+			State->PreviewComponent->SetTemplate(NewTemplate);
+		}
 
 		// 파티클 시스템 캐시 갱신 (새 파일이 Template 선택 목록에 반영되도록)
 		UPropertyRenderer::ClearResourcesCache();
