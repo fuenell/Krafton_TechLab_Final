@@ -237,10 +237,14 @@ struct FDynamicMeshEmitterReplayDataBase : public FDynamicEmitterReplayDataBase
 	// -1이면 MeshRotation 모듈이 없음
 	int32 MeshRotationPayloadOffset;
 
+	// true면 MaterialInterface를 사용, false면 메시의 섹션별 Material 사용
+	bool bOverrideMaterial;
+
 	FDynamicMeshEmitterReplayDataBase()
 		: MaterialInterface(nullptr)
 		, MeshData(nullptr)
 		, MeshRotationPayloadOffset(-1)
+		, bOverrideMaterial(false)
 	{
 		eEmitterType = EDynamicEmitterType::Mesh;
 	}

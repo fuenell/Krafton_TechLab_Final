@@ -124,10 +124,12 @@ SParticleEditorWindow::~SParticleEditorWindow()
 // 타입 데이터 삭제 시 스프라이트로 복원 (머티리얼 포함)
 static void RestoreToSpriteTypeData(UParticleLODLevel* LOD, ParticleEditorState* State)
 {
-	// 기존 타입 데이터 제거
+	// 기존 타입 데이터 제거 및 삭제
 	if (LOD->TypeDataModule)
 	{
 		LOD->Modules.Remove(LOD->TypeDataModule);
+		DeleteObject(LOD->TypeDataModule);
+		LOD->TypeDataModule = nullptr;
 	}
 
 	// 스프라이트 타입 데이터 생성
@@ -138,6 +140,13 @@ static void RestoreToSpriteTypeData(UParticleLODLevel* LOD, ParticleEditorState*
 	// 스프라이트용 머티리얼 생성 및 설정
 	if (LOD->RequiredModule)
 	{
+		// 기존 Material이 NewObject로 생성된 것이면 삭제 (FilePath가 비어있음)
+		UMaterialInterface* OldMaterial = LOD->RequiredModule->Material;
+		if (OldMaterial && OldMaterial->GetFilePath().empty())
+		{
+			DeleteObject(OldMaterial);
+		}
+
 		UMaterial* SpriteMaterial = NewObject<UMaterial>();
 		UShader* SpriteShader = UResourceManager::GetInstance().Load<UShader>("Shaders/Particle/ParticleSprite.hlsl");
 		SpriteMaterial->SetShader(SpriteShader);
@@ -995,10 +1004,12 @@ static void AddModuleToLOD(UParticleLODLevel* LOD, ParticleEditorState* State)
 template<typename T>
 static void SetTypeDataModule(UParticleLODLevel* LOD, ParticleEditorState* State)
 {
-	// 기존 타입 데이터가 있으면 Modules 배열에서 제거
+	// 기존 타입 데이터가 있으면 제거 및 삭제
 	if (LOD->TypeDataModule)
 	{
 		LOD->Modules.Remove(LOD->TypeDataModule);
+		DeleteObject(LOD->TypeDataModule);
+		LOD->TypeDataModule = nullptr;
 	}
 
 	// 새 타입 데이터 생성 및 설정
@@ -1013,13 +1024,15 @@ static void SetTypeDataModule(UParticleLODLevel* LOD, ParticleEditorState* State
 	State->bIsDirty = true;
 }
 
-// 메시 타입 데이터 모듈 설정 (기본 메시 및 머티리얼 포함)
+// 메시 타입 데이터 모듈 설정 (기본 메시 포함)
 static void SetMeshTypeDataModule(UParticleLODLevel* LOD, ParticleEditorState* State)
 {
-	// 기존 타입 데이터가 있으면 Modules 배열에서 제거
+	// 기존 타입 데이터가 있으면 제거 및 삭제
 	if (LOD->TypeDataModule)
 	{
 		LOD->Modules.Remove(LOD->TypeDataModule);
+		DeleteObject(LOD->TypeDataModule);
+		LOD->TypeDataModule = nullptr;
 	}
 
 	// 메시 타입 데이터 생성
@@ -1028,30 +1041,24 @@ static void SetMeshTypeDataModule(UParticleLODLevel* LOD, ParticleEditorState* S
 	// 기본 메시 로드
 	MeshTypeData->Mesh = UResourceManager::GetInstance().Load<UStaticMesh>(GDataDir + "/cube-tex.obj");
 
-	// 메시 파티클용 머티리얼 생성
-	UMaterial* MeshParticleMaterial = NewObject<UMaterial>();
-	UShader* MeshShader = UResourceManager::GetInstance().Load<UShader>("Shaders/Particle/ParticleMesh.hlsl");
-	MeshParticleMaterial->SetShader(MeshShader);
+	// bOverrideMaterial = false (기본값)이므로 메시의 섹션별 Material 사용
+	// 사용자가 bOverrideMaterial을 true로 설정하면 RequiredModule->Material로 override
 
-	// 메시의 내장 머티리얼에서 텍스처 정보 가져오기
-	if (MeshTypeData->Mesh)
-	{
-		const TArray<FGroupInfo>& GroupInfos = MeshTypeData->Mesh->GetMeshGroupInfo();
-		if (!GroupInfos.IsEmpty() && !GroupInfos[0].InitialMaterialName.empty())
-		{
-			UMaterial* MeshMaterial = UResourceManager::GetInstance().Load<UMaterial>(GroupInfos[0].InitialMaterialName);
-			if (MeshMaterial)
-			{
-				MeshParticleMaterial->SetMaterialInfo(MeshMaterial->GetMaterialInfo());
-				MeshParticleMaterial->ResolveTextures();
-			}
-		}
-	}
-
-	// RequiredModule에 머티리얼 설정
+	// RequiredModule->Material에 메시 파티클용 셰이더 설정 (override 시 사용됨)
 	if (LOD->RequiredModule)
 	{
-		LOD->RequiredModule->Material = MeshParticleMaterial;
+		// 기존 Material이 NewObject로 생성된 것이면 삭제 (FilePath가 비어있음)
+		// ResourceManager에서 로드한 Material은 삭제하지 않음 (FilePath가 있음)
+		UMaterialInterface* OldMaterial = LOD->RequiredModule->Material;
+		if (OldMaterial && OldMaterial->GetFilePath().empty())
+		{
+			DeleteObject(OldMaterial);
+		}
+
+		UMaterial* MeshMaterial = NewObject<UMaterial>();
+		UShader* MeshShader = UResourceManager::GetInstance().Load<UShader>("Shaders/Particle/ParticleMesh.hlsl");
+		MeshMaterial->SetShader(MeshShader);
+		LOD->RequiredModule->Material = MeshMaterial;
 	}
 
 	// 타입 데이터 설정

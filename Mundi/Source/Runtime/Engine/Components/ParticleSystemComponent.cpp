@@ -123,6 +123,9 @@ UParticleSystemComponent::~UParticleSystemComponent()
 		BeamIndexBuffer = nullptr;
 	}
 
+	// 캐싱된 파티클용 Material 정리
+	ClearCachedMaterials();
+
 	// 테스트용 리소스 정리 (디버그 함수에서 생성한 리소스)
 	CleanupTestResources();
 }
@@ -145,6 +148,19 @@ void UParticleSystemComponent::CleanupTestResources()
 		DeleteObject(TestTemplate);
 		TestTemplate = nullptr;
 	}
+}
+
+void UParticleSystemComponent::ClearCachedMaterials()
+{
+	// 캐싱된 파티클용 Material 정리
+	for (auto& Pair : CachedParticleMaterials)
+	{
+		if (Pair.second)
+		{
+			DeleteObject(Pair.second);
+		}
+	}
+	CachedParticleMaterials.Empty();
 }
 
 void UParticleSystemComponent::OnRegister(UWorld* InWorld)
@@ -457,6 +473,9 @@ void UParticleSystemComponent::OnUnregister()
 	}
 	AllocatedBeamIndexCount = 0;
 
+	// 캐싱된 파티클용 Material 정리
+	ClearCachedMaterials();
+
 	Super::OnUnregister();
 }
 
@@ -525,9 +544,32 @@ void UParticleSystemComponent::RefreshEmitterInstances()
 {
 	// 동일한 템플릿의 내용이 변경되었을 때 EmitterInstances 재생성
 	ClearEmitterInstances();
-	InitializeEmitterInstances();
-}
+	ClearCachedMaterials();  // Material 캐시도 클리어 (텍스처 변경 반영)
 
+	// 인스턴스 버퍼도 클리어 (TypeData 변경 시 stride 불일치 방지)
+	// 스프라이트 -> 메시 전환 시, 이전 프레임의 스프라이트 버퍼(48바이트 stride)가
+	// 메시 셰이더의 Input Layout(68바이트 기대)과 불일치하는 것을 방지
+	if (SpriteInstanceBuffer)
+	{
+		SpriteInstanceBuffer->Release();
+		SpriteInstanceBuffer = nullptr;
+	}
+	AllocatedSpriteInstanceCount = 0;
+
+	if (MeshInstanceBuffer)
+	{
+		MeshInstanceBuffer->Release();
+		MeshInstanceBuffer = nullptr;
+	}
+	AllocatedMeshInstanceCount = 0;
+
+	InitializeEmitterInstances();
+
+	// EmitterRenderData도 즉시 갱신 (이전 프레임의 오래된 데이터 사용 방지)
+	// 이렇게 하지 않으면 TypeData나 Material 변경 후 첫 프레임에서
+	// stride 불일치 경고가 발생할 수 있음
+	UpdateRenderData();
+}
 void UParticleSystemComponent::InitializeEmitterInstances()
 {
 	ClearEmitterInstances();
@@ -715,6 +757,9 @@ void UParticleSystemComponent::DuplicateSubObjects()
 	// 테스트용 리소스 포인터 초기화 (원본 소유, 복사본에서 삭제하면 안됨)
 	TestTemplate = nullptr;
 	TestMaterials.Empty();
+
+	// 캐싱된 Material도 원본 소유이므로 비움 (delete 하지 않음)
+	CachedParticleMaterials.Empty();
 }
 
 void UParticleSystemComponent::CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View)
@@ -937,6 +982,7 @@ void UParticleSystemComponent::CreateMeshParticleBatch(TArray<FMeshBatchElement>
 	// 첫 번째 메시 이미터에서 Mesh와 Material 가져오기
 	UStaticMesh* Mesh = nullptr;
 	UMaterialInterface* Material = nullptr;
+	bool bOverrideMaterial = false;
 	int32 NumInstances = 0;
 
 	for (FDynamicEmitterDataBase* EmitterData : EmitterRenderData)
@@ -950,66 +996,145 @@ void UParticleSystemComponent::CreateMeshParticleBatch(TArray<FMeshBatchElement>
 			const auto& MeshSource = static_cast<const FDynamicMeshEmitterReplayDataBase&>(Source);
 			Mesh = MeshSource.MeshData;
 			Material = MeshSource.MaterialInterface;
+			bOverrideMaterial = MeshSource.bOverrideMaterial;
 			NumInstances += Source.ActiveParticleCount;
 		}
 	}
 
-	// Material이 없으면 렌더링하지 않음
-	// RequiredModule을 통해 올바르게 Material을 설정해야 함
-	if (!Mesh || !Material || NumInstances == 0)
+	if (!Mesh || NumInstances == 0)
 	{
 		return;
 	}
 
-	if (!Material->GetShader())
+	// 메시의 섹션(GroupInfo) 정보 가져오기
+	const TArray<FGroupInfo>& MeshGroupInfos = Mesh->GetMeshGroupInfo();
+	const bool bHasSections = !MeshGroupInfos.IsEmpty();
+	const uint32 NumSectionsToProcess = bHasSections ? static_cast<uint32>(MeshGroupInfos.size()) : 1;
+
+	// 파티클 메시 전용 인스턴싱 셰이더 로드 (한 번만)
+	static UShader* ParticleMeshShader = UResourceManager::GetInstance().Load<UShader>("Shaders/Particle/ParticleMesh.hlsl");
+	if (!ParticleMeshShader)
 	{
 		return;
 	}
 
-	UShader* Shader = Material->GetShader();
-
-	// 메시 파티클은 뷰 모드 매크로 적용 (Lit 모드 지원)
-	TArray<FShaderMacro> ShaderMacros = View->ViewShaderMacros;
-	if (Material->GetShaderMacros().Num() > 0)
+	// Lambda: 섹션별 소스 Material 가져오기
+	// bOverrideMaterial이 true면 RequiredModule->Material 사용, false면 메시의 섹션별 Material 사용
+	auto GetSourceMaterial = [&](uint32 SectionIndex) -> UMaterialInterface*
 	{
-		ShaderMacros.Append(Material->GetShaderMacros());
+		if (bOverrideMaterial && Material != nullptr)
+		{
+			return Material;
+		}
+
+		if (bHasSections && SectionIndex < MeshGroupInfos.size())
+		{
+			const FGroupInfo& Group = MeshGroupInfos[SectionIndex];
+			if (!Group.InitialMaterialName.empty())
+			{
+				UMaterialInterface* MeshMaterial = UResourceManager::GetInstance().Get<UMaterial>(Group.InitialMaterialName);
+				if (MeshMaterial)
+				{
+					return MeshMaterial;
+				}
+			}
+		}
+
+		return UResourceManager::GetInstance().GetDefaultMaterial();
+	};
+
+	// 각 섹션마다 별도의 배치 생성
+	for (uint32 SectionIndex = 0; SectionIndex < NumSectionsToProcess; ++SectionIndex)
+	{
+		uint32 IndexCount = 0;
+		uint32 StartIndex = 0;
+
+		if (bHasSections)
+		{
+			const FGroupInfo& Group = MeshGroupInfos[SectionIndex];
+			IndexCount = Group.IndexCount;
+			StartIndex = Group.StartIndex;
+		}
+		else
+		{
+			IndexCount = Mesh->GetIndexCount();
+			StartIndex = 0;
+		}
+
+		if (IndexCount == 0)
+		{
+			continue;
+		}
+
+		// 소스 Material 가져오기
+		UMaterialInterface* SourceMaterial = GetSourceMaterial(SectionIndex);
+		if (!SourceMaterial)
+		{
+			continue;
+		}
+
+		// 캐싱된 Material 확인, 없으면 새로 생성
+		// (캐시는 RefreshEmitterInstances() 호출 시 클리어됨)
+		UMaterial* ParticleMaterial = nullptr;
+		UMaterial** CachedMaterial = CachedParticleMaterials.Find(SourceMaterial);
+		if (CachedMaterial && *CachedMaterial)
+		{
+			ParticleMaterial = *CachedMaterial;
+		}
+		else
+		{
+			ParticleMaterial = UMaterial::CreateWithShaderOverride(SourceMaterial, ParticleMeshShader);
+			if (ParticleMaterial)
+			{
+				CachedParticleMaterials.Add(SourceMaterial, ParticleMaterial);
+			}
+		}
+
+		if (!ParticleMaterial)
+		{
+			continue;
+		}
+
+		// 셰이더 변형 컴파일
+		TArray<FShaderMacro> ShaderMacros = View->ViewShaderMacros;
+		if (ParticleMaterial->GetShaderMacros().Num() > 0)
+		{
+			ShaderMacros.Append(ParticleMaterial->GetShaderMacros());
+		}
+		FShaderVariant* ShaderVariant = ParticleMeshShader->GetOrCompileShaderVariant(ShaderMacros);
+
+		if (!ShaderVariant)
+		{
+			continue;
+		}
+
+		// FMeshBatchElement 생성
+		FMeshBatchElement BatchElement;
+
+		BatchElement.VertexShader = ShaderVariant->VertexShader;
+		BatchElement.PixelShader = ShaderVariant->PixelShader;
+		BatchElement.InputLayout = ShaderVariant->InputLayout;
+		BatchElement.Material = ParticleMaterial;
+
+		BatchElement.VertexBuffer = Mesh->GetVertexBuffer();
+		BatchElement.IndexBuffer = Mesh->GetIndexBuffer();
+		BatchElement.VertexStride = Mesh->GetVertexStride();
+
+		BatchElement.NumInstances = NumInstances;
+		BatchElement.InstanceBuffer = MeshInstanceBuffer;
+		BatchElement.InstanceStride = sizeof(FMeshParticleInstanceVertex);
+
+		BatchElement.IndexCount = IndexCount;
+		BatchElement.StartIndex = StartIndex;
+		BatchElement.BaseVertexIndex = 0;
+
+		BatchElement.WorldMatrix = FMatrix::Identity();
+		BatchElement.ObjectID = InternalIndex;
+		BatchElement.PrimitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		BatchElement.RenderMode = EBatchRenderMode::Opaque;
+
+		OutMeshBatchElements.Add(BatchElement);
 	}
-	FShaderVariant* ShaderVariant = Shader->GetOrCompileShaderVariant(ShaderMacros);
-
-	// FMeshBatchElement 생성
-	FMeshBatchElement BatchElement;
-
-	BatchElement.VertexShader = ShaderVariant->VertexShader;
-	BatchElement.PixelShader = ShaderVariant->PixelShader;
-	BatchElement.InputLayout = ShaderVariant->InputLayout;
-	BatchElement.Material = Material;
-
-	// StaticMesh 버퍼 사용
-	BatchElement.VertexBuffer = Mesh->GetVertexBuffer();
-	BatchElement.IndexBuffer = Mesh->GetIndexBuffer();
-	BatchElement.VertexStride = Mesh->GetVertexStride();
-
-	// 인스턴싱 데이터
-	BatchElement.NumInstances = NumInstances;
-	BatchElement.InstanceBuffer = MeshInstanceBuffer;
-	BatchElement.InstanceStride = sizeof(FMeshParticleInstanceVertex);
-
-	BatchElement.IndexCount = Mesh->GetIndexCount();
-	BatchElement.StartIndex = 0;
-	BatchElement.BaseVertexIndex = 0;
-
-	// 월드 행렬은 항등 행렬 (인스턴스 버퍼에서 Transform 제공)
-	BatchElement.WorldMatrix = FMatrix::Identity();
-	BatchElement.ObjectID = InternalIndex;
-	BatchElement.PrimitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-
-	// 텍스처는 Material 시스템을 통해 바인딩됨 (UberLit과 동일)
-	// DrawMeshBatches에서 Material->GetTexture()를 사용하여 자동으로 바인딩
-
-	// 메시 파티클: 불투명 렌더링 (backface culling, depth write)
-	BatchElement.RenderMode = EBatchRenderMode::Opaque;
-
-	OutMeshBatchElements.Add(BatchElement);
 }
 
 void UParticleSystemComponent::FillSpriteInstanceBuffer(uint32 TotalInstances)

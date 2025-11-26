@@ -15,6 +15,10 @@ public:
 	UPROPERTY(EditAnywhere, Category="Mesh")
 	UStaticMesh* Mesh = nullptr;
 
+	// true면 RequiredModule->Material을 사용, false면 메시의 섹션별 Material 사용
+	UPROPERTY(EditAnywhere, Category="Mesh")
+	bool bOverrideMaterial = false;
+
 	UParticleModuleTypeDataMesh() = default;
 	virtual ~UParticleModuleTypeDataMesh() = default;
 

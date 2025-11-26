@@ -127,6 +127,12 @@ private:
 	TArray<UMaterialInterface*> TestMaterials;
 	void CleanupTestResources();
 
+	// === 파티클 메시용 Material 캐시 ===
+	// 원본 Material → 인스턴싱 셰이더로 변환된 Material
+	// (매 프레임 새로 생성하지 않고 캐싱하여 재사용)
+	TMap<UMaterialInterface*, UMaterial*> CachedParticleMaterials;
+	void ClearCachedMaterials();
+
 	// 테스트용 디버그 파티클 시스템 생성
 	void CreateDebugMeshParticleSystem();	// 메시 파티클 테스트
 	void CreateDebugSpriteParticleSystem();	// 스프라이트 파티클 테스트

@@ -37,6 +37,38 @@ void UMaterial::Load(const FString& InFilePath, ID3D11Device* InDevice)
 	}
 }
 
+UMaterial* UMaterial::CreateWithShaderOverride(UMaterialInterface* SourceMaterial, UShader* OverrideShader)
+{
+	if (!SourceMaterial || !OverrideShader)
+	{
+		return nullptr;
+	}
+
+	UMaterial* NewMaterial = NewObject<UMaterial>();
+
+	// ===== 깊은 복사 (Deep Copy) =====
+	// MaterialInfo: 값 타입이므로 대입 연산자로 깊은 복사
+	// (색상, 텍스처 경로 문자열 등 모든 값 데이터 복사)
+	NewMaterial->MaterialInfo = SourceMaterial->GetMaterialInfo();
+
+	// ===== 얕은 복사 (Shallow Copy) =====
+	// ResolvedTextures: 텍스처 리소스는 ResourceManager가 소유하므로 포인터만 공유
+	for (uint8 i = 0; i < static_cast<uint8>(EMaterialTextureSlot::Max); ++i)
+	{
+		EMaterialTextureSlot Slot = static_cast<EMaterialTextureSlot>(i);
+		NewMaterial->ResolvedTextures[i] = SourceMaterial->GetTexture(Slot);
+	}
+
+	// ===== 교체 (Replace) =====
+	// Shader: 새 인스턴싱 셰이더로 교체 (원본 셰이더와 다름)
+	NewMaterial->Shader = OverrideShader;
+
+	// ===== 복사 안 함 (Skip) =====
+	// ShaderMacros: 새 셰이더용 매크로와 호환되지 않을 수 있으므로 빈 상태 유지
+
+	return NewMaterial;
+}
+
 void UMaterial::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
 	Super::Serialize(bInIsLoading, InOutHandle); // 부모 Serialize 호출

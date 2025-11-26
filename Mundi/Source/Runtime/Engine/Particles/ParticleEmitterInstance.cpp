@@ -792,6 +792,7 @@ bool FParticleEmitterInstance::BuildMeshDynamicData(FDynamicMeshEmitterData* Dat
 	if (MeshType)
 	{
 		Data->MeshSource.MeshData = MeshType->Mesh;
+		Data->MeshSource.bOverrideMaterial = MeshType->bOverrideMaterial;
 	}
 	Data->MeshSource.MaterialInterface = CurrentLODLevel->RequiredModule ? CurrentLODLevel->RequiredModule->Material : nullptr;
 	Data->MeshSource.SortMode = CurrentLODLevel->RequiredModule ? CurrentLODLevel->RequiredModule->SortMode : 0;

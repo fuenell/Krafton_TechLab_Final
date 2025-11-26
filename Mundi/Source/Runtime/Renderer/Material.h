@@ -37,6 +37,10 @@ public:
 	UMaterial();
 	void Load(const FString& InFilePath, ID3D11Device* InDevice);
 
+	// 원본 Material의 속성(텍스처, 색상 등)을 복사하고 셰이더만 교체한 새 Material 생성
+	// 파티클 메시처럼 인스턴싱 전용 셰이더가 필요한 경우 사용
+	static UMaterial* CreateWithShaderOverride(UMaterialInterface* SourceMaterial, UShader* OverrideShader);
+
 protected:
 	~UMaterial() override = default;
 

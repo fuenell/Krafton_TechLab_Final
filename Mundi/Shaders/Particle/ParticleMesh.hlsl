@@ -23,6 +23,23 @@
 #include "../Common/LightingCommon.hlsl"
 
 //------------------------------------------------------------------------------------------------
+// Material 구조체 (C++ FMaterialInPs와 정확히 일치해야 함 - 80 bytes)
+//------------------------------------------------------------------------------------------------
+struct FMaterial
+{
+    float3 DiffuseColor;        // Kd - Diffuse 색상
+    float OpticalDensity;       // Ni - 광학 밀도 (굴절률)
+    float3 AmbientColor;        // Ka - Ambient 색상
+    float Transparency;         // Tr or d - 투명도 (0=불투명, 1=투명)
+    float3 SpecularColor;       // Ks - Specular 색상
+    float SpecularExponent;     // Ns - Specular 지수 (광택도)
+    float3 EmissiveColor;       // Ke - Emissive 색상 (자체 발광)
+    uint IlluminationModel;     // illum - 조명 모델 (0-10)
+    float3 TransmissionFilter;  // Tf - 투과 필터
+    float dummy;                // 16바이트 정렬용 패딩
+};
+
+//------------------------------------------------------------------------------------------------
 // Constant Buffers
 //------------------------------------------------------------------------------------------------
 
@@ -33,6 +50,15 @@ cbuffer ViewProjBuffer : register(b1)
     row_major float4x4 ProjectionMatrix;
     row_major float4x4 InverseViewMatrix;
     row_major float4x4 InverseProjectionMatrix;
+};
+
+// b4: PixelConstBuffer (PS) - 텍스처 유무 플래그
+cbuffer PixelConstBuffer : register(b4)
+{
+    FMaterial Material;         // 64 bytes
+    uint bHasMaterial;          // 4 bytes
+    uint bHasTexture;           // 4 bytes (bHasDiffuseTexture)
+    uint bHasNormalTexture;     // 4 bytes
 };
 
 //------------------------------------------------------------------------------------------------
@@ -192,7 +218,13 @@ PS_INPUT mainVS(VS_MESH_INPUT mesh, VS_INSTANCE_INPUT inst)
     output.UV = mesh.UV;
 
     // 베이스 컬러: 인스턴스 색상 × 버텍스 색상
-    float4 baseColor = inst.InstanceColor * mesh.VertexColor;
+    // FBX는 버텍스 컬러가 없거나 (0,0,0,0)인 경우가 많음 → 흰색으로 대체
+    float4 vertColor = mesh.VertexColor;
+    if (vertColor.r + vertColor.g + vertColor.b < 0.001f)
+    {
+        vertColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    }
+    float4 baseColor = inst.InstanceColor * vertColor;
 
 #if defined(LIGHTING_MODEL_GOURAUD)
     //-----------------------------------------------------------------------------------
@@ -231,11 +263,27 @@ PS_OUTPUT mainPS(PS_INPUT input)
 {
     PS_OUTPUT output;
 
-    // 텍스처 샘플링
-    float4 texColor = MeshTexture.Sample(LinearSampler, input.UV);
+    // 텍스처 유무에 따라 분기
+    float4 texColor;
+    if (bHasTexture)
+    {
+        // 텍스처가 있으면 샘플링
+        texColor = MeshTexture.Sample(LinearSampler, input.UV);
+    }
+    else
+    {
+        // 텍스처가 없으면 흰색 (머티리얼 색상만 사용)
+        texColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    }
 
     // 최종 색상: 텍스처 × 정점 컬러
     output.Color = texColor * input.Color;
+
+    // 머티리얼 색상 적용 (텍스처 없는 경우 중요)
+    if (bHasMaterial && !bHasTexture)
+    {
+        output.Color.rgb *= Material.DiffuseColor;
+    }
 
 #if defined(LIGHTING_MODEL_PHONG)
     //-----------------------------------------------------------------------------------
