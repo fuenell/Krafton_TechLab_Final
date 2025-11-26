@@ -55,9 +55,18 @@ void UParticleModuleAcceleration::Update(FModuleUpdateContext& Context)
 			}
 			break;
 
+		case EDistributionType::Uniform:
+			{
+				// Uniform: Spawn 시 결정된 랜덤 비율로 Min/Max 보간 (시간 무관)
+				CurrentAcceleration.X = FMath::Lerp(AccelerationOverLife.MinValue.X, AccelerationOverLife.MaxValue.X, Payload.RandomFactor.X);
+				CurrentAcceleration.Y = FMath::Lerp(AccelerationOverLife.MinValue.Y, AccelerationOverLife.MaxValue.Y, Payload.RandomFactor.Y);
+				CurrentAcceleration.Z = FMath::Lerp(AccelerationOverLife.MinValue.Z, AccelerationOverLife.MaxValue.Z, Payload.RandomFactor.Z);
+			}
+			break;
+
 		default:
 			// Constant: 고정값 사용
-			CurrentAcceleration = AccelerationOverLife.GetValue(Particle.RelativeTime, Context.Owner.RandomStream, Context.Owner.Component);
+			CurrentAcceleration = AccelerationOverLife.ConstantValue;
 			break;
 		}
 

@@ -50,9 +50,14 @@ void UParticleModuleRotation::Update(FModuleUpdateContext& Context)
 			}
 			break;
 
+		case EDistributionType::Uniform:
+			// Uniform: Spawn 시 결정된 랜덤 비율로 Min/Max 보간 (시간 무관)
+			CurrentRotation = FMath::Lerp(RotationOverLife.MinValue, RotationOverLife.MaxValue, Payload.RandomFactor);
+			break;
+
 		default:
 			// Constant: 고정값 사용
-			CurrentRotation = RotationOverLife.GetValue(Particle.RelativeTime, Context.Owner.RandomStream, Context.Owner.Component);
+			CurrentRotation = RotationOverLife.ConstantValue;
 			break;
 		}
 

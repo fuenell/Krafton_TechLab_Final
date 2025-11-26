@@ -77,10 +77,19 @@ void UParticleModuleSize::Update(FModuleUpdateContext& Context)
 			}
 			break;
 
+		case EDistributionType::Uniform:
+			{
+				// Uniform: Spawn 시 결정된 랜덤 비율로 Min/Max 보간 (시간 무관, 고정값)
+				CurrentSizeVec.X = FMath::Lerp(SizeOverLife.MinValue.X, SizeOverLife.MaxValue.X, SizePayload.RandomFactor.X);
+				CurrentSizeVec.Y = FMath::Lerp(SizeOverLife.MinValue.Y, SizeOverLife.MaxValue.Y, SizePayload.RandomFactor.Y);
+				CurrentSizeVec.Z = FMath::Lerp(SizeOverLife.MinValue.Z, SizeOverLife.MaxValue.Z, SizePayload.RandomFactor.Z);
+				CurrentSizeVec = CurrentSizeVec * ComponentScaleX;
+			}
+			break;
+
 		default:
 			// Constant: 고정값 사용
-			CurrentSizeVec = SizeOverLife.GetValue(Particle.RelativeTime, Context.Owner.RandomStream, Context.Owner.Component);
-			CurrentSizeVec = CurrentSizeVec * ComponentScaleX;
+			CurrentSizeVec = SizeOverLife.ConstantValue * ComponentScaleX;
 			break;
 		}
 

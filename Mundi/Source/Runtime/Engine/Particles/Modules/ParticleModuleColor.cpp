@@ -70,13 +70,21 @@ void UParticleModuleColor::Update(FModuleUpdateContext& Context)
 			}
 			break;
 
+		case EDistributionType::Uniform:
+			{
+				// Uniform: Spawn 시 결정된 랜덤 비율로 Min/Max 보간 (시간 무관)
+				CurrentColor.R = FMath::Lerp(ColorOverLife.RGB.MinValue.X, ColorOverLife.RGB.MaxValue.X, ColorPayload.RGBRandomFactor.X);
+				CurrentColor.G = FMath::Lerp(ColorOverLife.RGB.MinValue.Y, ColorOverLife.RGB.MaxValue.Y, ColorPayload.RGBRandomFactor.Y);
+				CurrentColor.B = FMath::Lerp(ColorOverLife.RGB.MinValue.Z, ColorOverLife.RGB.MaxValue.Z, ColorPayload.RGBRandomFactor.Z);
+			}
+			break;
+
 		default:
 			// Constant 타입: 고정값 사용
 			{
-				FLinearColor ConstColor = ColorOverLife.GetValue(Particle.RelativeTime, Context.Owner.RandomStream, Context.Owner.Component);
-				CurrentColor.R = ConstColor.R;
-				CurrentColor.G = ConstColor.G;
-				CurrentColor.B = ConstColor.B;
+				CurrentColor.R = ColorOverLife.RGB.ConstantValue.X;
+				CurrentColor.G = ColorOverLife.RGB.ConstantValue.Y;
+				CurrentColor.B = ColorOverLife.RGB.ConstantValue.Z;
 			}
 			break;
 		}
@@ -96,12 +104,14 @@ void UParticleModuleColor::Update(FModuleUpdateContext& Context)
 			}
 			break;
 
+		case EDistributionType::Uniform:
+			// Uniform: Spawn 시 결정된 랜덤 비율로 Min/Max 보간 (시간 무관)
+			CurrentColor.A = FMath::Lerp(ColorOverLife.Alpha.MinValue, ColorOverLife.Alpha.MaxValue, ColorPayload.AlphaRandomFactor);
+			break;
+
 		default:
 			// Constant 타입: 고정값 사용
-			{
-				FLinearColor ConstColor = ColorOverLife.GetValue(Particle.RelativeTime, Context.Owner.RandomStream, Context.Owner.Component);
-				CurrentColor.A = ConstColor.A;
-			}
+			CurrentColor.A = ColorOverLife.Alpha.ConstantValue;
 			break;
 		}
 
