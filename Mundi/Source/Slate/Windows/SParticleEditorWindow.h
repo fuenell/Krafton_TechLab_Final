@@ -142,6 +142,7 @@ private:
 
 	// 툴바 아이콘
 	UTexture* IconSave = nullptr;
+	UTexture* IconSaveAs = nullptr;
 	UTexture* IconLoad = nullptr;
 	UTexture* IconRestart = nullptr;
 	UTexture* IconBounds = nullptr;

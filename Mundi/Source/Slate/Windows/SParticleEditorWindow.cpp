@@ -69,6 +69,11 @@ SParticleEditorWindow::~SParticleEditorWindow()
 		DeleteObject(IconSave);
 		IconSave = nullptr;
 	}
+	if (IconSaveAs)
+	{
+		DeleteObject(IconSaveAs);
+		IconSaveAs = nullptr;
+	}
 	if (IconLoad)
 	{
 		DeleteObject(IconLoad);
@@ -480,6 +485,9 @@ void SParticleEditorWindow::LoadToolbarIcons()
 	// 툴바 아이콘 로드
 	IconSave = NewObject<UTexture>();
 	IconSave->Load(GDataDir + "/Icon/Toolbar_Save.png", Device);
+
+	IconSaveAs = NewObject<UTexture>();
+	IconSaveAs->Load(GDataDir + "/Icon/Toolbar_SaveAs.png", Device);
 
 	IconLoad = NewObject<UTexture>();
 	IconLoad->Load(GDataDir + "/Icon/Toolbar_Load.png", Device);
@@ -1346,6 +1354,19 @@ void SParticleEditorWindow::RenderToolbar()
 		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("파티클 시스템 저장");
+	}
+
+	ImGui::SameLine();
+
+	// SaveAs 버튼
+	if (IconSaveAs && IconSaveAs->GetShaderResourceView())
+	{
+		if (ImGui::ImageButton("##SaveAsPS", (void*)IconSaveAs->GetShaderResourceView(), IconSizeVec))
+		{
+			SaveParticleSystemAs();
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("다른 이름으로 저장");
 	}
 
 	ImGui::SameLine();
