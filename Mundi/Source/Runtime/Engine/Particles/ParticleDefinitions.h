@@ -54,12 +54,16 @@ enum class EDynamicEmitterType : uint8
 	Unknown = 255
 };
 
-// 기본 파티클 구조체 (언리얼 엔진 완전 호환)
-struct FBaseParticle
+// 기본 파티클 구조체 (TODO - 이후 SIMD 최적화를 위한 16바이트 정렬)
+struct alignas(16) FBaseParticle
 {
-	// 48바이트 - 위치 정보
-	FVector      OldLocation;        // 충돌 처리용 이전 프레임 위치
+	// 16바이트
+	FVector      OldLocation;         // 충돌 처리용 이전 프레임 위치
+	float        Pad0;                // 16바이트 정렬용 패딩
+
+	// 16바이트
 	FVector      Location;            // 현재 위치
+	float        Pad1;                // 16바이트 정렬용 패딩
 
 	// 16바이트
 	FVector      BaseVelocity;        // 매 프레임 시작 시 속도 (Velocity가 리셋되는 기준값)
@@ -85,13 +89,15 @@ struct FBaseParticle
 
 	// 16바이트
 	float        RelativeTime;        // 상대 시간, 0 (생성) ~ 1 (소멸)
-	float        OneOverMaxLifetime;  // 수명의 역수 (나눗셈 최적화용: RelativeTime += DeltaTime * OneOverMaxLifetime)
-	float        Placeholder0;        // 향후 확장용
-	float        Placeholder1;        // 향후 확장용
+	float        OneOverMaxLifetime;  // 수명의 역수 (나눗셈 최적화용)
+	float        Pad2;                // 16바이트 정렬용 패딩
+	float        Pad3;                // 16바이트 정렬용 패딩
 
 	FBaseParticle()
 		: OldLocation(FVector(0.0f, 0.0f, 0.0f))
+		, Pad0(0.0f)
 		, Location(FVector(0.0f, 0.0f, 0.0f))
+		, Pad1(0.0f)
 		, BaseVelocity(FVector(0.0f, 0.0f, 0.0f))
 		, Rotation(0.0f)
 		, Velocity(FVector(0.0f, 0.0f, 0.0f))
@@ -104,10 +110,11 @@ struct FBaseParticle
 		, BaseColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f))
 		, RelativeTime(0.0f)
 		, OneOverMaxLifetime(1.0f)
-		, Placeholder0(0.0f)
-		, Placeholder1(0.0f)
+		, Pad2(0.0f)
+		, Pad3(0.0f)
 	{
 	}
+	// 총 크기: 144바이트 (16 x 9), 모든 FVector가 16바이트 경계에서 시작
 };
 
 struct FParticleSpriteVertex
