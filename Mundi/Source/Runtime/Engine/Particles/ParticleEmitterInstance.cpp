@@ -317,15 +317,17 @@ void FParticleEmitterInstance::Resize(int32 NewMaxActiveParticles)
 			// 기존 파티클 데이터 복사 (확장 시)
 			if (bPreserveData && OldContainer.ParticleData && OldContainer.ParticleIndices)
 			{
-				// 활성 파티클 데이터 복사
-				int32 CopySize = OldActiveParticles * ParticleStride;
+				// 전체 기존 데이터 복사 (KillParticle로 인해 인덱스가 섞여있을 수 있음)
+				// ParticleIndices가 [99, 50, 3, ...] 처럼 비순차적일 수 있으므로
+				// 기존 전체 슬롯을 복사해야 함
+				int32 CopySize = OldMaxActiveParticles * ParticleStride;
 				memcpy(ParticleData, OldContainer.ParticleData, CopySize);
 
-				// 인덱스 복사 (활성 파티클 부분)
-				memcpy(ParticleIndices, OldContainer.ParticleIndices, OldActiveParticles * sizeof(uint16));
+				// 인덱스도 전체 복사 (기존 매핑 유지)
+				memcpy(ParticleIndices, OldContainer.ParticleIndices, OldMaxActiveParticles * sizeof(uint16));
 
-				// 나머지 인덱스 초기화 (새로 확장된 부분)
-				for (int32 i = OldActiveParticles; i < MaxActiveParticles; i++)
+				// 새로 확장된 부분의 인덱스만 초기화
+				for (int32 i = OldMaxActiveParticles; i < MaxActiveParticles; i++)
 				{
 					ParticleIndices[i] = static_cast<uint16>(i);
 				}
