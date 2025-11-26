@@ -2882,13 +2882,15 @@ bool UPropertyRenderer::RenderInterpCurveFloatUniform(const char* Label, FInterp
 
 	if (ImGui::TreeNode(Label))
 	{
-		// 포인트 배열 헤더
-		int32 NumPoints = MinCurve.Points.Num();
-
-		if (ImGui::TreeNode("포인트"))
+		// 상수 커브 섹션
+		if (ImGui::TreeNode("상수 커브"))
 		{
+			// 포인트 배열 헤더
+			int32 NumPoints = MinCurve.Points.Num();
+
+			ImGui::Text("포인트");
 			ImGui::SameLine();
-			ImGui::Text("배열 엘리먼트: %d", NumPoints);
+			ImGui::TextDisabled("배열 엘리먼트: %d", NumPoints);
 			ImGui::SameLine();
 			if (ImGui::SmallButton("+"))
 			{
@@ -2919,8 +2921,7 @@ bool UPropertyRenderer::RenderInterpCurveFloatUniform(const char* Label, FInterp
 
 				if (ImGui::TreeNode(NodeLabel))
 				{
-					ImGui::SameLine();
-					ImGui::Text("멤버: 5");
+					ImGui::TextDisabled("멤버: 5");
 
 					// In 값 (두 커브 동기화)
 					if (ImGui::DragFloat("In 값", &MinPoint.InVal, 0.01f))
@@ -2997,13 +2998,15 @@ bool UPropertyRenderer::RenderInterpCurveVectorUniform(const char* Label, FInter
 
 	if (ImGui::TreeNode(Label))
 	{
-		// 포인트 배열 헤더
-		int32 NumPoints = MinCurve.Points.Num();
-
-		if (ImGui::TreeNode("포인트"))
+		// 상수 커브 섹션
+		if (ImGui::TreeNode("상수 커브"))
 		{
+			// 포인트 배열 헤더
+			int32 NumPoints = MinCurve.Points.Num();
+
+			ImGui::Text("포인트");
 			ImGui::SameLine();
-			ImGui::Text("배열 엘리먼트: %d", NumPoints);
+			ImGui::TextDisabled("배열 엘리먼트: %d", NumPoints);
 			ImGui::SameLine();
 			if (ImGui::SmallButton("+"))
 			{
@@ -3033,8 +3036,7 @@ bool UPropertyRenderer::RenderInterpCurveVectorUniform(const char* Label, FInter
 
 				if (ImGui::TreeNode(NodeLabel))
 				{
-					ImGui::SameLine();
-					ImGui::Text("멤버: 5");
+					ImGui::TextDisabled("멤버: 5");
 
 					// In 값 (두 커브 동기화)
 					if (ImGui::DragFloat("In 값", &MinPoint.InVal, 0.01f))
