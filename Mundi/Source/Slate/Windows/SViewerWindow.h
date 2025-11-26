@@ -22,6 +22,7 @@ public:
 	void RequestFocus() { bRequestFocus = true; }
 	void OnRenderViewport();
 	virtual void PreRenderViewportUpdate() {}
+	virtual void OnSave() {}
 
 	// Accessors (active tab)
 	FViewport* GetViewport() const { return ActiveState ? ActiveState->Viewport : nullptr; }

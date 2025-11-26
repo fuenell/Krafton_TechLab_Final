@@ -505,54 +505,58 @@ void SViewerWindow::RenderViewerButton(EViewerType ViewerType, EViewerType Curre
 
 void SViewerWindow::RenderTabsAndToolbar(EViewerType CurrentViewerType)
 {
-    if (!ImGui::BeginTabBar("ViewerTabs",
-        ImGuiTabBarFlags_AutoSelectNewTabs | ImGuiTabBarFlags_Reorderable))
-        return;
-
     // ============================================
     // 1. Render Tab Bar
     // ============================================
-    for (int i = 0; i < Tabs.Num(); ++i)
+    if (ImGui::BeginTabBar("ViewerTabs", ImGuiTabBarFlags_AutoSelectNewTabs | ImGuiTabBarFlags_Reorderable))
     {
-        ViewerState* State = Tabs[i];
-        bool open = true;
-        if (ImGui::BeginTabItem(State->Name.ToString().c_str(), &open))
-        {
-            ActiveTabIndex = i;
-            ActiveState = State;
-            ImGui::EndTabItem();
-        }
-        if (!open)
-        {
-            CloseTab(i);
-            ImGui::EndTabBar();
-            return;
-        }
-    }
-
-    if (ImGui::TabItemButton("+", ImGuiTabItemFlags_Trailing))
-    {
-        int maxViewerNum = 0;
         for (int i = 0; i < Tabs.Num(); ++i)
         {
-            const FString& tabName = Tabs[i]->Name.ToString();
-            const char* prefix = "Viewer ";
-            if (strncmp(tabName.c_str(), prefix, strlen(prefix)) == 0)
+            ViewerState* State = Tabs[i];
+            bool open = true;
+
+            // Add '*' to tab name if dirty
+            char tabName[256];
+            sprintf_s(tabName, "%s%s", State->Name.ToString().c_str(), State->bIsDirty ? "*" : "");
+
+            if (ImGui::BeginTabItem(tabName, &open))
             {
-                const char* numberPart = tabName.c_str() + strlen(prefix);
-                int num = atoi(numberPart);
-                if (num > maxViewerNum)
-                {
-                    maxViewerNum = num;
-                }
+                ActiveTabIndex = i;
+                ActiveState = State;
+                ImGui::EndTabItem();
+            }
+            if (!open)
+            {
+                CloseTab(i);
+                ImGui::EndTabBar();
+                return;
             }
         }
 
-        char label[32];
-        sprintf_s(label, "Viewer %d", maxViewerNum + 1);
-        OpenNewTab(label);
+        if (ImGui::TabItemButton("+", ImGuiTabItemFlags_Trailing))
+        {
+            int maxViewerNum = 0;
+            for (int i = 0; i < Tabs.Num(); ++i)
+            {
+                const FString& tabName = Tabs[i]->Name.ToString();
+                const char* prefix = "Viewer ";
+                if (strncmp(tabName.c_str(), prefix, strlen(prefix)) == 0)
+                {
+                    const char* numberPart = tabName.c_str() + strlen(prefix);
+                    int num = atoi(numberPart);
+                    if (num > maxViewerNum)
+                    {
+                        maxViewerNum = num;
+                    }
+                }
+            }
+
+            char label[32];
+            sprintf_s(label, "Viewer %d", maxViewerNum + 1);
+            OpenNewTab(label);
+        }
+        ImGui::EndTabBar();
     }
-    ImGui::EndTabBar();
 
     // ============================================
     // 2. Render ToolBar Below Tabs
@@ -567,16 +571,32 @@ void SViewerWindow::RenderTabsAndToolbar(EViewerType CurrentViewerType)
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (availableHeight - BtnHeight) * 0.5f);
 
     // Save Button (Left-aligned)
+    const bool bIsSaveButtonDisabled = (ActiveState && !ActiveState->bIsDirty);
+    if (bIsSaveButtonDisabled)
+    {
+        ImGui::BeginDisabled();
+    }
+
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-    if (ImGui::ImageButton("##Save",
+    if (ImGui::ImageButton("##SaveBtn",
         (void*)IconSave->GetShaderResourceView(), IconSizeVec))
     {
-        // TODO: Add asset saving logic here
         if (ActiveState)
         {
             UE_LOG("Save button clicked for asset: %s", ActiveState->LoadedMeshPath.c_str());
+            // TODO: This should call a virtual OnSave() function
+            // Actual saving will happen in SAnimationViewerWindow::OnSave()
+            // For now, just resetting the dirty flag
+            ActiveState->bIsDirty = false;
         }
     }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Save Changes");
+    
+    if (bIsSaveButtonDisabled)
+    {
+        ImGui::EndDisabled();
+    }
+    
     ImGui::PopStyleColor();
     ImGui::SameLine();
 

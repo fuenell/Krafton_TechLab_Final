@@ -457,6 +457,16 @@ void SAnimationViewerWindow::PreRenderViewportUpdate()
     }
 }
 
+void SAnimationViewerWindow::OnSave()
+{
+    if (ActiveState && ActiveState->bIsDirty)
+    {
+        SyncNotifyTracksToDataModel();
+        ActiveState->bIsDirty = false;
+        UE_LOG("Animation data saved for: %s", ActiveState->LoadedMeshPath.c_str());
+    }
+}
+
 ViewerState* SAnimationViewerWindow::CreateViewerState(const char* Name, UEditorAssetPreviewContext* Context)
 {
     ViewerState* NewState = AnimationViewerBootstrap::CreateViewerState(Name, World, Device);
@@ -1259,7 +1269,7 @@ void SAnimationViewerWindow::RenderLeftTrackList(float width, float RowHeight, f
         {
             int idx = ActiveState->NotifyTracks.size();
             ActiveState->NotifyTracks.push_back(FNotifyTrack("Track " + std::to_string(idx)));
-            SyncNotifyTracksToDataModel();
+            ActiveState->bIsDirty = true;
         }
         ImGui::PopStyleColor();
         ImGui::EndPopup();
@@ -1496,7 +1506,7 @@ void SAnimationViewerWindow::RenderTimelineGridBody(float RowHeight, const TArra
                     if (ImGui::MenuItem("Delete"))
                     {
                         Track.Notifies.erase(Track.Notifies.begin() + i);
-                        SyncNotifyTracksToDataModel();
+                        ActiveState->bIsDirty = true;
                     }
 
                     if (ImGui::MenuItem("Add Duration +0.2s"))
@@ -1518,7 +1528,7 @@ void SAnimationViewerWindow::RenderTimelineGridBody(float RowHeight, const TArra
                 }
                 if (ImGui::IsItemDeactivatedAfterEdit())
                 {
-                    SyncNotifyTracksToDataModel();
+                    ActiveState->bIsDirty = true;
                 }
             }
         }
@@ -1563,7 +1573,7 @@ void SAnimationViewerWindow::RenderTimelineGridBody(float RowHeight, const TArra
                     newNotify.NotifyName = FName("NewNotify_" + std::to_string(notifyCount + 1));
 
                     ActiveState->NotifyTracks[NotifyIndex].Notifies.Add(newNotify);
-                    SyncNotifyTracksToDataModel();
+                    ActiveState->bIsDirty = true;
                 }
                 ImGui::PopStyleColor();
                 ImGui::EndPopup();

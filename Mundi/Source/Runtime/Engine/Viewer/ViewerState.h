@@ -88,6 +88,8 @@ public:
 
     FSelectedNotify SelectedNotify;
 
+    bool bIsDirty = false;
+
     // Additive bone transforms applied on top of animation
     TMap<int32, FTransform> BoneAdditiveTransforms;
 
