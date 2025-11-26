@@ -597,6 +597,10 @@ void UParticleSystemComponent::TickComponent(float DeltaTime)
 {
 	USceneComponent::TickComponent(DeltaTime);
 
+	// DeltaTime 제한 (일시정지 후 복귀 시 파티클 전멸 방지)
+	const float MaxDeltaTime = 1.0f;
+	DeltaTime = FMath::Min(DeltaTime, MaxDeltaTime);
+
 	// 이벤트 클리어 (매 프레임 시작 시)
 	ClearEvents();
 

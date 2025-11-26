@@ -185,6 +185,51 @@ struct FParticleDataContainer
 		Free();
 	}
 
+	// 복사 금지 (메모리 소유권 문제 방지)
+	FParticleDataContainer(const FParticleDataContainer&) = delete;
+	FParticleDataContainer& operator=(const FParticleDataContainer&) = delete;
+
+	// Move 생성자
+	FParticleDataContainer(FParticleDataContainer&& Other) noexcept
+		: MemBlockSize(Other.MemBlockSize)
+		, ParticleDataNumBytes(Other.ParticleDataNumBytes)
+		, ParticleIndicesNumShorts(Other.ParticleIndicesNumShorts)
+		, ParticleData(Other.ParticleData)
+		, ParticleIndices(Other.ParticleIndices)
+	{
+		// 원본의 소유권 해제 (double-free 방지)
+		Other.MemBlockSize = 0;
+		Other.ParticleDataNumBytes = 0;
+		Other.ParticleIndicesNumShorts = 0;
+		Other.ParticleData = nullptr;
+		Other.ParticleIndices = nullptr;
+	}
+
+	// Move 대입 연산자
+	FParticleDataContainer& operator=(FParticleDataContainer&& Other) noexcept
+	{
+		if (this != &Other)
+		{
+			// 기존 메모리 해제
+			Free();
+
+			// 소유권 이전
+			MemBlockSize = Other.MemBlockSize;
+			ParticleDataNumBytes = Other.ParticleDataNumBytes;
+			ParticleIndicesNumShorts = Other.ParticleIndicesNumShorts;
+			ParticleData = Other.ParticleData;
+			ParticleIndices = Other.ParticleIndices;
+
+			// 원본의 소유권 해제
+			Other.MemBlockSize = 0;
+			Other.ParticleDataNumBytes = 0;
+			Other.ParticleIndicesNumShorts = 0;
+			Other.ParticleData = nullptr;
+			Other.ParticleIndices = nullptr;
+		}
+		return *this;
+	}
+
 	// 메모리 할당 (언리얼 엔진 호환)
 	// InParticleDataNumBytes: 파티클 데이터 영역 크기 (바이트) = MaxParticles * ParticleStride
 	// InParticleIndicesNumShorts: 인덱스 배열 개수 (uint16 개수) = MaxParticles
