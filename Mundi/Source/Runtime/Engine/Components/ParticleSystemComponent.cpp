@@ -672,10 +672,28 @@ void UParticleSystemComponent::DispatchEventsToReceivers()
 		return;
 	}
 
+	// this 컴포넌트 파괴 상태 체크 (언리얼 방식)
+	if (IsPendingDestroy())
+	{
+		return;
+	}
+
 	// 각 이미터 인스턴스의 EventReceiver 모듈에 이벤트 전달
 	for (FParticleEmitterInstance* Instance : EmitterInstances)
 	{
+		// 매 반복마다 this 파괴 상태 재확인
+		if (IsPendingDestroy())
+		{
+			return;
+		}
+
 		if (!Instance || !Instance->CurrentLODLevel)
+		{
+			continue;
+		}
+
+		// Instance->Component 파괴 상태 체크
+		if (!Instance->Component || Instance->Component->IsPendingDestroy())
 		{
 			continue;
 		}
@@ -689,30 +707,40 @@ void UParticleSystemComponent::DispatchEventsToReceivers()
 				continue;
 			}
 
-			// 충돌 이벤트 전달
+			// 충돌 이벤트 전달 (EventName 필터링 적용)
 			if (Receiver->EventType == EParticleEventType::Collision || Receiver->EventType == EParticleEventType::Any)
 			{
 				for (const FParticleEventCollideData& Event : CollisionEvents)
 				{
-					Receiver->HandleCollisionEvent(Instance, Event);
+					// EventName 필터링: Receiver의 EventName이 비어있으면 모두 수신
+					if (Receiver->EventName.empty() || Receiver->EventName == Event.EventName)
+					{
+						Receiver->HandleCollisionEvent(Instance, Event);
+					}
 				}
 			}
 
-			// 스폰 이벤트 전달
+			// 스폰 이벤트 전달 (EventName 필터링 적용)
 			if (Receiver->EventType == EParticleEventType::Spawn || Receiver->EventType == EParticleEventType::Any)
 			{
 				for (const FParticleEventData& Event : SpawnEvents)
 				{
-					Receiver->HandleEvent(Instance, Event);
+					if (Receiver->EventName.empty() || Receiver->EventName == Event.EventName)
+					{
+						Receiver->HandleEvent(Instance, Event);
+					}
 				}
 			}
 
-			// 사망 이벤트 전달
+			// 사망 이벤트 전달 (EventName 필터링 적용)
 			if (Receiver->EventType == EParticleEventType::Death || Receiver->EventType == EParticleEventType::Any)
 			{
 				for (const FParticleEventData& Event : DeathEvents)
 				{
-					Receiver->HandleEvent(Instance, Event);
+					if (Receiver->EventName.empty() || Receiver->EventName == Event.EventName)
+					{
+						Receiver->HandleEvent(Instance, Event);
+					}
 				}
 			}
 		}

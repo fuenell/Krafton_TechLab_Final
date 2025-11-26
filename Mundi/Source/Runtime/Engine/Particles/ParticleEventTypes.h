@@ -31,6 +31,7 @@ enum class EParticleCollisionComplete : uint8
 struct FParticleEventData
 {
 	EParticleEventType Type = EParticleEventType::Any;
+	FString EventName;                 // 이벤트 소스 이름 (필터링용)
 	float EmitterTime = 0.0f;          // 이벤트 발생 시 이미터 시간
 	FVector Position = FVector(0.0f, 0.0f, 0.0f);
 	FVector Velocity = FVector(0.0f, 0.0f, 0.0f);

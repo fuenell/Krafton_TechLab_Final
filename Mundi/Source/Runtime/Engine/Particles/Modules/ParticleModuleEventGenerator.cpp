@@ -11,7 +11,7 @@ void FParticleEventGeneratorInfo::Serialize(const bool bInIsLoading, JSON& InOut
 		FJsonSerializer::ReadInt32(InOutHandle, "Type", TypeValue);
 		Type = static_cast<EParticleEventType>(TypeValue);
 		FJsonSerializer::ReadInt32(InOutHandle, "Frequency", Frequency);
-		FJsonSerializer::ReadString(InOutHandle, "CustomName", CustomName);
+		FJsonSerializer::ReadString(InOutHandle, "EventName", EventName);
 		FJsonSerializer::ReadBool(InOutHandle, "bFirstSpawnOnly", bFirstSpawnOnly);
 		FJsonSerializer::ReadBool(InOutHandle, "bNaturalDeathOnly", bNaturalDeathOnly);
 		FJsonSerializer::ReadBool(InOutHandle, "bFirstCollisionOnly", bFirstCollisionOnly);
@@ -20,7 +20,7 @@ void FParticleEventGeneratorInfo::Serialize(const bool bInIsLoading, JSON& InOut
 	{
 		InOutHandle["Type"] = static_cast<int32>(Type);
 		InOutHandle["Frequency"] = Frequency;
-		InOutHandle["CustomName"] = CustomName;
+		InOutHandle["EventName"] = EventName;
 		InOutHandle["bFirstSpawnOnly"] = bFirstSpawnOnly;
 		InOutHandle["bNaturalDeathOnly"] = bNaturalDeathOnly;
 		InOutHandle["bFirstCollisionOnly"] = bFirstCollisionOnly;
@@ -49,6 +49,7 @@ void UParticleModuleEventGenerator::Spawn(FParticleEmitterInstance* Owner, int32
 
 	// 이벤트 데이터 생성
 	FParticleEventData Event = CreateEventData(EParticleEventType::Spawn, *ParticleBase, Owner->EmitterTime);
+	Event.EventName = SpawnEventInfo->EventName;  // 이벤트 이름 설정
 
 	// 이벤트 추가
 	Owner->Component->AddSpawnEvent(Event);
@@ -93,6 +94,7 @@ void UParticleModuleEventGenerator::Update(FModuleUpdateContext& Context)
 			}
 
 			FParticleEventData Event = CreateEventData(EParticleEventType::Death, Particle, Context.Owner.EmitterTime);
+			Event.EventName = DeathEventInfo->EventName;  // 이벤트 이름 설정
 			PSC->AddDeathEvent(Event);
 		}
 

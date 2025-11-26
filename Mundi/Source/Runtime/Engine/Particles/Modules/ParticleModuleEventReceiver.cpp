@@ -80,7 +80,13 @@ void UParticleModuleEventReceiverSpawn::HandleCollisionEvent(FParticleEmitterIns
 
 void UParticleModuleEventReceiverSpawn::SpawnParticlesAtLocation(FParticleEmitterInstance* Owner, const FVector& Location, const FVector& Velocity)
 {
-	if (!Owner)
+	if (!Owner || !Owner->Component)
+	{
+		return;
+	}
+
+	// Component 파괴 상태 체크 (언리얼 방식)
+	if (Owner->Component->IsPendingDestroy())
 	{
 		return;
 	}
@@ -89,7 +95,7 @@ void UParticleModuleEventReceiverSpawn::SpawnParticlesAtLocation(FParticleEmitte
 	float SpawnCountFloat = SpawnCount.GetValue(Owner->EmitterTime, Owner->RandomStream, Owner->Component);
 	int32 ActualSpawnCount = FMath::Max(1, static_cast<int32>(SpawnCountFloat + 0.5f));
 
-	// 파티클 스폰
+	// 파티클 스폰 (스폰 수 제한은 Resize 하드 리밋에서 처리됨)
 	// StartTime = 0 (현재 프레임에서 즉시 스폰)
 	// Increment = 0 (모든 파티클이 같은 시간에 스폰)
 	Owner->SpawnParticles(ActualSpawnCount, 0.0f, 0.0f, Location, Velocity);

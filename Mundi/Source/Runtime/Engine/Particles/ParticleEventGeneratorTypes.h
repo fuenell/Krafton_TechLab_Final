@@ -21,9 +21,9 @@ public:
 	UPROPERTY(EditAnywhere, Category="Event", Tooltip="이벤트 빈도 제한 (0=무제한)")
 	int32 Frequency = 0;
 
-	// 이벤트를 받을 이미터 이름 (빈 문자열이면 전체 브로드캐스트)
-	UPROPERTY(EditAnywhere, Category="Event", Tooltip="이벤트를 받을 이미터 이름")
-	FString CustomName;
+	// 이벤트 이름 (EventReceiver에서 이 이름으로 필터링하여 수신)
+	UPROPERTY(EditAnywhere, Category="Event", Tooltip="이벤트 이름 (EventReceiver에서 이 이름으로 수신)")
+	FString EventName;
 
 	// 스폰 이벤트: 첫 스폰 시에만 발생할지 여부
 	UPROPERTY(EditAnywhere, Category="Spawn", Tooltip="첫 스폰 시에만 이벤트 발생")

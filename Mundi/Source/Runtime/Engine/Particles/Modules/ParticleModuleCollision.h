@@ -50,6 +50,10 @@ public:
 	UPROPERTY(EditAnywhere, Category="Collision", meta=(ToolTip="충돌 시 이벤트를 생성할지 여부"))
 	bool bGenerateCollisionEvents = true;
 
+	// 충돌 이벤트 이름 (EventReceiver에서 필터링용)
+	UPROPERTY(EditAnywhere, Category="Collision", meta=(ToolTip="충돌 이벤트 이름 (빈 문자열이면 모든 Receiver가 수신)"))
+	FString CollisionEventName;
+
 	UParticleModuleCollision()
 	{
 		bSpawnModule = true;   // 스폰 시 페이로드 초기화

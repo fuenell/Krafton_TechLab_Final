@@ -237,16 +237,28 @@ void UParticleModuleCollision::Update(FModuleUpdateContext& Context)
 				// 충돌 이벤트 생성
 				if (bGenerateCollisionEvents && PSC)
 				{
-					FParticleEventCollideData Event;
-					Event.Type = EParticleEventType::Collision;
-					Event.Position = Particle.Location;
-					Event.Velocity = Particle.Velocity;
-					Event.Normal = HitNormal;
-					Event.HitComponent = PrimComp;
-					Event.HitActor = PrimComp->GetOwner();
-					Event.EmitterTime = Context.Owner.EmitterTime;
+					// 컴포넌트 유효성 검사 (언리얼 방식)
+					if (PrimComp && !PrimComp->IsPendingDestroy())
+					{
+						AActor* Owner = PrimComp->GetOwner();
+						// 파괴 예정인 Actor는 null로 처리
+						if (Owner && Owner->IsPendingDestroy())
+						{
+							Owner = nullptr;
+						}
 
-					PSC->AddCollisionEvent(Event);
+						FParticleEventCollideData Event;
+						Event.Type = EParticleEventType::Collision;
+						Event.EventName = CollisionEventName;  // 이벤트 이름 설정
+						Event.Position = Particle.Location;
+						Event.Velocity = Particle.Velocity;
+						Event.Normal = HitNormal;
+						Event.HitComponent = PrimComp;
+						Event.HitActor = Owner;
+						Event.EmitterTime = Context.Owner.EmitterTime;
+
+						PSC->AddCollisionEvent(Event);
+					}
 				}
 
 				// 충돌 위치 보정 (표면에서 약간 띄움)
