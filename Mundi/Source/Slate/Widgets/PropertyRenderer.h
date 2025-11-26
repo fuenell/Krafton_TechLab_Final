@@ -21,6 +21,9 @@ public:
 	// 반환값: 프로퍼티가 변경되었으면 true
 	static bool RenderAllPropertiesWithInheritance(UObject* Object);
 
+	// 리소스 캐시 초기화 (새 에셋 생성 후 목록 갱신용)
+	static void ClearResourcesCache();
+
 private:
 	// 타입별 렌더링 함수들
 	static bool RenderBoolProperty(const FProperty& Prop, void* Instance);
@@ -72,7 +75,6 @@ private:
 	static bool RenderInterpCurveVectorUniform(const char* Label, struct FInterpCurveVector& MinCurve, struct FInterpCurveVector& MaxCurve);
 
 	static void CacheResources();	// 필요할 때 리소스 목록을 멤버 변수에 캐시합니다.
-	static void ClearResourcesCache();	// 렌더링 패스가 끝날 때 캐시를 비웁니다.
 
 private:
 	// 렌더링 중 캐시되는 리소스 목록

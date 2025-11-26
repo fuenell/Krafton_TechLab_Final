@@ -2708,6 +2708,9 @@ void SParticleEditorWindow::SaveParticleSystemAs()
 		// ResourceManager에 등록/갱신 (새 파일이므로 AddOrReplace 사용)
 		UResourceManager::GetInstance().AddOrReplace<UParticleSystem>(SavePathStr, State->EditingTemplate);
 
+		// 파티클 시스템 캐시 갱신 (새 파일이 Template 선택 목록에 반영되도록)
+		UPropertyRenderer::ClearResourcesCache();
+
 		UE_LOG("[SParticleEditorWindow] 파티클 시스템 저장 완료: %s", SavePathStr.c_str());
 	}
 	else
