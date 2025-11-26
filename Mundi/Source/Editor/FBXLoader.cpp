@@ -1177,7 +1177,7 @@ void UFbxLoader::ParseMaterial(FbxSurfaceMaterial* Material, FMaterialInfo& Mate
 	NewMaterial->SetMaterialInfo(MaterialInfo);
 	NewMaterial->SetShader(Default->GetShader());
 	NewMaterial->SetShaderMacros(Default->GetShaderMacros());
-	//NewMaterial->ResolveTextures();  // 텍스처 경로를 실제 텍스처 포인터로 변환
+	//NewMaterial->ResolveTextures();  // 텍스처 경로를 실제 텍스처 포인터로 변환 : 일단 적용 안함
 
 	MaterialInfos.Add(MaterialInfo);
 	UResourceManager::GetInstance().Add<UMaterial>(MaterialInfo.MaterialName, NewMaterial);

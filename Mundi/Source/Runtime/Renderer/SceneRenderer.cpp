@@ -1704,7 +1704,7 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 				Batch.NumInstances,
 				Batch.StartIndex,
 				Batch.BaseVertexIndex,
-				0  // StartInstanceLocation
+				Batch.StartInstanceLocation
 			);
 		}
 		else

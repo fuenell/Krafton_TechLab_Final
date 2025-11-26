@@ -5,6 +5,16 @@
 #include "ResourceManager.h"
 #include "Material.h"
 
+UParticleModuleRequired::~UParticleModuleRequired()
+{
+	// 로드 시 직접 생성한 Material만 정리
+	if (bOwnsMaterial && Material)
+	{
+		DeleteObject(Material);
+		Material = nullptr;
+	}
+}
+
 // 언리얼 엔진 호환: 렌더 스레드용 데이터로 변환
 FParticleRequiredModule UParticleModuleRequired::ToRenderThreadData() const
 {
@@ -29,23 +39,24 @@ void UParticleModuleRequired::Serialize(const bool bInIsLoading, JSON& InOutHand
 
 		if (!ShaderPath.empty())
 		{
-			// Shader 경로로 Material 로드/생성
-			Material = UResourceManager::GetInstance().Load<UMaterial>(ShaderPath);
+			// 각 이미터별로 독립적인 Material 인스턴스 생성
+			// (ResourceManager::Load는 캐싱된 동일 인스턴스를 반환하므로 사용하지 않음)
+			UMaterial* NewMaterial = NewObject<UMaterial>();
+			UShader* Shader = UResourceManager::GetInstance().Load<UShader>(ShaderPath);
+			NewMaterial->SetShader(Shader);
+			Material = NewMaterial;
+			bOwnsMaterial = true;  // 직접 생성했으므로 소멸자에서 정리
 
 			// 텍스처 경로 읽기 및 설정
 			FString TexturePath;
 			FJsonSerializer::ReadString(InOutHandle, "MaterialTexture", TexturePath);
 
-			if (Material && !TexturePath.empty())
+			if (!TexturePath.empty())
 			{
-				UMaterial* MatPtr = Cast<UMaterial>(Material);
-				if (MatPtr)
-				{
-					FMaterialInfo MatInfo;
-					MatInfo.DiffuseTextureFileName = TexturePath;
-					MatPtr->SetMaterialInfo(MatInfo);
-					MatPtr->ResolveTextures();
-				}
+				FMaterialInfo MatInfo;
+				MatInfo.DiffuseTextureFileName = TexturePath;
+				NewMaterial->SetMaterialInfo(MatInfo);
+				NewMaterial->ResolveTextures();
 			}
 		}
 	}

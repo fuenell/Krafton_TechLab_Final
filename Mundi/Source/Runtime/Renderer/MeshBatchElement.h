@@ -68,6 +68,10 @@ struct FMeshBatchElement
 	// 인스턴스 데이터의 스트라이드입니다. (인스턴스 1개의 크기)
 	uint32 InstanceStride = 0;
 
+	// 인스턴스 버퍼에서 읽기 시작할 인스턴스 인덱스입니다.
+	// 여러 이미터가 하나의 인스턴스 버퍼를 공유할 때 각 이미터의 시작 위치를 지정합니다.
+	uint32 StartInstanceLocation = 0;
+
 
 	// --- 4. 오브젝트별 데이터 (Per-Object Data) ---
 	// 드로우 콜마다 고유하게 설정되는 데이터입니다. (정렬 키가 아님)
