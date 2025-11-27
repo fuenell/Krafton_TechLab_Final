@@ -35,10 +35,10 @@ public:
     FVector RelativeLocation{ 0,0,0 };
 
     UPROPERTY(EditAnywhere, Category="Transform")
-    FVector RelativeScale{ 1,1,1 };
+    FVector RelativeRotationEuler{ 0,0,0 };
 
     UPROPERTY(EditAnywhere, Category="Transform")
-    FVector RelativeRotationEuler{ 0,0,0 };
+    FVector RelativeScale{ 1,1,1 };
     // ──────────────────────────────
     // Relative Transform API
     // ──────────────────────────────
