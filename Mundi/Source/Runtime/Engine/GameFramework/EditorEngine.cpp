@@ -5,6 +5,7 @@
 #include "FAudioDevice.h"
 #include "FbxLoader.h"
 #include "PlatformCrashHandler.h"
+#include "GameUI/SGameHUD.h"
 #include <ObjManager.h>
 
 float UEditorEngine::ClientWidth = 1024.0f;
@@ -304,6 +305,12 @@ void UEditorEngine::MainLoop()
             {
                 WorldContexts.pop_back();
                 ObjectFactory::DeleteObject(GWorld);
+            }
+
+            // PIE 종료 시 Game HUD 위젯 정리
+            if (SGameHUD::Get().IsInitialized())
+            {
+                SGameHUD::Get().ClearWidgets();
             }
 
             GWorld = WorldContexts[0].World;
