@@ -957,6 +957,10 @@ void UObject::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 	}
 }
 
+void UObject::OnPropertyChanged(const FProperty& Prop)
+{
+}
+
 void UObject::DuplicateSubObjects()
 {
     UUID = GenerateUUID(); // UUID는 고유값이므로 새로 생성
