@@ -11,6 +11,7 @@
 #include "World.h"
 #include "PrimitiveComponent.h"
 #include "GameObject.h"
+#include "GarbageCollector.h"
 
 	/*BEGIN_PROPERTIES(AActor)
 	ADD_PROPERTY(FName, ObjectName, "[액터]", true, "액터의 이름입니다")
@@ -798,4 +799,18 @@ void AActor::UnregisterComponentTree(USceneComponent* SceneComp)
 		UnregisterComponentTree(Child);
 	}
 	SceneComp->UnregisterComponent();
+}
+
+void AActor::AddReferencedObjects(FGarbageCollector& Collector)
+{
+	Super::AddReferencedObjects(Collector);
+
+	// RootComponent 마킹
+	Collector.MarkObject(RootComponent);
+
+	// 소유한 모든 컴포넌트 마킹
+	for (UActorComponent* Comp : OwnedComponents)
+	{
+		Collector.MarkObject(Comp);
+	}
 }

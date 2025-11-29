@@ -6,6 +6,7 @@
 #include "UEContainer.h"
 #include "Enums.h"
 #include "Object.h"
+#include "UMeshLoader.generated.h"
 
 struct FPosition
 {
@@ -51,13 +52,14 @@ namespace std {
         }
     };
 }
+UCLASS()
 class UMeshLoader : public UObject
 {
 public:
-    DECLARE_CLASS(UMeshLoader, UObject)
+    GENERATED_REFLECTION_BODY()
     static UMeshLoader& GetInstance();
 
-    UMeshLoader(const UMeshLoader&) = delete;
+    //UMeshLoader(const UMeshLoader&) = delete;
     UMeshLoader(UMeshLoader&&) = delete;
 
     UMeshLoader& operator=(const UMeshLoader&) = delete;

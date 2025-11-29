@@ -21,6 +21,6 @@ public:
 
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
-protected:
+	UPROPERTY(EditAnywhere, Category = "Components")
 	UDirectionalLightComponent* LightComponent;
 };

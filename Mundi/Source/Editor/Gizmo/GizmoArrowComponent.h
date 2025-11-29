@@ -1,9 +1,11 @@
 ﻿#pragma once
 #include "StaticMeshComponent.h"
+#include "UGizmoArrowComponent.generated.h"
+UCLASS()
 class UGizmoArrowComponent : public UStaticMeshComponent
 {
 public:
-    DECLARE_CLASS(UGizmoArrowComponent, UStaticMeshComponent)
+    GENERATED_REFLECTION_BODY()
     UGizmoArrowComponent();
     
     void CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View) override;
@@ -40,7 +42,6 @@ public:
 
     // ───── 복사 관련 ────────────────────────────
     void DuplicateSubObjects() override;
-    DECLARE_DUPLICATE(UGizmoArrowComponent)
 protected:
     float ComputeScreenConstantScale(float ViewWidth, float ViewHeight, const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix, float TargetPixels) const;
 

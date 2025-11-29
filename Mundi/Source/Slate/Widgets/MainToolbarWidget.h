@@ -1,13 +1,15 @@
 ﻿#pragma once
 #include "Widgets/Widget.h"
 #include <filesystem>
+#include "UMainToolbarWidget.generated.h"
 
 class UTexture;
 
+UCLASS()
 class UMainToolbarWidget : public UWidget
 {
 public:
-    DECLARE_CLASS(UMainToolbarWidget, UWidget)
+    GENERATED_REFLECTION_BODY()
 
     UMainToolbarWidget();
 

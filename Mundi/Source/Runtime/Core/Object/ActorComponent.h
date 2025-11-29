@@ -90,9 +90,10 @@ public:
     // ───── 직렬화 ────────────────────────────
     void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
-protected:
+    UPROPERTY(EditAnywhere, Category = "ActorComponent")
     AActor* Owner = nullptr;     // 소유 액터
 
+protected:
     // 생성 시 고정 데이터
     bool bIsNative = false;      // 액터의 기본 구성 컴포넌트인지 여부. 활성화되면 보호되어 UI에서 삭제 불가 상태가 됨 
     bool bIsEditable = true;    //UI에서 Edit이 가능한가

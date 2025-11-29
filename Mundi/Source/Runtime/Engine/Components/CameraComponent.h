@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "SceneComponent.h"
+#include "StaticMeshComponent.h"
 #include "UCameraComponent.generated.h"
 
 UCLASS(DisplayName="카메라 컴포넌트", Description="카메라 뷰포트 컴포넌트입니다")
@@ -88,6 +89,8 @@ private:
     bool bSetViewGizmo;
     TArray<FVector> ViewGizmo;
 
-    class UStaticMeshComponent* CameraGizmo = nullptr;
+public:
+    UPROPERTY(EditAnywhere, Category = "Camera")
+    UStaticMeshComponent* CameraGizmo = nullptr;
 };
 

@@ -112,6 +112,10 @@ public:
 	 */
 	void AddRollInput(float DeltaRoll);
 
+	/** 현재 빙의한 Pawn */
+	UPROPERTY(EditAnywhere, Category = "Controller")
+	APawn* PossessedPawn;
+
 protected:
 	// ────────────────────────────────────────────────
 	// 생명주기
@@ -126,13 +130,6 @@ protected:
 
 	void DuplicateSubObjects() override;
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
-
-	// ────────────────────────────────────────────────
-	// 멤버 변수
-	// ────────────────────────────────────────────────
-
-	/** 현재 빙의한 Pawn */
-	APawn* PossessedPawn;
 
 	/** Controller의 회전 (Controller가 보고 있는 방향) */
 	FQuat ControlRotation;

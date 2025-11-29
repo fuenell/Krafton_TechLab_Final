@@ -209,13 +209,12 @@ protected:
 	void DuplicateSubObjects() override;
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
-	// ────────────────────────────────────────────────
-	// 멤버 변수
-	// ────────────────────────────────────────────────
-
+public:
 	/** Owner Character */
+	UPROPERTY(EditAnywhere, Category = "CharacterMovement")
 	ACharacter* CharacterOwner;
 
+protected:
 	/** 이번 프레임 입력 */
 	FVector PendingInputVector;
 

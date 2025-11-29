@@ -145,24 +145,25 @@ protected:
      */
    // void PropagateTransformUpdate();
 
+public:
     //Component 위치 나타내기 위함
+    UPROPERTY(EditAnywhere, Category = "SceneComponent")
     UBillboardComponent* SpriteComponent = nullptr;
 
+    // Hierarchy
+    UPROPERTY(EditAnywhere, Category = "SceneComponent")
+    USceneComponent* AttachParent = nullptr;
+
+protected:
     bool bWantsOnUpdateTransform = false;
 
-
-
     FQuat   RelativeRotation;
-
 
     // UI 편집용 Euler Angle (Degrees)
     // RelativeRotation과 항상 동기화됨
 
     mutable FMatrix CachedWorldMatrix = FMatrix::Identity();
     mutable bool bIsTransformDirty = true;
-    
-    // Hierarchy
-    USceneComponent* AttachParent = nullptr;
     TArray<USceneComponent*> AttachChildren;
 
     // 로컬(부모 기준) 트랜스폼

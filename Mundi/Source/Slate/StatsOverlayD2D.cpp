@@ -16,6 +16,8 @@
 #include "SkinningStats.h"
 #include "SkinnedMeshComponent.h"
 #include "ParticleStats.h"
+#include "GarbageCollector.h"
+#include "ObjectFactory.h"
 
 #pragma comment(lib, "d2d1")
 #pragma comment(lib, "dwrite")
@@ -166,7 +168,7 @@ static void DrawTextBlock(
 
 void UStatsOverlayD2D::Draw()
 {
-	if (!bInitialized || (!bShowFPS && !bShowMemory && !bShowPicking && !bShowDecal && !bShowTileCulling && !bShowLights && !bShowShadow && !bShowSkinning && !bShowParticles) || !SwapChain)
+	if (!bInitialized || (!bShowFPS && !bShowMemory && !bShowPicking && !bShowDecal && !bShowTileCulling && !bShowLights && !bShowShadow && !bShowSkinning && !bShowParticles && !bShowGC) || !SwapChain)
 		return;
 
 	// D2D 리소스 초기화 (최초 1회만 실행)
@@ -540,6 +542,53 @@ void UStatsOverlayD2D::Draw()
 		NextY += particlePanelHeight + Space;
 	}
 
+	if (bShowGC)
+	{
+		FGarbageCollector& GC = FGarbageCollector::Get();
+
+		// GUObjectArray 통계
+		int32 TotalObjects = GUObjectArray.Num();
+		int32 ValidObjects = 0;
+		for (int32 i = 0; i < GUObjectArray.Num(); ++i)
+		{
+			if (GUObjectArray[i] != nullptr)
+				ValidObjects++;
+		}
+		int32 NullSlots = TotalObjects - ValidObjects;
+
+		wchar_t GCBuf[512];
+		swprintf_s(GCBuf,
+			L"[Garbage Collector]\n"
+			L"Status: %s\n"
+			L"Collecting: %s\n"
+			L"\n"
+			L"[Object Stats]\n"
+			L"Total Slots: %d\n"
+			L"Valid Objects: %d\n"
+			L"Null Slots: %d\n"
+			L"\n"
+			L"[Collection Stats]\n"
+			L"Last Collected: %u\n"
+			L"Total Collected: %u",
+			GC.IsEnabled() ? L"Enabled" : L"Disabled",
+			GC.IsCollecting() ? L"Yes" : L"No",
+			TotalObjects,
+			ValidObjects,
+			NullSlots,
+			GC.GetLastCollectedCount(),
+			GC.GetTotalCollectedCount());
+
+		const float gcPanelHeight = 240.0f;
+		D2D1_RECT_F gcRc = D2D1::RectF(Margin, NextY, Margin + PanelWidth, NextY + gcPanelHeight);
+
+		DrawTextBlock(
+			D2dCtx, CachedBrush, TextFormat, GCBuf, gcRc,
+			D2D1::ColorF(0, 0, 0, 0.6f),
+			D2D1::ColorF(D2D1::ColorF::LimeGreen));
+
+		NextY += gcPanelHeight + Space;
+	}
+
 	D2dCtx->EndDraw();
 	D2dCtx->SetTarget(nullptr);
 
@@ -638,4 +687,14 @@ void UStatsOverlayD2D::SetShowParticles(bool b)
 void UStatsOverlayD2D::ToggleParticles()
 {
 	bShowParticles = !bShowParticles;
+}
+
+void UStatsOverlayD2D::SetShowGC(bool b)
+{
+	bShowGC = b;
+}
+
+void UStatsOverlayD2D::ToggleGC()
+{
+	bShowGC = !bShowGC;
 }

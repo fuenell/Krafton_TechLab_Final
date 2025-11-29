@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "Actor.h"
 #include "Enums.h"
+#include "AGizmoActor.generated.h"
 
 class UGizmoArrowComponent;
 class UGizmoScaleComponent;
@@ -12,10 +13,11 @@ class UUIManager;
 class URenderer;
 class CPickingSystem;
 class FViewport;
+UCLASS()
 class AGizmoActor : public AActor
 {
 public:
-    DECLARE_CLASS(AGizmoActor, AActor)
+    GENERATED_REFLECTION_BODY()
     AGizmoActor();
 
     virtual void Tick(float DeltaSeconds) override;
@@ -71,23 +73,32 @@ public:
     // 어차피 gizmo가 게임모드에서 안나오니까 할 필요 없을지도?
     // ───── 복사 관련 ────────────────────────────
     /*void DuplicateSubObjects() override;
-    DECLARE_DUPLICATE(AGizmoActor)*/
+*/
+
+    UPROPERTY(EditAnywhere, Category = "Gizmo")
+    UGizmoArrowComponent* ArrowX;
+    UPROPERTY(EditAnywhere, Category = "Gizmo")
+    UGizmoArrowComponent* ArrowY;
+    UPROPERTY(EditAnywhere, Category = "Gizmo")
+    UGizmoArrowComponent* ArrowZ;
+
+    UPROPERTY(EditAnywhere, Category = "Gizmo")
+    UGizmoScaleComponent* ScaleX;
+    UPROPERTY(EditAnywhere, Category = "Gizmo")
+    UGizmoScaleComponent* ScaleY;
+    UPROPERTY(EditAnywhere, Category = "Gizmo")
+    UGizmoScaleComponent* ScaleZ;
+
+    UPROPERTY(EditAnywhere, Category = "Gizmo")
+    UGizmoRotateComponent* RotateX;
+    UPROPERTY(EditAnywhere, Category = "Gizmo")
+    UGizmoRotateComponent* RotateY;
+    UPROPERTY(EditAnywhere, Category = "Gizmo")
+    UGizmoRotateComponent* RotateZ;
 
 protected:
-
-    UGizmoArrowComponent* ArrowX;
-    UGizmoArrowComponent* ArrowY;
-    UGizmoArrowComponent* ArrowZ;
     TArray<USceneComponent*> GizmoArrowComponents;
-
-    UGizmoScaleComponent* ScaleX;
-    UGizmoScaleComponent* ScaleY;
-    UGizmoScaleComponent* ScaleZ;
     TArray<USceneComponent*> GizmoScaleComponents;
-
-    UGizmoRotateComponent* RotateX;
-    UGizmoRotateComponent* RotateY;
-    UGizmoRotateComponent* RotateZ;
     TArray<USceneComponent*> GizmoRotateComponents;
     bool bRender = false;
     bool bIsHovering = false;

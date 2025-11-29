@@ -9,7 +9,7 @@
 #include "imGui/imgui_impl_win32.h"
 #include "Widgets/TargetActorTransformWidget.h"
 
-IMPLEMENT_CLASS(UUIManager)
+//IMPLEMENT_CLASS(UUIManager)
 
 UUIManager::UUIManager()
 {

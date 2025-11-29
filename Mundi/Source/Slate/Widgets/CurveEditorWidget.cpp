@@ -4,7 +4,7 @@
 #include "ParticleModule.h"
 #include "Distribution.h"
 
-IMPLEMENT_CLASS(SCurveEditorWidget)
+//IMPLEMENT_CLASS(SCurveEditorWidget)
 
 SCurveEditorWidget::SCurveEditorWidget()
 {

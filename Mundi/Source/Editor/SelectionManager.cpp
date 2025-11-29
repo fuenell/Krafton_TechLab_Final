@@ -3,7 +3,6 @@
 #include "Actor.h"
 #include "SceneComponent.h"
 
-IMPLEMENT_CLASS(USelectionManager)
 
 void USelectionManager::SelectActor(AActor* Actor)
 {

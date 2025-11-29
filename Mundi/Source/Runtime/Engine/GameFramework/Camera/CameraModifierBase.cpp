@@ -1,9 +1,10 @@
 ﻿#include "pch.h"
 #include "CameraModifierBase.h"
+#include "SceneView.h"
 
-IMPLEMENT_CLASS(UCameraModifierBase);
-
-UCameraModifierBase::UCameraModifierBase() = default;
+UCameraModifierBase::UCameraModifierBase()
+{
+}
 
 void UCameraModifierBase::ApplyToView(float DeltaTime, FMinimalViewInfo* ViewInfo)
 {

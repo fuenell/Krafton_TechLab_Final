@@ -134,6 +134,10 @@ public:
 	 */
 	UCameraComponent* GetCameraComponentForRendering() const;
 
+	/** 카메라 매니저 (PIE 모드에서만 사용) */
+	UPROPERTY(EditAnywhere, Category = "PlayerController")
+	APlayerCameraManager* PlayerCameraManager;
+
 protected:
 	// ────────────────────────────────────────────────
 	// 생명주기
@@ -167,7 +171,4 @@ protected:
 
 	/** 마우스 감도 */
 	float MouseSensitivity;
-
-	/** 카메라 매니저 (PIE 모드에서만 사용) */
-	APlayerCameraManager* PlayerCameraManager;
 };

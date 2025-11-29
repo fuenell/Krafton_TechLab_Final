@@ -44,8 +44,9 @@ struct FActorTimeState
 
 enum class EWorldType : uint8;
 
-class UWorld final : public UObject
+class UWorld  : public UObject
 {
+    
 public:
     DECLARE_CLASS(UWorld, UObject)
     UWorld();
@@ -60,6 +61,9 @@ public:
 public:
     /** 초기화 */
     void Initialize();
+
+    // ───── 가비지 컬렉션 관련 ────────────────────────────
+    void AddReferencedObjects(FGarbageCollector& Collector) override;
     void InitializeGrid();
     void InitializeGizmo();
 

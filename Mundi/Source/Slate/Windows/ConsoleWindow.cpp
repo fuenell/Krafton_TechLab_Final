@@ -3,7 +3,7 @@
 #include "Widgets/ConsoleWidget.h"
 #include "ObjectFactory.h"
 
-IMPLEMENT_CLASS(UConsoleWindow)
+//IMPLEMENT_CLASS(UConsoleWindow)
 
 UConsoleWindow::UConsoleWindow()
     : UUIWindow()

@@ -3,6 +3,7 @@
 #include "UEContainer.h"
 #include "Vector.h"
 #include "SceneComponent.h"
+#include "USelectionManager.generated.h"
 
 // Forward Declarations
 class AActor;
@@ -12,11 +13,11 @@ class AActor;
  * - 액터 선택 상태를 관리하는 싱글톤 클래스
  * UGameInstanceSubsystem 써야함
  */
+UCLASS()
 class USelectionManager : public UObject
 {
 public:
-    DECLARE_CLASS(USelectionManager, UObject)
-
+    GENERATED_REFLECTION_BODY()
     /** === 선택 관리 === */
     void SelectActor(AActor* Actor);
     void SelectComponent(UActorComponent* Component);
@@ -46,7 +47,7 @@ public:
 protected:
     
     // 복사 금지
-    USelectionManager(const USelectionManager&) = delete;
+   // USelectionManager(const USelectionManager&) = delete;
     USelectionManager& operator=(const USelectionManager&) = delete;
     
     /** === 선택된 액터들 === */

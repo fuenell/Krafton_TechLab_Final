@@ -4,6 +4,7 @@
 #include "Object.h"
 #include "ImGui/imgui.h"
 #include "Factory/UIWindowFactory.h"
+#include "UUIWindow.generated.h"
 
 
 
@@ -74,12 +75,13 @@ struct FUIWindowConfig
  * @param LastWindowSize 마지막 윈도우 크기
  * @param LastWindowPos 마지막 윈도우 위치
  */
+UCLASS()
 class UUIWindow :
 	public UObject
 {
 	friend class UUIManager;
 public:
-	DECLARE_CLASS(UUIWindow, UObject)
+	GENERATED_REFLECTION_BODY()
 	UUIWindow(const FUIWindowConfig& InConfig = FUIWindowConfig());
 	~UUIWindow() override;
 

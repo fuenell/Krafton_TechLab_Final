@@ -3,7 +3,8 @@
 #include "UMeshComponent.generated.h"
 
 class UShader;
-
+class UMaterialInstanceDynamic;
+class UMaterialInterface;
 UCLASS(Abstract)
 class UMeshComponent : public UPrimitiveComponent
 {

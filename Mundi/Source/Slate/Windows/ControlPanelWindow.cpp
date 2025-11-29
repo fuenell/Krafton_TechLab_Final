@@ -4,7 +4,7 @@
 //// UE_LOG 대체 매크로
 //#define UE_LOG(fmt, ...)
 
-IMPLEMENT_CLASS(UControlPanelWindow)
+//IMPLEMENT_CLASS(UControlPanelWindow)
 
 /**
  * @brief Control Panel Constructor

@@ -1,16 +1,18 @@
 ﻿#pragma once
 #include "Object.h"
 #include "UEContainer.h"
+#include "UClipboardManager.generated.h"
 
 // Forward Declarations
 class AActor;
 class UActorComponent;
 class UWorld;
 
+UCLASS()
 class UClipboardManager : public UObject
 {
 public:
-    DECLARE_CLASS(UClipboardManager, UObject)
+    GENERATED_REFLECTION_BODY()
 
     void CopyActor(AActor* Actor);
     void CopyComponent(UActorComponent* Component, AActor* OwnerActor);
@@ -28,7 +30,7 @@ public:
 
 protected:
     // 복사 방지
-    UClipboardManager(const UClipboardManager&) = delete;
+   // UClipboardManager(const UClipboardManager&) = delete;
     UClipboardManager& operator=(const UClipboardManager&) = delete;
 
     /** === 클립보드 데이터 === */

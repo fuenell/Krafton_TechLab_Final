@@ -5,7 +5,7 @@
 
 using namespace std;
 
-IMPLEMENT_CLASS(UUIWindow)
+//IMPLEMENT_CLASS(UUIWindow)
 
 int UUIWindow::IssuedWindowID = 0;
 

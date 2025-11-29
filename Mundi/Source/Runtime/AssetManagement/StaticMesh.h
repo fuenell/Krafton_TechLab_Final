@@ -2,13 +2,15 @@
 #include "ResourceBase.h"
 #include "MeshBVH.h"
 #include <d3d11.h>
+#include "UStaticMesh.generated.h"
 
 class UStaticMeshComponent;
 class FMeshBVH;
+UCLASS()
 class UStaticMesh : public UResourceBase
 {
 public:
-    DECLARE_CLASS(UStaticMesh, UResourceBase)
+    GENERATED_REFLECTION_BODY()
 
     UStaticMesh() = default;
     virtual ~UStaticMesh() override;

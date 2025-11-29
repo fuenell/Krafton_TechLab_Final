@@ -2,11 +2,13 @@
 
 #include "CameraModifierBase.h"
 #include "PostProcessing/PostProcessing.h"
+#include "UCamMod_Gamma.generated.h"
 
+UCLASS()
 class UCamMod_Gamma : public UCameraModifierBase
 {
 public:
-	DECLARE_CLASS(UCamMod_Gamma, UCameraModifierBase)
+	GENERATED_REFLECTION_BODY()
 
 	UCamMod_Gamma() = default;
 	virtual ~UCamMod_Gamma() = default;

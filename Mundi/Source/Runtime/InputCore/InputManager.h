@@ -6,6 +6,7 @@
 #include "Object.h"
 #include "Vector.h"
 #include "ImGui/imgui.h"
+#include "UInputManager.generated.h"
 
 // 마우스 버튼 상수
 enum EMouseButton
@@ -18,10 +19,11 @@ enum EMouseButton
     MaxMouseButtons = 5
 };
 
+UCLASS()
 class UInputManager : public UObject
 {
 public:
-    DECLARE_CLASS(UInputManager, UObject)
+    GENERATED_REFLECTION_BODY()
 
     // 생성자/소멸자 (싱글톤)
     UInputManager();
@@ -29,7 +31,6 @@ protected:
     ~UInputManager() override;
 
     // 복사 방지
-    UInputManager(const UInputManager&) = delete;
     UInputManager& operator=(const UInputManager&) = delete;
 
 public:

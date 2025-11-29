@@ -12,7 +12,7 @@
 using std::max;
 using std::min;
 
-IMPLEMENT_CLASS(UInputInformationWidget)
+//IMPLEMENT_CLASS(UInputInformationWidget)
 
 UInputInformationWidget::UInputInformationWidget()
 	: UWidget("Input Information Widget")

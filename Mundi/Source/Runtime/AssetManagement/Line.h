@@ -1,15 +1,17 @@
 ﻿#pragma once
 #include "Object.h"
 #include "Vector.h"
+#include "ULine.generated.h"
 
 /**
  * ULine - Individual line data structure
  * Represents a single line with start/end points and visual properties
  */
+UCLASS()
 class ULine : public UObject
 {
 public:
-    DECLARE_CLASS(ULine, UObject)
+    GENERATED_REFLECTION_BODY()
     
     ULine() = default;
     ULine(const FVector& InStart, const FVector& InEnd, const FVector4& InColor = FVector4(1,1,1,1))
@@ -47,9 +49,6 @@ public:
 
     // ───── 복사 관련 ────────────────────────────
     void DuplicateSubObjects() override;
-    DECLARE_DUPLICATE(ULine)
-
-
 private:
     // Line geometry
     FVector StartPoint = FVector();

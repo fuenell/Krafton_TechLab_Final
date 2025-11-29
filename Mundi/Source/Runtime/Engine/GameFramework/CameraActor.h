@@ -67,8 +67,10 @@ public:
     // ───── 복사 관련 ────────────────────────────
     void DuplicateSubObjects() override;
 
-private:
+    UPROPERTY(EditAnywhere, Category = "Camera")
     UCameraComponent* CameraComponent = nullptr;
+
+private:
     
     // Camera control parameters
     float MouseSensitivity = 0.1f;  // 기존 World에서 사용하던 값으로 조정

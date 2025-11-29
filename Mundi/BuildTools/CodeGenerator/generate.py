@@ -386,7 +386,7 @@ def find_header_file(source_dir, header_name):
 
 
 def extract_additional_includes(class_info, all_classes, source_dir=None):
-    """UFUNCTION에서 사용되는 타입의 헤더 파일을 자동으로 추출"""
+    """UFUNCTION과 UPROPERTY에서 사용되는 타입의 헤더 파일을 자동으로 추출"""
     # 모든 클래스의 타입명 -> 헤더 파일명 매핑 생성
     type_to_header = {}
     # all_classes가 리스트인 경우 처리
@@ -397,6 +397,18 @@ def extract_additional_includes(class_info, all_classes, source_dir=None):
         type_to_header[cls.name] = header_path.name  # 파일명만 추출
 
     required_includes = set()
+
+    # UPROPERTY 타입 검사
+    for prop in class_info.properties:
+        prop_type = prop.type.replace('*', '').replace('const', '').replace('&', '').strip()
+        if prop_type in type_to_header and prop_type != class_info.name:
+            required_includes.add(type_to_header[prop_type])
+        elif prop_type.startswith('U') or prop_type.startswith('A') or prop_type.startswith('F'):
+            # U, A, F 접두사 제거하여 헤더 파일명 생성
+            header_name = prop_type[1:] + '.h'
+            # 헤더 파일이 실제로 존재하는지 확인
+            if source_dir and find_header_file(source_dir, header_name):
+                required_includes.add(header_name)
 
     # UFUNCTION의 반환 타입과 파라미터 타입 검사
     for func in class_info.functions:

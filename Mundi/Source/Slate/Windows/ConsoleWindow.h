@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "UIWindow.h"
 #include <cstdarg>
+#include "UConsoleWindow.generated.h"
 
 class UConsoleWidget;
 
@@ -8,10 +9,11 @@ class UConsoleWidget;
  * @brief Console Window containing ConsoleWidget
  * Replaces the old ImGuiConsole with new widget system
  */
+UCLASS()
 class UConsoleWindow : public UUIWindow
 {
 public:
-    DECLARE_CLASS(UConsoleWindow, UUIWindow)
+    GENERATED_REFLECTION_BODY()
 
     UConsoleWindow();
     ~UConsoleWindow() override;
@@ -25,6 +27,6 @@ public:
     // Accessors
     UConsoleWidget* GetConsoleWidget() const;
 
-private:
+    UPROPERTY(EditAnywhere, Category = "Console")
     UConsoleWidget* ConsoleWidget;
 };

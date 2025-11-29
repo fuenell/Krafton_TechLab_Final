@@ -13,6 +13,7 @@
 #include "SkeletalMesh.h"
 #include "AnimSequence.h"
 #include "../Engine/Particles/ParticleSystem.h"
+#include "UResourceManager.generated.h"
 // ... 기타 include ...
 
 // --- 전방 선언 ---
@@ -26,10 +27,11 @@ class USound;
 // UResourceManager
 //================================================================================================
 
+UCLASS()
 class UResourceManager : public UObject
 {
 public:
-	DECLARE_CLASS(UResourceManager, UObject)
+	GENERATED_REFLECTION_BODY()
 
 	// --- 싱글톤 및 초기화 ---
 	static UResourceManager& GetInstance();
@@ -106,7 +108,6 @@ public:
 protected:
 	// --- 소멸자 및 복사/대입 방지 ---
 	~UResourceManager() override;
-	UResourceManager(const UResourceManager&) = delete;
 	UResourceManager& operator=(const UResourceManager&) = delete;
 
 	// --- 보호된 멤버 변수 ---

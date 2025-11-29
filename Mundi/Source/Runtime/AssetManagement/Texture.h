@@ -1,11 +1,13 @@
 ﻿#pragma once
 #include "ResourceBase.h"
 #include <d3d11.h>
+#include "UTexture.generated.h"
 
+UCLASS()
 class UTexture : public UResourceBase
 {
 public:
-	DECLARE_CLASS(UTexture, UResourceBase)
+	GENERATED_REFLECTION_BODY()
 
 	UTexture();
 	virtual ~UTexture();

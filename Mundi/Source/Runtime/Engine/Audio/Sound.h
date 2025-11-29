@@ -1,14 +1,16 @@
-#pragma once
+﻿#pragma once
 
 #include "ResourceBase.h"
 #include "Vector.h"
 #include <mmreg.h>
+#include "USound.generated.h"
 
 // Minimal sound asset for PCM WAV playback
+UCLASS()
 class USound : public UResourceBase
 {
 public:
-    DECLARE_CLASS(USound, UResourceBase)
+    GENERATED_REFLECTION_BODY()
 
     USound() = default;
     ~USound() override = default;

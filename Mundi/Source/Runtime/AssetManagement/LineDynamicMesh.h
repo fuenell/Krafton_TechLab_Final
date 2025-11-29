@@ -1,11 +1,13 @@
 ﻿#pragma once
 #include "ResourceBase.h"
 #include "VertexData.h"
+#include "ULineDynamicMesh.generated.h"
 
+UCLASS()
 class ULineDynamicMesh : public UResourceBase
 {
 public:
-    DECLARE_CLASS(ULineDynamicMesh, UResourceBase)
+    GENERATED_REFLECTION_BODY()
 
     ULineDynamicMesh() = default;
     virtual ~ULineDynamicMesh() override;

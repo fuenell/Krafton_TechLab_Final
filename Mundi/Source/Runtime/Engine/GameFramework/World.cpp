@@ -33,6 +33,11 @@
 #include "PlayerCameraManager.h"
 #include "Hash.h"
 #include "ParticleEventManager.h"
+#include "GarbageCollector.h"
+#include "MeshLoader.h"
+#include "FBXLoader.h"
+#include "PipelineStateManager.h"
+#include"RenderManager.h"
 
 IMPLEMENT_CLASS(UWorld)
 
@@ -782,4 +787,48 @@ bool UWorld::TryMarkOverlapPair(const AActor* Actor, const AActor* B)
 
 	FrameOverlapPairs.Add(Key);
 	return true;
+}
+
+void UWorld::AddReferencedObjects(FGarbageCollector& Collector)
+{
+	Super::AddReferencedObjects(Collector);
+
+	// Level이 소유하는 모든 액터 마킹
+	if (Level)
+	{
+		Collector.MarkObject(Level.get());
+		for (AActor* Actor : Level->GetActors())
+		{
+			Collector.MarkObject(Actor);
+		}
+	}
+
+	// 에디터 액터들 마킹
+	for (AActor* EditorActor : EditorActors)
+	{
+		Collector.MarkObject(EditorActor);
+	}
+
+	// 특수 액터들 마킹
+	Collector.MarkObject(MainEditorCameraActor);
+	Collector.MarkObject(GridActor);
+	Collector.MarkObject(GizmoActor);
+	Collector.MarkObject(PlayerCameraManager);
+	Collector.MarkObject(ParticleEventManager);
+
+	// 삭제 대기 액터들도 마킹 (아직 삭제되지 않았으므로)
+	for (AActor* PendingActor : PendingKillActors)
+	{
+		Collector.MarkObject(PendingActor);
+	}
+
+	// 싱글톤 매니저들 마킹
+	Collector.MarkObject(&UResourceManager::GetInstance());
+	Collector.MarkObject(&UInputManager::GetInstance());
+	Collector.MarkObject(&UUIManager::GetInstance());
+	Collector.MarkObject(&USlateManager::GetInstance());
+	Collector.MarkObject(&URenderManager::GetInstance());
+	Collector.MarkObject(&UMeshLoader::GetInstance());
+	Collector.MarkObject(&UFbxLoader::GetInstance());
+	Collector.MarkObject(&UPipelineStateManager::GetInstance());
 }

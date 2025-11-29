@@ -8,7 +8,7 @@
 #define GET_Y_LPARAM(lp) ((int)(short)HIWORD(lp))
 #endif
 
-IMPLEMENT_CLASS(UInputManager)
+//IMPLEMENT_CLASS(UInputManager)
 
 UInputManager::UInputManager()
     : WindowHandle(nullptr)

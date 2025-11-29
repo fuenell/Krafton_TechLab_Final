@@ -21,8 +21,10 @@ public:
 
     USkeletalMeshComponent* GetOwningComponent() const;
     const FSkeleton* GetSkeleton() const;
-    
-private:
+
+    UPROPERTY(EditAnywhere, Category = "Animation")
     USkeletalMeshComponent* OwningComponent = nullptr;
+
+private:
     bool bInitialized = false;
 };

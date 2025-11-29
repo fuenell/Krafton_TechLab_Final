@@ -2,6 +2,7 @@
 #include <cstdarg>
 #include <iostream>
 #include "Object.h"
+#include "UGlobalConsole.generated.h"
 
 class UConsoleWidget;
 
@@ -9,11 +10,12 @@ class UConsoleWidget;
  * @brief Global Console Manager - replaces ImGuiConsole completely
  * Routes all console logging to our new ConsoleWidget
  */
+UCLASS()
 class UGlobalConsole : public UObject
 {
 public:
-    DECLARE_CLASS(UGlobalConsole, UObject)
-
+    GENERATED_REFLECTION_BODY()
+        UGlobalConsole() {};
     static void Initialize();
     static void Shutdown();
     

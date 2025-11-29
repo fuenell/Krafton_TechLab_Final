@@ -1,4 +1,5 @@
 ﻿#include "pch.h"
+#include "GarbageCollector.h"
 
 FString UObject::GetName()
 {
@@ -759,6 +760,202 @@ UObject* UObject::Duplicate() const
 
 	NewObject->PostDuplicate();
     return NewObject;
+}
+
+// ───── 리플렉션 기반 가비지 컬렉션 ────────────────────────────
+
+bool UObject::IsObjectPtrType(EPropertyType Type)
+{
+    switch (Type)
+    {
+        case EPropertyType::ObjectPtr:
+        case EPropertyType::Texture:
+        case EPropertyType::SkeletalMesh:
+        case EPropertyType::StaticMesh:
+        case EPropertyType::Material:
+        case EPropertyType::Sound:
+        case EPropertyType::ParticleSystem:
+            return true;
+        default:
+            return false;
+    }
+}
+
+void UObject::AddReferencedObjects(FGarbageCollector& Collector)
+{
+    // 리플렉션 기반 자동 마킹 (UPROPERTY로 등록된 UObject* 멤버들)
+    AddReferencedObjectsFromReflection(Collector);
+}
+
+void UObject::AddReferencedObjectsFromReflection(FGarbageCollector& Collector)
+{
+    // 리플렉션으로 모든 프로퍼티 순회
+    const TArray<FProperty>& Props = GetClass()->GetAllProperties();
+
+    for (const FProperty& Prop : Props)
+    {
+        MarkPropertyReference(Prop, Collector);
+    }
+}
+
+void UObject::MarkPropertyReference(const FProperty& Prop, FGarbageCollector& Collector)
+{
+    switch (Prop.Type)
+    {
+        // === 단일 UObject* 타입들 ===
+        case EPropertyType::ObjectPtr:
+        case EPropertyType::Texture:
+        case EPropertyType::SkeletalMesh:
+        case EPropertyType::StaticMesh:
+        case EPropertyType::Material:
+        case EPropertyType::Sound:
+        case EPropertyType::ParticleSystem:
+        {
+            UObject** ObjPtr = Prop.GetValuePtr<UObject*>(this);
+            if (ObjPtr && *ObjPtr)
+            {
+                Collector.MarkObject(*ObjPtr);
+            }
+            break;
+        }
+
+        // === TArray<UObject*> ===
+        case EPropertyType::Array:
+        {
+            if (IsObjectPtrType(Prop.InnerType))
+            {
+                MarkArrayReferences(Prop, Collector);
+            }
+            break;
+        }
+
+        default:
+            break;
+    }
+}
+
+void UObject::MarkArrayReferences(const FProperty& Prop, FGarbageCollector& Collector)
+{
+    // TArray의 원시 포인터를 가져와서 UObject* 배열로 처리
+    // 모든 UObject* 파생 타입은 동일한 포인터 크기를 가지므로 안전하게 캐스팅 가능
+
+    switch (Prop.InnerType)
+    {
+        case EPropertyType::ObjectPtr:
+        {
+            TArray<UObject*>* ArrayPtr = Prop.GetValuePtr<TArray<UObject*>>(this);
+            if (ArrayPtr)
+            {
+                for (UObject* Obj : *ArrayPtr)
+                {
+                    if (Obj)
+                    {
+                        Collector.MarkObject(Obj);
+                    }
+                }
+            }
+            break;
+        }
+
+        case EPropertyType::Texture:
+        {
+            TArray<UTexture*>* ArrayPtr = Prop.GetValuePtr<TArray<UTexture*>>(this);
+            if (ArrayPtr)
+            {
+                for (UTexture* Obj : *ArrayPtr)
+                {
+                    if (Obj)
+                    {
+                        Collector.MarkObject(Obj);
+                    }
+                }
+            }
+            break;
+        }
+
+        case EPropertyType::StaticMesh:
+        {
+            TArray<UStaticMesh*>* ArrayPtr = Prop.GetValuePtr<TArray<UStaticMesh*>>(this);
+            if (ArrayPtr)
+            {
+                for (UStaticMesh* Obj : *ArrayPtr)
+                {
+                    if (Obj)
+                    {
+                        Collector.MarkObject(Obj);
+                    }
+                }
+            }
+            break;
+        }
+
+        case EPropertyType::SkeletalMesh:
+        {
+            TArray<USkeletalMesh*>* ArrayPtr = Prop.GetValuePtr<TArray<USkeletalMesh*>>(this);
+            if (ArrayPtr)
+            {
+                for (USkeletalMesh* Obj : *ArrayPtr)
+                {
+                    if (Obj)
+                    {
+                        Collector.MarkObject(Obj);
+                    }
+                }
+            }
+            break;
+        }
+
+        case EPropertyType::Material:
+        {
+            TArray<UMaterial*>* ArrayPtr = Prop.GetValuePtr<TArray<UMaterial*>>(this);
+            if (ArrayPtr)
+            {
+                for (UMaterial* Obj : *ArrayPtr)
+                {
+                    if (Obj)
+                    {
+                        Collector.MarkObject(Obj);
+                    }
+                }
+            }
+            break;
+        }
+
+        case EPropertyType::Sound:
+        {
+            TArray<USound*>* ArrayPtr = Prop.GetValuePtr<TArray<USound*>>(this);
+            if (ArrayPtr)
+            {
+                for (USound* Obj : *ArrayPtr)
+                {
+                    if (Obj)
+                    {
+                        Collector.MarkObject(Obj);
+                    }
+                }
+            }
+            break;
+        }
+
+        case EPropertyType::ParticleSystem:
+        {
+            TArray<UParticleSystem*>* ArrayPtr = Prop.GetValuePtr<TArray<UParticleSystem*>>(this);
+            if (ArrayPtr)
+            {
+                for (UParticleSystem* Obj : *ArrayPtr)
+                {
+                    if (Obj)
+                    {
+                        Collector.MarkObject(Obj);
+                    }
+                }
+            }
+            break;
+        }
+
+        default:
+            break;
+    }
 }
 
 

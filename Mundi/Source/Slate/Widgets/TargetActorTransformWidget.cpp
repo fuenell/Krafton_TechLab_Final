@@ -35,7 +35,7 @@
 
 using namespace std;
 
-IMPLEMENT_CLASS(UTargetActorTransformWidget)
+//IMPLEMENT_CLASS(UTargetActorTransformWidget)
 
 namespace
 {

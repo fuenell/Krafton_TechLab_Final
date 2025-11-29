@@ -1,12 +1,14 @@
 ﻿#pragma once
 #include "ResourceBase.h"
+#include "UDynamicMesh.generated.h"
 
 // Dynamic mesh for efficient batch rendering
 // Uses D3D11_USAGE_DYNAMIC buffers that can be updated each frame without recreation
+UCLASS()
 class UDynamicMesh : public UResourceBase
 {
 public:
-    DECLARE_CLASS(UDynamicMesh, UResourceBase)
+    GENERATED_REFLECTION_BODY()
 
     UDynamicMesh() = default;
     virtual ~UDynamicMesh() override;

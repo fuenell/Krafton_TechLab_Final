@@ -25,6 +25,6 @@ public:
     // Serialize
     void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
-protected:
+    UPROPERTY(EditAnywhere, Category = "Components")
     UDecalComponent* DecalComponent;
 };

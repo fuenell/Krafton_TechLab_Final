@@ -136,6 +136,22 @@ public:
 	UFUNCTION(LuaBind, DisplayName="LookUp")
 	void LookUp(float Value);
 
+	// ────────────────────────────────────────────────
+	// 멤버 변수
+	// ────────────────────────────────────────────────
+
+	/** Character 이동 컴포넌트 */
+	UPROPERTY(EditAnywhere, Category = "Components")
+	UCharacterMovementComponent* CharacterMovement;
+
+	/** 캡슐 컴포넌트 (충돌 및 물리) */
+	UPROPERTY(EditAnywhere, Category = "Components")
+	UCapsuleComponent* CapsuleComponent;
+
+	/** 스켈레탈 메시 컴포넌트 (애니메이션) */
+	UPROPERTY(EditAnywhere, Category = "Components")
+	USkeletalMeshComponent* MeshComponent;
+
 protected:
 	// ────────────────────────────────────────────────
 	// 생명주기
@@ -167,19 +183,6 @@ protected:
 
 	void DuplicateSubObjects() override;
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
-
-	// ────────────────────────────────────────────────
-	// 멤버 변수
-	// ────────────────────────────────────────────────
-
-	/** Character 이동 컴포넌트 */
-	UCharacterMovementComponent* CharacterMovement;
-
-	/** 캡슐 컴포넌트 (충돌 및 물리) */
-	UCapsuleComponent* CapsuleComponent;
-
-	/** 스켈레탈 메시 컴포넌트 (애니메이션) */
-	USkeletalMeshComponent* MeshComponent;
 
 	/** 웅크리기 상태 */
 	bool bIsCrouched;

@@ -1,17 +1,19 @@
 ﻿#pragma once
 #include "GizmoArrowComponent.h"
+#include "UGizmoRotateComponent.generated.h"
+UCLASS()
 class UGizmoRotateComponent :public UGizmoArrowComponent
 {
 public:
+    GENERATED_REFLECTION_BODY()
     UGizmoRotateComponent();
 
 protected:
     ~UGizmoRotateComponent() override;
 
 public:
-    DECLARE_CLASS(UGizmoRotateComponent, UGizmoArrowComponent)
+    
 
     void DuplicateSubObjects() override;
-    DECLARE_DUPLICATE(UGizmoRotateComponent)
 };
 

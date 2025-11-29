@@ -1,11 +1,13 @@
 ﻿#pragma once
 #include "Actor.h"
 #include "LineComponent.h"
+#include "AGridActor.generated.h"
 
+UCLASS()
 class AGridActor : public AActor
 {
 public:
-    DECLARE_CLASS(AGridActor, AActor);
+    GENERATED_REFLECTION_BODY();
     AGridActor();
     void Initialize();
 
@@ -27,7 +29,6 @@ public:
 
     // ───── 복사 관련 ────────────────────────────
     void DuplicateSubObjects() override;
-    DECLARE_DUPLICATE(AGridActor)
 private:
     void RegenerateGrid();
     

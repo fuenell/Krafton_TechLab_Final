@@ -1,7 +1,6 @@
 ﻿#include "pch.h"
 #include "GizmoRotateComponent.h"
 
-IMPLEMENT_CLASS(UGizmoRotateComponent)
 
 UGizmoRotateComponent::UGizmoRotateComponent()
 {

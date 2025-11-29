@@ -1,15 +1,18 @@
-#pragma once
+﻿#pragma once
 
 #include "SceneComponent.h"
 #include "SkeletalMeshComponent.h"
+#include "UBoneAnchorComponent.generated.h"
 
 // A single anchor component that represents the transform of a selected bone.
 // The viewer selects this component so the editor gizmo latches onto it.
+UCLASS()
 class UBoneAnchorComponent : public USceneComponent
 {
 public:
-    DECLARE_CLASS(UBoneAnchorComponent, USceneComponent)
-
+    GENERATED_REFLECTION_BODY()
+        UBoneAnchorComponent() {};
+    ~UBoneAnchorComponent() override {};
     void SetTarget(USkeletalMeshComponent* InTarget, int32 InBoneIndex);
     void SetBoneIndex(int32 InBoneIndex) { BoneIndex = InBoneIndex; }
     int32 GetBoneIndex() const { return BoneIndex; }

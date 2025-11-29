@@ -1,8 +1,7 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "BoneAnchorComponent.h"
 #include "SelectionManager.h"
 
-IMPLEMENT_CLASS(UBoneAnchorComponent)
 
 void UBoneAnchorComponent::SetTarget(USkeletalMeshComponent* InTarget, int32 InBoneIndex)
 {

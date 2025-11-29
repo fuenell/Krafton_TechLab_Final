@@ -1,12 +1,13 @@
 ﻿#pragma once
-
+#include"UCameraModifierBase.generated.h"
 struct FPostProcessModifier;
 
 class FMinimalViewInfo;
+UCLASS()
 class UCameraModifierBase : public UObject
 {
 public:
-    DECLARE_CLASS(UCameraModifierBase, UObject)
+    GENERATED_REFLECTION_BODY()
     
 public:
     UCameraModifierBase();

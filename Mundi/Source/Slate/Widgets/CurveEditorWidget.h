@@ -1,5 +1,6 @@
-#pragma once
+﻿#pragma once
 #include "Widget.h"
+#include "SCurveEditorWidget.generated.h"
 
 class UParticleModule;
 struct FDistributionFloat;
@@ -82,10 +83,11 @@ struct FCurveEditorState
 };
 
 // 커브 에디터 위젯
+UCLASS()
 class SCurveEditorWidget : public UWidget
 {
 public:
-	DECLARE_CLASS(SCurveEditorWidget, UWidget)
+	GENERATED_REFLECTION_BODY()
 
 	SCurveEditorWidget();
 	virtual ~SCurveEditorWidget() = default;

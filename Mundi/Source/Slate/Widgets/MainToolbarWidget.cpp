@@ -12,7 +12,7 @@
 #include <commdlg.h>
 #include <random>
 
-IMPLEMENT_CLASS(UMainToolbarWidget)
+//IMPLEMENT_CLASS(UMainToolbarWidget)
 
 UMainToolbarWidget::UMainToolbarWidget()
     : UWidget("Main Toolbar")

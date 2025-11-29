@@ -74,6 +74,10 @@ private:
     float UVScrollTime = 0.0f;
     FVector2D UVScrollSpeed = FVector2D(0.5f, 0.5f);
 
+    // GC 주기적 호출
+    float TimeSinceLastGC = 0.0f;
+    float GCInterval = 3.0f;  // 3초마다 GC 실행
+
     // 클라이언트 사이즈
     static float ClientWidth;
     static float ClientHeight;

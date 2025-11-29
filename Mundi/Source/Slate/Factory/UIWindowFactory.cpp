@@ -9,7 +9,7 @@
 #include "Windows/ContentBrowserWindow.h"
 #include "GlobalConsole.h"
 
-IMPLEMENT_CLASS(UUIWindowFactory)
+UUIWindowFactory::UUIWindowFactory() = default;
 
 UConsoleWindow* UUIWindowFactory::CreateConsoleWindow(EUIDockDirection InDockDirection)
 {

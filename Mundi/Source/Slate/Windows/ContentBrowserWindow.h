@@ -4,6 +4,7 @@
 #include "UIWindow.h"
 #include <filesystem>
 #include <vector>
+#include "UContentBrowserWindow.generated.h"
 
 // Forward declarations
 class FThumbnailManager;
@@ -32,10 +33,11 @@ struct FFileEntry
  * - 드래그 앤 드롭으로 뷰포트에 에셋 배치
  * - 더블클릭으로 에셋 뷰어 열기
  */
+UCLASS()
 class UContentBrowserWindow : public UUIWindow
 {
 public:
-	DECLARE_CLASS(UContentBrowserWindow, UUIWindow)
+	GENERATED_REFLECTION_BODY()
 
 	UContentBrowserWindow();
 	~UContentBrowserWindow() override;

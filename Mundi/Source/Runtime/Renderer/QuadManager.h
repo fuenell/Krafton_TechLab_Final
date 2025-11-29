@@ -1,10 +1,12 @@
 ﻿#pragma once
 #include "Object.h"
+#include "UQuadManager.generated.h"
 
+UCLASS()
 class UQuadManager : public UObject
 {
 public:
-	DECLARE_CLASS(UQuadManager, UObject)
+	GENERATED_REFLECTION_BODY()
 
 	UQuadManager();
 	~UQuadManager();

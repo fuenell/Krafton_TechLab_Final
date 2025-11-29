@@ -1,12 +1,14 @@
 ﻿#pragma once
 #include "Object.h"
+#include "UEditorAssetPreviewContext.generated.h"
 
 class USkeletalMesh;
 class SWindow;
+UCLASS()
 class UEditorAssetPreviewContext : public UObject
 {
 public:
-	DECLARE_CLASS(UEditorAssetPreviewContext, UObject)
+	GENERATED_REFLECTION_BODY()
 
 	UEditorAssetPreviewContext();
 

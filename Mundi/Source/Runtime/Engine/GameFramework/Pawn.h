@@ -108,6 +108,14 @@ public:
 	 */
 	virtual void AddControllerRollInput(float DeltaRoll);
 
+	/** 이 Pawn을 제어하는 Controller */
+	UPROPERTY(EditAnywhere, Category = "Pawn")
+	AController* Controller;
+
+	/** 입력 바인딩을 관리하는 컴포넌트 */
+	UPROPERTY(EditAnywhere, Category = "Pawn")
+	UInputComponent* InputComponent;
+
 protected:
 	// ────────────────────────────────────────────────
 	// 생명주기
@@ -122,16 +130,6 @@ protected:
 
 	void DuplicateSubObjects() override;
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
-
-	// ────────────────────────────────────────────────
-	// 멤버 변수
-	// ────────────────────────────────────────────────
-
-	/** 이 Pawn을 제어하는 Controller */
-	AController* Controller;
-
-	/** 입력 바인딩을 관리하는 컴포넌트 */
-	UInputComponent* InputComponent;
 
 	/** 이번 프레임에 누적된 이동 입력 */
 	FVector PendingMovementInput;

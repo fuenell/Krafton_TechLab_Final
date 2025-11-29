@@ -6,7 +6,6 @@
 #include "World.h"
 #include "ObjectFactory.h"
 
-IMPLEMENT_CLASS(UClipboardManager)
 
 UClipboardManager::UClipboardManager()
 {

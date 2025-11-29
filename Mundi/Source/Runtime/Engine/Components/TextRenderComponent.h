@@ -29,10 +29,13 @@ public:
 	// ───── 복사 관련 ────────────────────────────
 	void DuplicateSubObjects() override;
 
+	UPROPERTY(EditAnywhere, Category = "Text")
+	UMaterialInterface* Material;
+	UPROPERTY(EditAnywhere, Category = "Text")
+	UQuad* TextQuad = nullptr;
+
 private:
 	FString Text;
 	static TMap<char, FBillboardVertexInfo> CharInfoMap; // shared per-process, built once
 	FString TextureFilePath;
-	UMaterialInterface* Material;
-	UQuad* TextQuad = nullptr;
 };

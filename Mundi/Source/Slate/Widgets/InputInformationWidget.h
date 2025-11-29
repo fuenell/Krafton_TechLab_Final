@@ -3,12 +3,14 @@
 #include "Vector.h"
 #include "Enums.h"
 #include "InputManager.h"
+#include "UInputInformationWidget.generated.h"
 
+UCLASS()
 class UInputInformationWidget :
 	public UWidget
 {
 public:
-	DECLARE_CLASS(UInputInformationWidget, UWidget)
+	GENERATED_REFLECTION_BODY()
 
 	void Initialize() override;
 	void Update() override;

@@ -12,6 +12,7 @@
 #include "World.h"
 #include "JsonSerializer.h"
 #include "SceneComponent.h"
+#include "GarbageCollector.h"
 
 static inline FString RemoveObjExtension(const FString& FileName)
 {
@@ -181,5 +182,16 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
             ActorListJson[std::to_string(Actor->UUID)] = ActorJson;
         }
         InOutHandle["Actors"] = ActorListJson;
+    }
+}
+
+void ULevel::AddReferencedObjects(FGarbageCollector& Collector)
+{
+    Super::AddReferencedObjects(Collector);
+
+    // 레벨이 소유하는 모든 액터 마킹
+    for (AActor* Actor : Actors)
+    {
+        Collector.MarkObject(Actor);
     }
 }

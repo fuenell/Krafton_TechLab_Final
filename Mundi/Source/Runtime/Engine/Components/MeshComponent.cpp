@@ -3,6 +3,7 @@
 #include "LuaBindHelpers.h"
 #include "ObjManager.h"
 #include "Material.h"
+#include "MaterialInstanceDynamic.h"
 #include "ResourceManager.h"
 #include "WorldPartitionManager.h"
 

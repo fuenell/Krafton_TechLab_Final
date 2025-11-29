@@ -13,8 +13,6 @@
 #include <filesystem>
 #include <functional>
 
-IMPLEMENT_CLASS(UFbxLoader)
-
 // 노드가 스켈레톤 속성을 포함하는지 확인
 static bool NodeContainsSkeleton(FbxNode* InNode)
 {

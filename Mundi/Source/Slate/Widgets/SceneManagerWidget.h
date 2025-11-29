@@ -2,6 +2,7 @@
 #include "Widget.h"
 #include "Vector.h"
 #include "UEContainer.h"
+#include "USceneManagerWidget.generated.h"
 
 class UUIManager;
 class UWorld;
@@ -16,10 +17,11 @@ class UTexture;
  * - Supports selection, visibility toggle, hierarchy management
  * - Syncs with 3D viewport selection
  */
+UCLASS()
 class USceneManagerWidget : public UWidget
 {
 public:
-    DECLARE_CLASS(USceneManagerWidget, UWidget)
+    GENERATED_REFLECTION_BODY()
     
     void Initialize() override;
     void Update() override;

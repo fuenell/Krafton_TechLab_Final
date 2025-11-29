@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Object.h"
+#include "URenderManager.generated.h"
 
 class UWorld;
 class URenderer;
@@ -10,10 +11,11 @@ class FViewportClient;
 struct FCandidateDrawable;
 
 // High-level scene rendering orchestrator extracted from UWorld
+UCLASS()
 class URenderManager : public UObject
 {
 public:
-	DECLARE_CLASS(URenderManager, UObject)
+	GENERATED_REFLECTION_BODY()
 
 	URenderManager();
 

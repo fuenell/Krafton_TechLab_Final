@@ -13,6 +13,7 @@ using JSON = json::JSON;
 // 전방 선언/외부 심볼 (네 프로젝트 환경 유지)
 class UObject;
 class UWorld;
+class FGarbageCollector;
 // ── UClass: 간단한 타입 디스크립터 ─────────────────────────────
 struct UClass
 {
@@ -331,9 +332,42 @@ public:
     virtual UObject* Duplicate() const; // 자기 자신 깊은 복사(+모든 멤버들 얕은 복사) -> DuplicateSubObjects 호출
     virtual void PostDuplicate() {};
 
+    // ───── 가비지 컬렉션 관련 ────────────────────────────
+    /**
+     * 이 객체가 참조하는 다른 UObject들을 GC에 알려줍니다.
+     * 리플렉션 시스템을 통해 UPROPERTY로 등록된 UObject* 멤버들을 자동으로 마킹합니다.
+     * UPROPERTY로 등록되지 않은 멤버는 파생 클래스에서 오버라이드하여 수동으로 등록해야 합니다.
+     *
+     * @param Collector - 참조 객체를 등록할 가비지 컬렉터
+     */
+    virtual void AddReferencedObjects(FGarbageCollector& Collector);
+
+protected:
+    // 리플렉션 기반 자동 GC 마킹 (UPROPERTY로 등록된 UObject* 멤버들)
+    void AddReferencedObjectsFromReflection(FGarbageCollector& Collector);
+
+    // UObject 포인터 타입인지 확인
+    static bool IsObjectPtrType(EPropertyType Type);
+
+    // 단일 프로퍼티의 참조 마킹
+    void MarkPropertyReference(const FProperty& Prop, FGarbageCollector& Collector);
+
+    // TArray 프로퍼티의 참조 마킹
+    void MarkArrayReferences(const FProperty& Prop, FGarbageCollector& Collector);
+
+public:
+
+    // GC 마킹 상태 확인/설정
+    bool IsMarkedByGC() const { return bMarkedByGC; }
+    void MarkByGC() { bMarkedByGC = true; }
+    void UnmarkByGC() { bMarkedByGC = false; }
+
 private:
     // 전역 UUID 카운터(초기값 1)
     inline static uint32 GUUIDCounter = 1;
+
+    // GC 마킹 플래그 (Mark-and-Sweep에서 사용)
+    bool bMarkedByGC = false;
 };
 
 // ── Cast 헬퍼 (UE Cast<> 와 동일 UX) ────────────────────────────

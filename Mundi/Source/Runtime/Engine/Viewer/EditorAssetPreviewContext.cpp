@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
 #include "EditorAssetPreviewContext.h"
 
-IMPLEMENT_CLASS(UEditorAssetPreviewContext, UObject)
+//IMPLEMENT_CLASS(UEditorAssetPreviewContext, UObject)
 
 UEditorAssetPreviewContext::UEditorAssetPreviewContext()
 {

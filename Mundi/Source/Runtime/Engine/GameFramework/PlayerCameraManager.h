@@ -78,9 +78,11 @@ protected:
 	}
 	void BuildForFrame(float DeltaTime);
 
-private:
+public:
+	UPROPERTY(EditAnywhere, Category = "Camera")
 	UCameraComponent* CurrentViewCamera{};
 
+private:
 	FMinimalViewInfo CurrentViewInfo{};
 	FMinimalViewInfo BlendStartViewInfo{};
 

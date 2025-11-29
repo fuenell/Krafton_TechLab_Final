@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "CameraModifierBase.h"
+#include "UCamMod_Shake.generated.h"
 
 enum class EShakeNoise : uint8
 {
@@ -8,10 +9,11 @@ enum class EShakeNoise : uint8
 	Mixed,   // Sine/Perlin 가중 혼합
 };
 
+UCLASS()
 class UCamMod_Shake : public UCameraModifierBase
 {
 public:
-	DECLARE_CLASS(UCamMod_Shake, UCameraModifierBase)
+	GENERATED_REFLECTION_BODY()
 
 	UCamMod_Shake();
 	virtual ~UCamMod_Shake() = default;

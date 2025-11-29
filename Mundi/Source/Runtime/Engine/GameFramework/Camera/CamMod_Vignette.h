@@ -1,12 +1,14 @@
 ﻿#pragma once
 #include "CameraModifierBase.h"
 #include "PostProcessing/PostProcessing.h"
+#include "UCamMod_Vignette.generated.h"
 
+UCLASS()
 class UCamMod_Vignette : public UCameraModifierBase
 {
 
 public:
-    DECLARE_CLASS(UCamMod_Vignette, UCameraModifierBase)
+    GENERATED_REFLECTION_BODY()
 
     UCamMod_Vignette() = default;
     virtual ~UCamMod_Vignette() = default;

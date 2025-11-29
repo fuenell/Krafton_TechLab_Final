@@ -2,13 +2,15 @@
 #include "PrimitiveComponent.h"
 #include "Line.h"
 #include "UEContainer.h"
+#include "ULineComponent.generated.h"
 
 class URenderer;
 
+UCLASS()
 class ULineComponent : public UPrimitiveComponent
 {
 public:
-    DECLARE_CLASS(ULineComponent, UPrimitiveComponent)
+    GENERATED_REFLECTION_BODY()
     
     ULineComponent();
     virtual ~ULineComponent() override;
@@ -38,8 +40,6 @@ public:
 
     // ───── 복사 관련 ────────────────────────────
     void DuplicateSubObjects() override;
-    DECLARE_DUPLICATE(ULineComponent)
-
 private:
     TArray<ULine*> Lines;
     bool bLinesVisible = true;

@@ -2,15 +2,17 @@
 #include "Widget.h"
 #include "Vector.h"
 #include "ImGui/imgui.h"
+#include "UConsoleWidget.generated.h"
 
 /**
  * @brief Console Widget for displaying log messages and executing commands
  * Based on ImGuiConsole but restructured to fit our Widget system
  */
+UCLASS()
 class UConsoleWidget : public UWidget
 {
 public:
-	DECLARE_CLASS(UConsoleWidget, UWidget)
+	GENERATED_REFLECTION_BODY()
 
 	void Initialize() override;
 	void Update() override;

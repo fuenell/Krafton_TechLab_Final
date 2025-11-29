@@ -6,6 +6,7 @@
 #include "FbxLoader.h"
 #include "PlatformCrashHandler.h"
 #include "GameUI/SGameHUD.h"
+#include "GarbageCollector.h"
 #include <ObjManager.h>
 
 float UEditorEngine::ClientWidth = 1024.0f;
@@ -202,6 +203,9 @@ bool UEditorEngine::Startup(HINSTANCE hInstance)
     WorldContexts.Add(FWorldContext(NewObject<UWorld>(), EWorldType::Editor));
     GWorld = WorldContexts[0].World;
     WorldContexts[0].World->Initialize();
+
+    // GC Root로 World 등록
+    FGarbageCollector::Get().AddRoot(GWorld);
     ///////////////////////////////////
 
     // 슬레이트 매니저 (singleton)
@@ -217,7 +221,7 @@ void UEditorEngine::Tick(float DeltaSeconds)
     //@TODO UV 스크롤 입력 처리 로직 이동
     HandleUVInput(DeltaSeconds);
     
-    //@TODO: Delta Time 계산 + EditorActor Tick은 어떻게 할 것인가 
+    //@TODO: Delta Time 계산 + EditorActor Tick은 어떻게 할 것인가
     for (auto& WorldContext : WorldContexts)
     {
         WorldContext.World->Tick(DeltaSeconds);
@@ -231,7 +235,15 @@ void UEditorEngine::Tick(float DeltaSeconds)
         //    WorldContext.World->Tick(DeltaSeconds, WorldContext.WorldType);
         //}
     }
-    
+
+    // 주기적 GC 실행
+    TimeSinceLastGC += DeltaSeconds;
+    if (TimeSinceLastGC >= GCInterval)
+    {
+        FGarbageCollector::Get().CollectGarbage();
+        TimeSinceLastGC = 0.0f;
+    }
+
     SLATE.Update(DeltaSeconds);
     UI.Update(DeltaSeconds);
     INPUT.Update();

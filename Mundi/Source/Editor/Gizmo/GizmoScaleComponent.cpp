@@ -1,7 +1,6 @@
 ﻿#include "pch.h"
 #include "GizmoScaleComponent.h"
 
-IMPLEMENT_CLASS(UGizmoScaleComponent)
 
 UGizmoScaleComponent::UGizmoScaleComponent()
 {

@@ -123,13 +123,15 @@ protected:
      */
     TArray<FMatrix> TempFinalSkinningMatrices;
 
+public:
+    // Animation state
+    UPROPERTY(EditAnywhere, Category = "Animation")
+    UAnimInstance* AnimInstance = nullptr;
+
 // FOR TEST!!!
 private:
     float TestTime = 0;
     bool bIsInitialized = false;
     FTransform TestBoneBasePose;
-
-    // Animation state
-    UAnimInstance* AnimInstance = nullptr;
     bool bUseAnimation = true;
 };

@@ -16,7 +16,6 @@
 using std::max;
 using std::min;
 
-IMPLEMENT_CLASS(UConsoleWidget)
 
 UConsoleWidget::UConsoleWidget()
 	: UWidget("Console Widget")
@@ -59,6 +58,7 @@ void UConsoleWidget::Initialize()
 	HelpCommandList.Add("STAT LIGHT");
 	HelpCommandList.Add("STAT SHADOW");
 	HelpCommandList.Add("STAT PARTICLES");
+	HelpCommandList.Add("STAT GC");
 	HelpCommandList.Add("MINIDUMP");
 	HelpCommandList.Add("CAUSECRASH");
 	HelpCommandList.Add("CRASHIN <seconds>");
@@ -368,6 +368,7 @@ void UConsoleWidget::ExecCommand(const char* command_line)
 		AddLog("- STAT LIGHT");
 		AddLog("- STAT SHADOW");
 		AddLog("- STAT PARTICLES");
+		AddLog("- STAT GC");
 		AddLog("- STAT ALL");
 		AddLog("- STAT NONE");
 	}
@@ -406,6 +407,7 @@ void UConsoleWidget::ExecCommand(const char* command_line)
 		UStatsOverlayD2D::Get().SetShowSkinning(true);
 		UStatsOverlayD2D::Get().SetShowShadow(true);
 		UStatsOverlayD2D::Get().SetShowParticles(true);
+		UStatsOverlayD2D::Get().SetShowGC(true);
 		AddLog("STAT: ON");
 	}
 	else if (Stricmp(command_line, "STAT SKINNING") == 0)
@@ -423,6 +425,11 @@ void UConsoleWidget::ExecCommand(const char* command_line)
 		UStatsOverlayD2D::Get().ToggleParticles();
 		AddLog("STAT PARTICLES TOGGLED");
 	}
+	else if (Stricmp(command_line, "STAT GC") == 0)
+	{
+		UStatsOverlayD2D::Get().ToggleGC();
+		AddLog("STAT GC TOGGLED");
+	}
 	else if (Stricmp(command_line, "STAT NONE") == 0)
 	{
 		UStatsOverlayD2D::Get().SetShowFPS(false);
@@ -433,6 +440,7 @@ void UConsoleWidget::ExecCommand(const char* command_line)
 		UStatsOverlayD2D::Get().SetShowSkinning(false);
 		UStatsOverlayD2D::Get().SetShowShadow(false);
 		UStatsOverlayD2D::Get().SetShowParticles(false);
+		UStatsOverlayD2D::Get().SetShowGC(false);
 		AddLog("STAT: OFF");
 	}
 	else if (Strnicmp(command_line, "SKINNING GPU", 12) == 0)

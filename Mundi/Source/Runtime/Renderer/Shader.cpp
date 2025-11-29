@@ -2,7 +2,7 @@
 #include "Shader.h"
 #include "Hash.h"
 
-IMPLEMENT_CLASS(UShader)
+//IMPLEMENT_CLASS(UShader)
 
 // 컴파일 로직을 처리하는 비공개 헬퍼 함수
 static bool CompileShaderInternal(

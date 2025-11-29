@@ -11,7 +11,7 @@
 #include "Frustum.h"
 #include "Gizmo/GizmoActor.h"
 
-IMPLEMENT_CLASS(UWorldPartitionManager)
+//IMPLEMENT_CLASS(UWorldPartitionManager)
 
 UWorldPartitionManager::UWorldPartitionManager()
 {

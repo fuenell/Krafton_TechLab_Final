@@ -7,6 +7,7 @@
 #include <ObjManager.h>
 #include "FAudioDevice.h"
 #include "GameUI/SGameHUD.h"
+#include "GarbageCollector.h"
 #include <sol/sol.hpp>
 
 float UGameEngine::ClientWidth = 1024.0f;
@@ -205,6 +206,9 @@ bool UGameEngine::Startup(HINSTANCE hInstance)
     GWorld = WorldContexts[0].World;
     GWorld->Initialize();
     GWorld->bPie = true;
+
+    // GC Root로 World 등록
+    FGarbageCollector::Get().AddRoot(GWorld);
     ///////////////////////////////////
 
     // 시작 scene(level)을 직접 로드
@@ -237,6 +241,14 @@ void UGameEngine::Tick(float DeltaSeconds)
     for (auto& WorldContext : WorldContexts)
     {
         WorldContext.World->Tick(DeltaSeconds);
+    }
+
+    // 주기적 GC 실행
+    TimeSinceLastGC += DeltaSeconds;
+    if (TimeSinceLastGC >= GCInterval)
+    {
+        FGarbageCollector::Get().CollectGarbage();
+        TimeSinceLastGC = 0.0f;
     }
 
     // Game HUD 입력 처리 (Standalone 모드)

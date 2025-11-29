@@ -3,11 +3,13 @@
 #include "ResourceBase.h"
 #include "Enums.h"
 #include <d3d11.h>
+#include "UQuad.generated.h"
 
+UCLASS()
 class UQuad : public UResourceBase
 {
 public:
-    DECLARE_CLASS(UQuad, UResourceBase)
+    GENERATED_REFLECTION_BODY()
 
     UQuad() = default;
     virtual ~UQuad() override;

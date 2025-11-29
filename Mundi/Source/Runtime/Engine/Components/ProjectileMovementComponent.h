@@ -98,29 +98,20 @@ public:
     void ResetLifetime() { CurrentLifetime = 0.0f; }
     float GetCurrentLifetime() const { return CurrentLifetime; }
 
+    // === 호밍 속성 ===
+    // 호밍 타겟 액터
+    UPROPERTY(EditAnywhere, Category = "Homing")
+    AActor* HomingTargetActor;
+
+    // 호밍 타겟 컴포넌트 (우선순위가 더 높음)
+    UPROPERTY(EditAnywhere, Category = "Homing")
+    USceneComponent* HomingTargetComponent;
+
 protected:
     // 내부 헬퍼 함수
     void LimitVelocity();
     void ComputeHomingAcceleration(float DeltaTime);
     void UpdateRotationFromVelocity();
-
-protected:
-    // [PIE] 값 복사
-
-    // === 물리 속성 ===
-    // 중력 가속도 (cm/s^2), Z-Up 좌표계에서 Z가 음수면 아래로 떨어짐
-
-
-    // 발사 시 초기 속도 (cm/s)
-
-    // 최대 속도 제한 (cm/s), 0이면 제한 없음
-
-    // === 호밍 속성 ===
-    // 호밍 타겟 액터
-    AActor* HomingTargetActor;
-
-    // 호밍 타겟 컴포넌트 (우선순위가 더 높음)
-    USceneComponent* HomingTargetComponent;
 
     // 호밍 가속도 크기 (cm/s^2)
 

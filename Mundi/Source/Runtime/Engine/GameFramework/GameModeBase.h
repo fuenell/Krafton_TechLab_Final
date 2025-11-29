@@ -116,21 +116,21 @@ public:
 	void DuplicateSubObjects() override;
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
-protected:
-	// ────────────────────────────────────────────────
-	// 멤버 변수
-	// ────────────────────────────────────────────────
-
 	// GameState 참조
+	UPROPERTY(EditAnywhere, Category = "GameMode")
 	AGameStateBase* GameState;
 
 	// DefaultPawn, PlayerController 클래스
+	UPROPERTY(EditAnywhere, Category = "GameMode")
 	UClass* DefaultPawnClass;
+	UPROPERTY(EditAnywhere, Category = "GameMode")
 	UClass* PlayerControllerClass;
 
 	// 메인 플레이어 컨트롤러 인스턴스
+	UPROPERTY(EditAnywhere, Category = "GameMode")
 	APlayerController* PlayerController;
 
+protected:
 	// 게임 시작 여부
 	bool bGameStarted;
 

@@ -21,7 +21,7 @@
 #include "ThumbnailManager.h"
 #include "Source/Runtime/Engine/Viewer/EditorAssetPreviewContext.h"
 
-IMPLEMENT_CLASS(USlateManager)
+//IMPLEMENT_CLASS(USlateManager)
 
 USlateManager& USlateManager::GetInstance()
 {
@@ -652,7 +652,7 @@ void USlateManager::ProcessInput()
     ImGuiIO& io = ImGui::GetIO();
     bool bImGuiWantsMouse = io.WantCaptureMouse;
 
-    SWindow* HoveredDetachedWindow = nullptr;
+   SWindow* HoveredDetachedWindow = nullptr;
 
     // 마우스가 올라가 있는 분리된 윈도우 찾기
     // 역순으로 순회 (z-order: 마지막 = 최상단)

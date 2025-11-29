@@ -2,11 +2,13 @@
 #include <d3d11.h>
 #include <filesystem>
 #include "Object.h"
+#include "UResourceBase.generated.h"
 
+UCLASS()
 class UResourceBase : public UObject
 {
 public:
-	DECLARE_CLASS(UResourceBase, UObject)
+	GENERATED_REFLECTION_BODY()
 
 	UResourceBase() = default;
 	virtual ~UResourceBase() {}

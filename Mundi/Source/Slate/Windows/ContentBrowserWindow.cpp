@@ -9,7 +9,7 @@
 #include "Source/Runtime/Engine/Viewer/EditorAssetPreviewContext.h"
 #include <algorithm>
 
-IMPLEMENT_CLASS(UContentBrowserWindow)
+//IMPLEMENT_CLASS(UContentBrowserWindow)
 
 UContentBrowserWindow::UContentBrowserWindow()
 	: SelectedFile(nullptr)

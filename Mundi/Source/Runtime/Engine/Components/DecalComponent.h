@@ -3,6 +3,7 @@
 #include "PrimitiveComponent.h"
 #include "AABB.h"
 #include "Vector.h"
+#include "GizmoArrowComponent.h"
 #include "UDecalComponent.generated.h"
 
 // Forward declarations
@@ -71,12 +72,13 @@ public:
 
 	void OnRegister(UWorld* InWorld) override;
 
-private:
-	//UPROPERTY(EditAnywhere, Category="Decal", Tooltip="데칼 텍스처입니다")
+	UPROPERTY(EditAnywhere, Category = "Decal")
 	UTexture* DecalTexture = nullptr;
 
+	UPROPERTY(EditAnywhere, Category = "Decal")
 	UGizmoArrowComponent* DirectionGizmo = nullptr;
 
+private:
 	bool bIsVisible = true;
 
 

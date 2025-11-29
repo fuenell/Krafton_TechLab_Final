@@ -1,8 +1,6 @@
 ﻿#pragma once
 #include "Property.h"
 #include "Color.h"
-#include "StaticMesh.h"
-#include "Texture.h"
 #include "TSubclassOf.h"
 #include "Distribution.h"
 #include <type_traits>

@@ -7,6 +7,7 @@
 #include "Windows/SSkeletalMeshViewerWindow.h"
 #include "Windows/SAnimationViewerWindow.h"
 #include "Windows/SParticleEditorWindow.h"
+#include "USlateManager.generated.h"
 
 class SSceneIOWindow; // 새로 추가할 UI
 class SDetailsWindow;
@@ -16,10 +17,11 @@ class UContentBrowserWindow;
 class UEditorAssetPreviewContext;
 
 // 중앙 레이아웃/입력 라우팅/뷰포트 관리 매니저 (위젯 아님)
+UCLASS()
 class USlateManager : public UObject
 {
 public:
-    DECLARE_CLASS(USlateManager, UObject)
+    GENERATED_REFLECTION_BODY()
 
     // 싱글톤 접근자
     static USlateManager& GetInstance();
@@ -31,7 +33,7 @@ public:
     USlateManager();
     virtual ~USlateManager() override;
 
-    USlateManager(const USlateManager&) = delete;
+   // USlateManager(const USlateManager&) = delete;
     USlateManager& operator=(const USlateManager&) = delete;
 
     void Initialize(ID3D11Device* Device, UWorld* World, const FRect& InRect);
@@ -84,6 +86,18 @@ public:
     void CloseDetachedWindow(SWindow* WindowToClose);
     void RequestCloseDetachedWindow(SWindow* WindowToClose);
 
+    // 메인 툴바 관련
+    UPROPERTY(EditAnywhere, Category = "MainToolbar")
+    UMainToolbarWidget* MainToolbar;
+
+    // Content Browser (Bottom panel overlay with animation)
+    UPROPERTY(EditAnywhere, Category = "ContentBrowserWindow")
+    UContentBrowserWindow* ContentBrowserWindow = nullptr;
+
+    // 콘솔 오버레이
+    UPROPERTY(EditAnywhere, Category = "Console")
+    UConsoleWindow* ConsoleWindow = nullptr;
+
 private:
     FRect Rect; // 이전엔 SWindow로부터 상속받던 영역 정보
 
@@ -112,12 +126,6 @@ private:
 
     // 현재 모드
     EViewportLayoutMode CurrentMode = EViewportLayoutMode::FourSplit;
-
-    // 메인 툴바 관련
-    UMainToolbarWidget* MainToolbar;
-
-    // 콘솔 오버레이
-    UConsoleWindow* ConsoleWindow = nullptr;
     bool bIsConsoleVisible = false;
     bool bIsConsoleAnimating = false;
     bool bConsoleShouldFocus = false; // 콘솔 열렸을 때 포커싱
@@ -143,8 +151,7 @@ private:
     // 드래그 중인 윈도우 추적 (마우스가 윈도우 밖으로 나가도 입력 전달하기 위해)
     SWindow* DraggingWindow = nullptr;
 
-    // Content Browser (Bottom panel overlay with animation)
-    UContentBrowserWindow* ContentBrowserWindow = nullptr;
+
     bool bIsContentBrowserVisible = false;
     bool bIsContentBrowserAnimating = false;
     float ContentBrowserAnimationProgress = 0.0f; // 0.0 = 숨김, 1.0 = 완전히 표시

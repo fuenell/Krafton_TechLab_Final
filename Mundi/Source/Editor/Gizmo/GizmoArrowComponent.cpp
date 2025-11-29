@@ -3,9 +3,6 @@
 #include "EditorEngine.h"
 #include "MeshBatchElement.h"
 #include "SceneView.h"
-
-IMPLEMENT_CLASS(UGizmoArrowComponent)
-
 UGizmoArrowComponent::UGizmoArrowComponent()
 {
 	SetStaticMesh(GDataDir + "/Gizmo/TranslationHandle.obj");

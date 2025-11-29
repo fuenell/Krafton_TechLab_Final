@@ -3,11 +3,13 @@
 #include "UEContainer.h"
 #include "Actor.h"
 #include <algorithm>
+#include "ULevel.generated.h"
 
+UCLASS()
 class ULevel : public UObject
 {
 public:
-    DECLARE_CLASS(ULevel, UObject)
+    GENERATED_REFLECTION_BODY()
     ULevel() = default;
     ~ULevel() override = default;
 
@@ -23,6 +25,9 @@ public:
     void Clear() { Actors.Empty(); }
 
     void Serialize(const bool bInIsLoading, JSON& InOutHandle);
+
+    // ───── 가비지 컬렉션 관련 ────────────────────────────
+    void AddReferencedObjects(FGarbageCollector& Collector) override;
 private:
     TArray<AActor*> Actors;
 };

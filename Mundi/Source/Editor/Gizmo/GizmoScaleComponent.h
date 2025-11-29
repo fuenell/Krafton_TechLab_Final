@@ -1,18 +1,20 @@
 ﻿#pragma once
 #include "GizmoArrowComponent.h"
+#include "UGizmoScaleComponent.generated.h"
+UCLASS()
 class UGizmoScaleComponent :
     public UGizmoArrowComponent
 {
 public:
+    GENERATED_REFLECTION_BODY()
     UGizmoScaleComponent();
 
 protected:
     ~UGizmoScaleComponent() override;
 
 public:
-    DECLARE_CLASS(UGizmoScaleComponent, UGizmoArrowComponent)
+
 
     void DuplicateSubObjects() override;
-    DECLARE_DUPLICATE(UGizmoScaleComponent)
 };
 

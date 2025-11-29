@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <Windows.h>
 #include "Object.h"
+#include "UImGuiHelper.generated.h"
 
 // Forward declarations
 struct ID3D11Device;
@@ -10,10 +11,11 @@ struct ID3D11DeviceContext;
  * @brief ImGui 초기화/렌더링/해제를 담당하는 Helper 클래스
  * UIManager에서 사용하는 유틸리티 클래스
  */
+UCLASS()
 class UImGuiHelper : public UObject
 {
 public:
-	DECLARE_CLASS(UImGuiHelper, UObject)
+	GENERATED_REFLECTION_BODY()
 
 	UImGuiHelper();
 	~UImGuiHelper() override;

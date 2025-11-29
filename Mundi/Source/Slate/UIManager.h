@@ -2,6 +2,7 @@
 #include <windows.h>
 #include "Object.h"
 #include "Vector.h"
+#include "UUIManager.generated.h"
 
 class UUIWindow;
 class UImGuiHelper;
@@ -25,10 +26,11 @@ class UCameraControlWidget;
  * @param bIsInitialized 초기화 상태
  * @param TotalTime 전체 경과 시간
  */
+UCLASS()
 class UUIManager : public UObject
 {
 public:
-	DECLARE_CLASS(UUIManager, UObject)
+	GENERATED_REFLECTION_BODY()
 	static UUIManager& GetInstance();
 
 	void Initialize();
@@ -82,7 +84,7 @@ public:
 protected:
 	~UUIManager() override;
 
-	UUIManager(const UUIManager&) = delete;
+	
 	UUIManager& operator=(const UUIManager&) = delete;
 
 private:

@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "Object.h"
 #include "Vector.h"
+#include "UWorldPartitionManager.generated.h"
 
 class UPrimitiveComponent;
 class AStaticMeshActor;
@@ -13,10 +14,11 @@ struct FRay;
 struct FAABB;
 struct FFrustum;
 
+UCLASS()
 class UWorldPartitionManager : public UObject
 {
 public:
-	DECLARE_CLASS(UWorldPartitionManager, UObject)
+	GENERATED_REFLECTION_BODY()
 
 	UWorldPartitionManager();
 	~UWorldPartitionManager();
@@ -47,7 +49,7 @@ public:
 private:
 
 	// 싱글톤 
-	UWorldPartitionManager(const UWorldPartitionManager&) = delete;
+	//UWorldPartitionManager(const UWorldPartitionManager&) = delete;
 	UWorldPartitionManager& operator=(const UWorldPartitionManager&) = delete;
 
 	//재시작시 필요 

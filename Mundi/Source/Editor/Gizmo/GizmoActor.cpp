@@ -13,7 +13,6 @@
 #include "Picking.h"
 #include "EditorEngine.h"
 
-IMPLEMENT_CLASS(AGizmoActor)
 
 AGizmoActor::AGizmoActor()
 {

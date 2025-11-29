@@ -1,12 +1,14 @@
 ﻿#pragma once
 #include "Object.h"
 #include "fbxsdk.h"
+#include "UFbxLoader.generated.h"
 
+UCLASS()
 class UFbxLoader : public UObject
 {
 public:
 
-	DECLARE_CLASS(UFbxLoader, UObject)
+	GENERATED_REFLECTION_BODY()
 	static UFbxLoader& GetInstance();
 	UFbxLoader();
 
@@ -35,7 +37,7 @@ public:
 protected:
 	~UFbxLoader() override;
 private:
-	UFbxLoader(const UFbxLoader&) = delete;
+	//UFbxLoader(const UFbxLoader&) = delete;
 	UFbxLoader& operator=(const UFbxLoader&) = delete;
 
 

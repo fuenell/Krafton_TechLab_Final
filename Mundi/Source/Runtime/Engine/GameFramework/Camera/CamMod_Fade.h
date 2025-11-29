@@ -1,11 +1,13 @@
 ﻿#pragma once
 #include "CameraModifierBase.h"
 #include "PostProcessing/PostProcessing.h"
+#include "UCamMod_Fade.generated.h"
 
+UCLASS()
 class UCamMod_Fade : public UCameraModifierBase
 {
 public:
-    DECLARE_CLASS(UCamMod_Fade, UCameraModifierBase)
+    GENERATED_REFLECTION_BODY()
 
     UCamMod_Fade() = default;
     virtual ~UCamMod_Fade() = default;

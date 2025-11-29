@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "ResourceBase.h"
 #include <filesystem>
+#include "UShader.generated.h"
 
 struct FShaderMacro
 {
@@ -37,11 +38,12 @@ struct FShaderVariant
 	}
 };
 
+UCLASS()
 class UShader : public UResourceBase
 {
 public:
-	DECLARE_CLASS(UShader, UResourceBase)
-
+	GENERATED_REFLECTION_BODY()
+	UShader() {};
 	static uint64 GenerateShaderKey(const TArray<FShaderMacro>& InMacros);
 	static FString GenerateMacrosToString(const TArray<FShaderMacro>& InMacros);	// UI 출력 or 디버깅용
 

@@ -26,7 +26,7 @@
 #include "EditorEngine.h"
 #include "DecalComponent.h"
 
-IMPLEMENT_CLASS(URenderManager)
+//IMPLEMENT_CLASS(URenderManager)
 
 URenderManager::URenderManager()
 {

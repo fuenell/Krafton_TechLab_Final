@@ -170,6 +170,9 @@ public:
     // ───── 복사 관련 ────────────────────────────
     void DuplicateSubObjects() override;
     void PostDuplicate() override;
+
+    // ───── 가비지 컬렉션 관련 ────────────────────────────
+    void AddReferencedObjects(FGarbageCollector& Collector) override;
     
 
     // Serialize
@@ -183,8 +186,11 @@ public:
     }
 
 public:
+    UPROPERTY(EditAnywhere, Category = "Actor")
     UWorld* World = nullptr;
+    UPROPERTY(EditAnywhere, Category = "Actor")
     USceneComponent* RootComponent = nullptr;
+    UPROPERTY(EditAnywhere, Category = "Actor")
     UTextRenderComponent* TextComp = nullptr;
 
     UPROPERTY(EditAnywhere, Category="[액터]", Tooltip="액터의 태그를 지정합니다.")

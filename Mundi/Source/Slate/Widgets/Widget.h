@@ -1,14 +1,16 @@
 ﻿#pragma once
 #include "Object.h"
+#include "UWidget.generated.h"
 
 /**
  * @brief UI의 기능 단위인 위젯 클래스의 Interface Class
  * 위젯이라면 필수적인 공통 인터페이스와 기능을 제공
  */
+UCLASS()
 class UWidget : public UObject
 {
 public:
-	DECLARE_CLASS(UWidget, UObject)
+	GENERATED_REFLECTION_BODY()
 
 	// Essential Role
 	// 필요하지 않은 기능이 있을 수 있으나 구현 시 반드시 고려하라는 의미의 순수 가상 함수 처리

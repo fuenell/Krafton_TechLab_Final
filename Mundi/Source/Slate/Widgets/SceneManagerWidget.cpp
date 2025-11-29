@@ -19,7 +19,7 @@
 //// UE_LOG 대체 매크로
 //#define UE_LOG(fmt, ...)
 
-IMPLEMENT_CLASS(USceneManagerWidget)
+//IMPLEMENT_CLASS(USceneManagerWidget)
 
 USceneManagerWidget::USceneManagerWidget()
 	: UWidget("Scene Manager")

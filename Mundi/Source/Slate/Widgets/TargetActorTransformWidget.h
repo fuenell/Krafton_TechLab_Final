@@ -2,6 +2,7 @@
 #include "Widget.h"
 #include "Vector.h"
 #include "Enums.h"
+#include "UTargetActorTransformWidget.generated.h"
 
 class UUIManager;
 class UWorld;
@@ -22,11 +23,12 @@ static const char* kFullPaths[] = {
 	"Editor/SpotLight_64x.png"
 };
 
+UCLASS()
 class UTargetActorTransformWidget
 	: public UWidget
 {
 public:
-	DECLARE_CLASS(UTargetActorTransformWidget, UWidget)
+	GENERATED_REFLECTION_BODY()
 
 	void Initialize() override;
 	void Update() override;
