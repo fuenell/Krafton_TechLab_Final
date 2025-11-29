@@ -2,34 +2,37 @@
 #include "Object.h"
 #include "AggregateGeom.h"
 #include "PhysXConversion.h"
+#include "PhysicalMaterial.h"
 #include "UBodySetup.generated.h"
 
 // 전방 선언
 struct FBodyInstance;
-class UPhysicalMaterial;
 
 /**
  * UBodySetup
  *
- * 물리 바디의 충돌 형태를 정의하는 클래스.
- * StaticMesh나 SkeletalMesh에 연결되어 충돌 Shape들을 저장
+ * 물리 바디의 충돌 형태를 정의하는 기본 클래스.
+ * StaticMesh 등의 단순 충돌 Shape 관리에 사용.
  *
  * Unreal Engine의 UBodySetup과 유사한 역할:
  * - FKAggregateGeom을 통해 복합 충돌 Shape 관리
  * - PhysX Shape 생성 팩토리 기능 제공
- * - 본 이름으로 SkeletalMesh 물리와 연동
+ *
+ * SkeletalMesh용은 USkeletalBodySetup을 사용할 것.
  */
-//UCLASS(DisplayName="바디 셋업", Description="물리 바디의 충돌 형태 정의")
+UCLASS(DisplayName="바디 셋업", Description="물리 바디의 충돌 형태 정의")
 class UBodySetup : public UObject
 {
     GENERATED_REFLECTION_BODY()
 
 public:
-    // --- 기본 설정 ---
+    // --- 본 정보 ---
 
-    // 이 BodySetup이 연결된 본 이름 (SkeletalMesh용)
-    UPROPERTY(EditAnywhere, Category="Physics")
+    // 이 BodySetup이 연결된 본 이름 (스켈레탈 메시용)
+    UPROPERTY(EditAnywhere, Category="Bone")
     FName BoneName = "None";
+
+    // --- 기본 설정 ---
 
     // 충돌 Geometry 컨테이너 (Sphere, Box, Capsule 등)
     FKAggregateGeom AggGeom;

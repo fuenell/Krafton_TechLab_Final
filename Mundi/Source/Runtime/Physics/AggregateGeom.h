@@ -5,7 +5,7 @@
 #include "FKAggregateGeom.generated.h"
 
 /** 충돌 Shape들의 컨테이너 */
-//USTRUCT(DisplayName="Aggregate Geometry", Description="충돌 Shape 컨테이너")
+USTRUCT(DisplayName="Aggregate Geometry", Description="충돌 Shape 컨테이너")
 struct FKAggregateGeom
 {
     GENERATED_REFLECTION_BODY()

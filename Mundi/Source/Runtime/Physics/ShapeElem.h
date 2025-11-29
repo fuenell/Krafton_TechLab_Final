@@ -30,7 +30,7 @@ enum class ECollisionEnabled : uint8
 };
 
 /** 모든 충돌 Shape의 기본 클래스 */
-//USTRUCT(DisplayName="Shape Element", Description="충돌 Shape 기본 클래스")
+USTRUCT(DisplayName="Shape Element", Description="충돌 Shape 기본 클래스")
 struct FKShapeElem
 {
     GENERATED_REFLECTION_BODY()

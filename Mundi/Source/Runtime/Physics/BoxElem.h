@@ -3,7 +3,7 @@
 #include "FKBoxElem.generated.h"
 
 /** 충돌용 Box Shape */
-//USTRUCT(DisplayName="Box Element", Description="충돌용 박스 Shape")
+USTRUCT(DisplayName="Box Element", Description="충돌용 박스 Shape")
 struct FKBoxElem : public FKShapeElem
 {
     GENERATED_REFLECTION_BODY()

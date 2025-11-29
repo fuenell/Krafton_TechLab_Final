@@ -62,6 +62,31 @@ namespace FMath
 	{
 		return A + (B - A) * Alpha;
 	}
+
+	// 시간 기반 보간 (Unreal Engine FInterpTo와 동일)
+	template<typename T>
+	static T FInterpTo(T Current, T Target, float DeltaTime, float InterpSpeed)
+	{
+		// InterpSpeed가 0이하면 즉시 Target으로
+		if (InterpSpeed <= 0.0f)
+		{
+			return Target;
+		}
+
+		// 거리 계산
+		const T Dist = Target - Current;
+
+		// 이미 도달했으면 Target 반환
+		if (Dist * Dist < KINDA_SMALL_NUMBER)
+		{
+			return Target;
+		}
+
+		// DeltaMove 계산 (overshoot 방지를 위해 Clamp)
+		const T DeltaMove = Dist * Clamp(DeltaTime * InterpSpeed, 0.0f, 1.0f);
+
+		return Current + DeltaMove;
+	}
 }
 // 각도를 -180 ~ 180 범위로 정규화 (모듈러 연산)
 inline float NormalizeAngleDeg(float angleDeg)

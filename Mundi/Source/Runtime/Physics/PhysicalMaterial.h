@@ -31,7 +31,7 @@ enum class EFrictionCombineMode : uint8
     Max         // 최대값
 };
 
-//UCLASS(DisplayName="물리 재질", Description="물리 재질 속성 정의")
+UCLASS(DisplayName="물리 재질", Description="물리 재질 속성 정의")
 class UPhysicalMaterial : public UResourceBase
 {
     GENERATED_REFLECTION_BODY()

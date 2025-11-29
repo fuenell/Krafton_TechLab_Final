@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "Object.h"
-#include "BodySetup.h"
+#include "SkeletalBodySetup.h"
 #include "UPhysicsAsset.generated.h"
 
 // 전방 선언
@@ -10,7 +10,7 @@ class USkeletalMesh;
  * UPhysicsAsset
  *
  * SkeletalMesh의 물리 시뮬레이션을 위한 BodySetup 컨테이너.
- * 각 본(Bone)에 대응하는 충돌 Shape와 물리 속성을 정의
+ * 각 본(Bone)에 대응하는 충돌 Shape와 물리 속성을 정의.
  *
  * 주요 용도:
  * - 랙돌(Ragdoll) 물리
@@ -25,9 +25,9 @@ class UPhysicsAsset : public UObject
 public:
     // --- BodySetup 컬렉션 ---
 
-    // 모든 BodySetup 배열 (각 본에 대응)
+    // 모든 SkeletalBodySetup 배열 (각 본에 대응)
     UPROPERTY(EditAnywhere, Category="Physics")
-    TArray<UBodySetup*> SkeletalBodySetups;
+    TArray<USkeletalBodySetup*> SkeletalBodySetups;
 
     // --- 기본 물리 설정 ---
 
@@ -46,13 +46,13 @@ public:
     // --- BodySetup 관리 ---
 
     // 본 이름으로 BodySetup 검색
-    UBodySetup* FindBodySetup(const FName& BoneName) const;
+    USkeletalBodySetup* FindBodySetup(const FName& BoneName) const;
 
     // 본 인덱스로 BodySetup 검색
-    UBodySetup* GetBodySetup(int32 BodyIndex) const;
+    USkeletalBodySetup* GetBodySetup(int32 BodyIndex) const;
 
     // BodySetup 추가
-    int32 AddBodySetup(UBodySetup* InBodySetup);
+    int32 AddBodySetup(USkeletalBodySetup* InBodySetup);
 
     // 본 이름으로 BodySetup 인덱스 검색
     int32 FindBodySetupIndex(const FName& BoneName) const;

@@ -1149,6 +1149,9 @@
     <ClCompile Include="Generated\UPhysicsAsset.generated.cpp">
       <Filter>Generated</Filter>
     </ClCompile>
+    <ClCompile Include="Generated\USkeletalBodySetup.generated.cpp">
+      <Filter>Generated</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Generated\UParticleModuleSizeScaleBySpeed.generated.h">
@@ -2412,6 +2415,9 @@
       <Filter>Generated</Filter>
     </ClInclude>
     <ClInclude Include="Generated\UPhysicsAsset.generated.h">
+      <Filter>Generated</Filter>
+    </ClInclude>
+    <ClInclude Include="Generated\USkeletalBodySetup.generated.h">
       <Filter>Generated</Filter>
     </ClInclude>
   </ItemGroup>

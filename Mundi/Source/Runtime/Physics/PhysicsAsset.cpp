@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "PhysicsAsset.h"
 
 // --- 생성자/소멸자 ---
@@ -16,11 +16,11 @@ UPhysicsAsset::~UPhysicsAsset()
 
 // --- BodySetup 관리 ---
 
-UBodySetup* UPhysicsAsset::FindBodySetup(const FName& BoneName) const
+USkeletalBodySetup* UPhysicsAsset::FindBodySetup(const FName& BoneName) const
 {
     for (int32 i = 0; i < SkeletalBodySetups.Num(); ++i)
     {
-        UBodySetup* Setup = SkeletalBodySetups[i];
+        USkeletalBodySetup* Setup = SkeletalBodySetups[i];
         if (Setup && Setup->BoneName == BoneName)
         {
             return Setup;
@@ -29,7 +29,7 @@ UBodySetup* UPhysicsAsset::FindBodySetup(const FName& BoneName) const
     return nullptr;
 }
 
-UBodySetup* UPhysicsAsset::GetBodySetup(int32 BodyIndex) const
+USkeletalBodySetup* UPhysicsAsset::GetBodySetup(int32 BodyIndex) const
 {
     if (BodyIndex >= 0 && BodyIndex < SkeletalBodySetups.Num())
     {
@@ -38,7 +38,7 @@ UBodySetup* UPhysicsAsset::GetBodySetup(int32 BodyIndex) const
     return nullptr;
 }
 
-int32 UPhysicsAsset::AddBodySetup(UBodySetup* InBodySetup)
+int32 UPhysicsAsset::AddBodySetup(USkeletalBodySetup* InBodySetup)
 {
     if (!InBodySetup) return -1;
 
@@ -58,7 +58,7 @@ int32 UPhysicsAsset::FindBodySetupIndex(const FName& BoneName) const
 {
     for (int32 i = 0; i < SkeletalBodySetups.Num(); ++i)
     {
-        UBodySetup* Setup = SkeletalBodySetups[i];
+        USkeletalBodySetup* Setup = SkeletalBodySetups[i];
         if (Setup && Setup->BoneName == BoneName)
         {
             return i;
@@ -96,7 +96,7 @@ int32 UPhysicsAsset::GetTotalShapeCount() const
     int32 TotalCount = 0;
     for (int32 i = 0; i < SkeletalBodySetups.Num(); ++i)
     {
-        UBodySetup* Setup = SkeletalBodySetups[i];
+        USkeletalBodySetup* Setup = SkeletalBodySetups[i];
         if (Setup)
         {
             TotalCount += Setup->GetShapeCount();

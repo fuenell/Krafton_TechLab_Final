@@ -53,8 +53,7 @@ namespace
 // --- 생성자/소멸자 ---
 
 UBodySetup::UBodySetup()
-    : BoneName("None")
-    , DefaultCollisionEnabled(ECollisionEnabled::QueryAndPhysics)
+    : DefaultCollisionEnabled(ECollisionEnabled::QueryAndPhysics)
     , PhysMaterial(nullptr)
 {
 }

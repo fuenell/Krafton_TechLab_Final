@@ -3,7 +3,7 @@
 #include "FKSphylElem.generated.h"
 
 /** 충돌용 Capsule Shape (Z축이 캡슐 축) */
-//USTRUCT(DisplayName="Sphyl Element", Description="충돌용 캡슐 Shape")
+USTRUCT(DisplayName="Sphyl Element", Description="충돌용 캡슐 Shape")
 struct FKSphylElem : public FKShapeElem
 {
     GENERATED_REFLECTION_BODY()
