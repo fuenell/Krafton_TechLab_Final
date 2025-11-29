@@ -2,8 +2,8 @@
 #include "ConstraintPropertiesWidget.h"
 #include "ImGui/imgui.h"
 #include "Source/Runtime/Engine/Viewer/PhysicsAssetEditorState.h"
-#include "Source/Runtime/Engine/Physics/PhysicsAsset.h"
-#include "Source/Runtime/Engine/Physics/FConstraintSetup.h"
+#include "Source/Runtime/Engine/PhysicsEngine/PhysicsAsset.h"
+#include "Source/Runtime/Engine/PhysicsEngine/FConstraintSetup.h"
 
 IMPLEMENT_CLASS(UConstraintPropertiesWidget);
 
