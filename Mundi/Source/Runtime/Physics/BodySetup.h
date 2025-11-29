@@ -12,7 +12,7 @@ class UPhysicalMaterial;
  * UBodySetup
  *
  * 물리 바디의 충돌 형태를 정의하는 클래스.
- * StaticMesh나 SkeletalMesh의 본(Bone)에 연결되어 충돌 Shape들을 저장합니다.
+ * StaticMesh나 SkeletalMesh에 연결되어 충돌 Shape들을 저장
  *
  * Unreal Engine의 UBodySetup과 유사한 역할:
  * - FKAggregateGeom을 통해 복합 충돌 Shape 관리
