@@ -19,6 +19,7 @@
 #include "Source/Runtime/AssetManagement/Line.h"
 #include "Source/Runtime/AssetManagement/LinesBatch.h"
 #include "Source/Editor/PlatformProcess.h"
+#include "Source/Slate/Widgets/ModalDialog.h"
 #include "ResourceManager.h"
 
 // Sub Widgets
@@ -1068,67 +1069,66 @@ void SPhysicsAssetEditorWindow::RenderLeftPanel(float PanelWidth)
 	ImGuiStyle& style = ImGui::GetStyle();
 
 	// ─────────────────────────────────────────────────
-	// ASSET BROWSER 섹션 (메시 로드)
+	// SELECT MESH 섹션 (로드된 메시 목록에서 선택)
 	// ─────────────────────────────────────────────────
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 6);
-	ImGui::Text("ASSET BROWSER");
+	ImGui::Text("SELECT MESH");
 	ImGui::Dummy(ImVec2(0, 6));
 	ImGui::Separator();
 	ImGui::Dummy(ImVec2(0, 6));
 
-	ImGui::PushItemWidth(-1.0f);
-	ImGui::InputTextWithHint("##MeshPath", "Browse for FBX file...", State->MeshPathBuffer, sizeof(State->MeshPathBuffer));
-	ImGui::PopItemWidth();
+	// 현재 선택된 메시 표시
+	FString CurrentMeshName = State->LoadedMeshPath.empty() ? "(None)" : ExtractFileName(State->LoadedMeshPath);
+	ImGui::Text("Current: %s", CurrentMeshName.c_str());
 	ImGui::Dummy(ImVec2(0, 4));
 
-	float innerPadding = 8.0f;
-	float availWidth = PanelWidth - innerPadding * 2.0f;
-	float buttonHeight = 30.0f;
-	float buttonWidth = (availWidth - 6.0f) * 0.5f;
+	// 메시 목록 스크롤 영역
+	float meshListHeight = 120.0f;
+	ImGui::BeginChild("MeshList", ImVec2(0, meshListHeight), true);
 
-	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.23f, 0.25f, 0.27f, 1.00f));
-	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.28f, 0.30f, 0.33f, 1.00f));
-	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.19f, 0.21f, 0.23f, 1.00f));
-	if (ImGui::Button("Browse...", ImVec2(buttonWidth, buttonHeight)))
+	// SkeletalMesh 목록 (ResourceManager에서 가져오기)
+	TArray<FString> MeshPaths = UResourceManager::GetInstance().GetAllFilePaths<USkeletalMesh>();
+
+	if (MeshPaths.IsEmpty())
 	{
-		auto widePath = FPlatformProcess::OpenLoadFileDialog(UTF8ToWide(GDataDir), L"fbx", L"FBX Files");
-		if (!widePath.empty())
-		{
-			std::string s = WideToUTF8(widePath.wstring());
-			strncpy_s(State->MeshPathBuffer, s.c_str(), sizeof(State->MeshPathBuffer) - 1);
-		}
+		ImGui::TextDisabled("No skeletal meshes loaded");
+		ImGui::TextDisabled("Load FBX files first");
 	}
-	ImGui::PopStyleColor(3);
-
-	ImGui::SameLine(0.0f, 4.0f);
-
-	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.29f, 0.44f, 0.63f, 1.00f));
-	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.36f, 0.51f, 0.72f, 1.00f));
-	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.22f, 0.36f, 0.51f, 1.00f));
-	if (ImGui::Button("Load FBX", ImVec2(buttonWidth, buttonHeight)))
+	else
 	{
-		FString Path = State->MeshPathBuffer;
-		if (!Path.empty())
+		for (const FString& Path : MeshPaths)
 		{
-			USkeletalMesh* Mesh = UResourceManager::GetInstance().Load<USkeletalMesh>(Path);
-			if (Mesh && State->PreviewActor)
+			bool bSelected = (State->LoadedMeshPath == Path);
+
+			// 파일명만 표시
+			FString DisplayName = ExtractFileName(Path);
+
+			if (ImGui::Selectable(DisplayName.c_str(), bSelected))
 			{
-				State->PreviewActor->SetSkeletalMesh(Path);
-				State->CurrentMesh = Mesh;
-				State->LoadedMeshPath = Path;
-
-				// Physics Asset에 메시 경로 저장
-				if (State->EditingAsset)
+				// 현재 메시와 다르면 변경
+				if (!bSelected)
 				{
-					State->EditingAsset->SkeletalMeshPath = Path;
-					State->bIsDirty = true;
+					// 미저장 확인 후 메시 로드
+					CheckUnsavedChangesAndExecute([this, Path]()
+					{
+						PhysicsAssetEditorState* S = GetActivePhysicsState();
+						if (S)
+						{
+							LoadMeshAndResetPhysics(S, Path);
+						}
+					});
 				}
+			}
 
-				OnSkeletalMeshLoaded(State, Path);
+			// 툴팁으로 전체 경로 표시
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("%s", Path.c_str());
 			}
 		}
 	}
-	ImGui::PopStyleColor(3);
+
+	ImGui::EndChild();
 
 	ImGui::Dummy(ImVec2(0, 8));
 	ImGui::Separator();
@@ -1208,7 +1208,6 @@ void SPhysicsAssetEditorWindow::RenderLeftPanel(float PanelWidth)
 	float graphHeight = ImGui::GetContentRegionAvail().y;
 	ImGui::BeginChild("GraphScroll", ImVec2(0, graphHeight), false);
 
-	if (State->EditingAsset)
 	{
 		// Bodies 리스트
 		if (ImGui::TreeNodeEx("Bodies", ImGuiTreeNodeFlags_DefaultOpen))
@@ -1329,7 +1328,6 @@ void SPhysicsAssetEditorWindow::OnSkeletalMeshLoaded(ViewerState* State, const F
 
 	// Physics Asset에 스켈레탈 메시 경로 저장
 	PhysicsState->EditingAsset->SkeletalMeshPath = Path;
-	PhysicsState->bIsDirty = true;
 	PhysicsState->RequestLinesRebuild();
 
 	UE_LOG("[SPhysicsAssetEditorWindow] Skeletal mesh loaded: %s", Path.c_str());
@@ -1354,6 +1352,12 @@ void SPhysicsAssetEditorWindow::RenderToolbar()
 	if (ImGui::Button("Save As"))
 	{
 		SavePhysicsAssetAs();
+	}
+	ImGui::SameLine();
+
+	if (ImGui::Button("Load"))
+	{
+		LoadPhysicsAsset();
 	}
 	ImGui::SameLine();
 
@@ -1700,22 +1704,152 @@ void SPhysicsAssetEditorWindow::SavePhysicsAsset()
 
 void SPhysicsAssetEditorWindow::SavePhysicsAssetAs()
 {
-	// 파일 다이얼로그 (추후 구현)
-	// 현재는 기본 경로로 저장
 	PhysicsAssetEditorState* State = GetActivePhysicsState();
 	if (!State || !State->EditingAsset) return;
 
-	FString DefaultPath = "Data/PhysicsAssets/NewPhysicsAsset.json";
-	if (PhysicsAssetEditorBootstrap::SavePhysicsAsset(State->EditingAsset, DefaultPath))
+	// 파일 저장 다이얼로그 열기 (.physicsasset 확장자)
+	auto widePath = FPlatformProcess::OpenSaveFileDialog(
+		UTF8ToWide(GDataDir),
+		L"physicsasset",
+		L"Physics Asset Files"
+	);
+
+	if (widePath.empty()) return;
+
+	FString FilePath = WideToUTF8(widePath.wstring());
+
+	if (PhysicsAssetEditorBootstrap::SavePhysicsAsset(State->EditingAsset, FilePath))
 	{
-		State->CurrentFilePath = DefaultPath;
+		State->CurrentFilePath = FilePath;
 		State->bIsDirty = false;
+		UE_LOG("[SPhysicsAssetEditorWindow] Physics Asset saved: %s", FilePath.c_str());
 	}
 }
 
 void SPhysicsAssetEditorWindow::LoadPhysicsAsset()
 {
-	// 파일 다이얼로그 (추후 구현)
+	CheckUnsavedChangesAndExecute([this]()
+	{
+		// 파일 열기 다이얼로그 (.physicsasset 확장자)
+		auto widePath = FPlatformProcess::OpenLoadFileDialog(
+			UTF8ToWide(GDataDir),
+			L"physicsasset",
+			L"Physics Asset Files"
+		);
+
+		if (widePath.empty()) return;
+
+		FString FilePath = WideToUTF8(widePath.wstring());
+
+		UPhysicsAsset* LoadedAsset = PhysicsAssetEditorBootstrap::LoadPhysicsAsset(FilePath);
+		if (LoadedAsset)
+		{
+			PhysicsAssetEditorState* State = GetActivePhysicsState();
+			if (State)
+			{
+				State->EditingAsset = LoadedAsset;
+				State->CurrentFilePath = FilePath;
+				State->ClearSelection();
+				State->RequestLinesRebuild();
+				State->HideGizmo();
+
+				// 연결된 스켈레탈 메시 로드
+				if (!LoadedAsset->SkeletalMeshPath.empty())
+				{
+					USkeletalMesh* Mesh = UResourceManager::GetInstance().Load<USkeletalMesh>(
+						LoadedAsset->SkeletalMeshPath);
+					if (Mesh && State->PreviewActor)
+					{
+						State->PreviewActor->SetSkeletalMesh(LoadedAsset->SkeletalMeshPath);
+						State->CurrentMesh = Mesh;
+						State->LoadedMeshPath = LoadedAsset->SkeletalMeshPath;
+						State->RequestLinesRebuild();
+					}
+				}
+
+				// 파일에서 로드한 것이므로 dirty 아님
+				State->bIsDirty = false;
+				UE_LOG("[SPhysicsAssetEditorWindow] Physics Asset loaded: %s", FilePath.c_str());
+			}
+		}
+	});
+}
+
+void SPhysicsAssetEditorWindow::CheckUnsavedChangesAndExecute(std::function<void()> Action)
+{
+	PhysicsAssetEditorState* State = GetActivePhysicsState();
+	if (!State || !State->bIsDirty)
+	{
+		// 변경사항 없으면 바로 실행
+		if (Action) Action();
+		return;
+	}
+
+	// 모달 다이얼로그 표시
+	PendingAction = Action;
+	FModalDialog::Get().Show(
+		"저장 확인",
+		"저장되지 않은 변경사항이 있습니다.\n저장하시겠습니까?",
+		EModalType::YesNoCancel,
+		[this](EModalResult Result)
+		{
+			if (Result == EModalResult::Yes)
+			{
+				SavePhysicsAsset();
+				if (PendingAction) PendingAction();
+			}
+			else if (Result == EModalResult::No)
+			{
+				if (PendingAction) PendingAction();
+			}
+			// Cancel이면 아무것도 안 함
+			PendingAction = nullptr;
+		}
+	);
+}
+
+void SPhysicsAssetEditorWindow::LoadMeshAndResetPhysics(PhysicsAssetEditorState* State, const FString& MeshPath)
+{
+	if (!State) return;
+
+	// SkeletalMesh 로드
+	USkeletalMesh* Mesh = UResourceManager::GetInstance().Load<USkeletalMesh>(MeshPath);
+	if (Mesh && State->PreviewActor)
+	{
+		State->PreviewActor->SetSkeletalMesh(MeshPath);
+		State->CurrentMesh = Mesh;
+		State->LoadedMeshPath = MeshPath;
+
+		// 새 Physics Asset 생성 (기존 캐시된 에셋 수정하지 않음)
+		State->EditingAsset = NewObject<UPhysicsAsset>();
+		State->EditingAsset->SkeletalMeshPath = MeshPath;
+		State->CurrentFilePath.clear();  // 새 에셋이므로 파일 경로 초기화
+		State->bIsDirty = false;  // 새 에셋이므로 수정되지 않은 상태
+
+		// 상태 초기화
+		State->ClearSelection();
+		State->RequestLinesRebuild();
+		State->HideGizmo();
+
+		OnSkeletalMeshLoaded(State, MeshPath);
+
+		UE_LOG("[SPhysicsAssetEditorWindow] Mesh loaded and physics reset: %s", MeshPath.c_str());
+	}
+}
+
+FString SPhysicsAssetEditorWindow::ExtractFileName(const FString& Path)
+{
+	size_t lastSlash = Path.find_last_of("/\\");
+	FString FileName = (lastSlash != FString::npos) ? Path.substr(lastSlash + 1) : Path;
+
+	// 확장자 제거
+	size_t dotPos = FileName.find_last_of('.');
+	if (dotPos != FString::npos)
+	{
+		FileName = FileName.substr(0, dotPos);
+	}
+
+	return FileName;
 }
 
 // ────────────────────────────────────────────────────────────────

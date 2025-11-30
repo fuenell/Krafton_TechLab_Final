@@ -23,6 +23,7 @@ public:
 	FName BoneName;
 
 	/** 연결된 본 인덱스 (캐시용) */
+	UPROPERTY()
 	int32 BoneIndex = -1;
 
 	// ────────────────────────────────────────────────

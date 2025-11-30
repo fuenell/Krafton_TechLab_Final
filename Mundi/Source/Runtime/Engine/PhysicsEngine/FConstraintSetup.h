@@ -76,5 +76,6 @@ public:
 		: JointName(InJointName)
 		, ParentBodyIndex(InParentIndex)
 		, ChildBodyIndex(InChildIndex)
+		, ConstraintType(EConstraintType::BallAndSocket)
 	{}
 };

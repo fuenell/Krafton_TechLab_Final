@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug_StandAlone|x64">
@@ -615,6 +615,7 @@ xcopy /y /d "$(ProjectDir)ThirdParty\lib\physx\$(Configuration)\*.dll" "$(OutDir
     <ClCompile Include="Source\Slate\UIManager.cpp" />
     <ClCompile Include="Source\Slate\SlateManager.cpp" />
     <ClCompile Include="Source\Slate\Widgets\ConsoleWidget.cpp" />
+    <ClCompile Include="Source\Slate\Widgets\ModalDialog.cpp" />
     <ClCompile Include="Source\Slate\Widgets\InputInformationWidget.cpp" />
     <ClCompile Include="Source\Slate\Widgets\MainToolbarWidget.cpp" />
     <ClCompile Include="Source\Slate\Widgets\SceneManagerWidget.cpp" />
@@ -699,6 +700,11 @@ xcopy /y /d "$(ProjectDir)ThirdParty\lib\physx\$(Configuration)\*.dll" "$(OutDir
     <ClCompile Include="Generated\UPhysicsAsset.generated.cpp" />
     <ClCompile Include="Generated\FBodySetup.generated.cpp" />
     <ClCompile Include="Generated\FConstraintSetup.generated.cpp" />
+    <ClCompile Include="Generated\FKAggregateGeom.generated.cpp" />
+    <ClCompile Include="Generated\FKBoxElem.generated.cpp" />
+    <ClCompile Include="Generated\FKShapeElem.generated.cpp" />
+    <ClCompile Include="Generated\FKSphereElem.generated.cpp" />
+    <ClCompile Include="Generated\FKSphylElem.generated.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Common\LightingBuffers.hlsl">
@@ -941,6 +947,10 @@ xcopy /y /d "$(ProjectDir)ThirdParty\lib\physx\$(Configuration)\*.dll" "$(OutDir
     <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\BodyInstance.h" />
     <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\BodySetup.h" />
     <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\BoxElem.h" />
+    <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\EAggCollisionShape.h" />
+    <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\ECollisionEnabled.h" />
+    <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\EConstraintType.h" />
+    <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\EPhysicsShapeType.h" />
     <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\ConstraintInstance.h" />
     <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\FBodySetup.h" />
     <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\FConstraintSetup.h" />
@@ -950,6 +960,8 @@ xcopy /y /d "$(ProjectDir)ThirdParty\lib\physx\$(Configuration)\*.dll" "$(OutDir
     <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\PhysXPublic.h" />
     <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\PhysXSupport.h" />
     <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\ShapeElem.h" />
+    <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\SphereElem.h" />
+    <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\SphylElem.h" />
     <ClInclude Include="Source\Runtime\Engine\Scripting\GameObject.h" />
     <ClInclude Include="Source\Runtime\Engine\Scripting\LuaArrayProxy.h" />
     <ClInclude Include="Source\Runtime\Engine\Scripting\LuaBindHelpers.h" />
@@ -1256,6 +1268,11 @@ xcopy /y /d "$(ProjectDir)ThirdParty\lib\physx\$(Configuration)\*.dll" "$(OutDir
     <ClInclude Include="Generated\UPhysicsAsset.generated.h" />
     <ClInclude Include="Generated\FBodySetup.generated.h" />
     <ClInclude Include="Generated\FConstraintSetup.generated.h" />
+    <ClInclude Include="Generated\FKAggregateGeom.generated.h" />
+    <ClInclude Include="Generated\FKBoxElem.generated.h" />
+    <ClInclude Include="Generated\FKShapeElem.generated.h" />
+    <ClInclude Include="Generated\FKSphereElem.generated.h" />
+    <ClInclude Include="Generated\FKSphylElem.generated.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="BuildTools\CodeGenerator\generate.py" />

@@ -203,13 +203,116 @@ void UPhysicsAsset::Load(const FString& InFilePath, ID3D11Device* InDevice)
 
 void UPhysicsAsset::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
-	// UPROPERTY 자동 직렬화 (SkeletalMeshPath, BodySetups, ConstraintSetups)
-	UObject::Serialize(bInIsLoading, InOutHandle);
-
-	// 로드 후 인덱스 캐시 재구성
 	if (bInIsLoading)
 	{
+		UObject::Serialize(bInIsLoading, InOutHandle);
+		BodySetups.Empty();
+		JSON BodySetupsJson;
+		if (FJsonSerializer::ReadArray(InOutHandle, "BodySetups", BodySetupsJson, JSON(), false))
+		{
+			for (int32 i = 0; i < static_cast<int32>(BodySetupsJson.size()); ++i)
+			{
+				const JSON& BodyJson = BodySetupsJson.at(i);
+				UBodySetup* NewBody = NewObject<UBodySetup>();
+				FString BoneNameStr;
+				FJsonSerializer::ReadString(BodyJson, "BoneName", BoneNameStr, "", false);
+				NewBody->BoneName = FName(BoneNameStr);
+				FJsonSerializer::ReadInt32(BodyJson, "BoneIndex", NewBody->BoneIndex, -1, false);
+				JSON AggGeomJson;
+				if (FJsonSerializer::ReadObject(BodyJson, "AggGeom", AggGeomJson, JSON(), false))
+				{
+					JSON SphereElemsJson;
+					if (FJsonSerializer::ReadArray(AggGeomJson, "SphereElems", SphereElemsJson, JSON(), false))
+						for (int32 j = 0; j < static_cast<int32>(SphereElemsJson.size()); ++j)
+						{
+							const JSON& SphereJson = SphereElemsJson.at(j);
+							FKSphereElem Sphere;
+							FJsonSerializer::ReadVector(SphereJson, "Center", Sphere.Center, FVector::Zero(), false);
+							FJsonSerializer::ReadFloat(SphereJson, "Radius", Sphere.Radius, 0.5f, false);
+							NewBody->AggGeom.SphereElems.Add(Sphere);
+						}
+					JSON BoxElemsJson;
+					if (FJsonSerializer::ReadArray(AggGeomJson, "BoxElems", BoxElemsJson, JSON(), false))
+						for (int32 j = 0; j < static_cast<int32>(BoxElemsJson.size()); ++j)
+						{
+							const JSON& BoxJson = BoxElemsJson.at(j);
+							FKBoxElem Box;
+							FJsonSerializer::ReadVector(BoxJson, "Center", Box.Center, FVector::Zero(), false);
+							FVector4 RotVec;
+							FJsonSerializer::ReadVector4(BoxJson, "Rotation", RotVec, FVector4(0,0,0,1), false);
+							Box.Rotation = FQuat(RotVec.X, RotVec.Y, RotVec.Z, RotVec.W);
+							FJsonSerializer::ReadFloat(BoxJson, "X", Box.X, 1.f, false);
+							FJsonSerializer::ReadFloat(BoxJson, "Y", Box.Y, 1.f, false);
+							FJsonSerializer::ReadFloat(BoxJson, "Z", Box.Z, 1.f, false);
+							NewBody->AggGeom.BoxElems.Add(Box);
+						}
+					JSON SphylElemsJson;
+					if (FJsonSerializer::ReadArray(AggGeomJson, "SphylElems", SphylElemsJson, JSON(), false))
+						for (int32 j = 0; j < static_cast<int32>(SphylElemsJson.size()); ++j)
+						{
+							const JSON& SphylJson = SphylElemsJson.at(j);
+							FKSphylElem Sphyl;
+							FJsonSerializer::ReadVector(SphylJson, "Center", Sphyl.Center, FVector::Zero(), false);
+							FVector4 RotVec;
+							FJsonSerializer::ReadVector4(SphylJson, "Rotation", RotVec, FVector4(0,0,0,1), false);
+							Sphyl.Rotation = FQuat(RotVec.X, RotVec.Y, RotVec.Z, RotVec.W);
+							FJsonSerializer::ReadFloat(SphylJson, "Radius", Sphyl.Radius, 0.5f, false);
+							FJsonSerializer::ReadFloat(SphylJson, "Length", Sphyl.Length, 1.f, false);
+							NewBody->AggGeom.SphylElems.Add(Sphyl);
+						}
+				}
+				BodySetups.Add(NewBody);
+			}
+		}
 		RebuildIndexMap();
+	}
+	else
+	{
+		UObject::Serialize(bInIsLoading, InOutHandle);
+		JSON BodySetupsJson = JSON::Make(JSON::Class::Array);
+		for (UBodySetup* Body : BodySetups)
+		{
+			if (!Body) continue;
+			JSON BodyJson = JSON::Make(JSON::Class::Object);
+			BodyJson["BoneName"] = Body->BoneName.ToString();
+			BodyJson["BoneIndex"] = Body->BoneIndex;
+			JSON AggGeomJson = JSON::Make(JSON::Class::Object);
+			JSON SphereElemsJson = JSON::Make(JSON::Class::Array);
+			for (const FKSphereElem& Sphere : Body->AggGeom.SphereElems)
+			{
+				JSON SphereJson = JSON::Make(JSON::Class::Object);
+				SphereJson["Center"] = FJsonSerializer::VectorToJson(Sphere.Center);
+				SphereJson["Radius"] = Sphere.Radius;
+				SphereElemsJson.append(SphereJson);
+			}
+			AggGeomJson["SphereElems"] = SphereElemsJson;
+			JSON BoxElemsJson = JSON::Make(JSON::Class::Array);
+			for (const FKBoxElem& Box : Body->AggGeom.BoxElems)
+			{
+				JSON BoxJson = JSON::Make(JSON::Class::Object);
+				BoxJson["Center"] = FJsonSerializer::VectorToJson(Box.Center);
+				BoxJson["Rotation"] = FJsonSerializer::Vector4ToJson(FVector4(Box.Rotation.X, Box.Rotation.Y, Box.Rotation.Z, Box.Rotation.W));
+				BoxJson["X"] = Box.X;
+				BoxJson["Y"] = Box.Y;
+				BoxJson["Z"] = Box.Z;
+				BoxElemsJson.append(BoxJson);
+			}
+			AggGeomJson["BoxElems"] = BoxElemsJson;
+			JSON SphylElemsJson = JSON::Make(JSON::Class::Array);
+			for (const FKSphylElem& Sphyl : Body->AggGeom.SphylElems)
+			{
+				JSON SphylJson = JSON::Make(JSON::Class::Object);
+				SphylJson["Center"] = FJsonSerializer::VectorToJson(Sphyl.Center);
+				SphylJson["Rotation"] = FJsonSerializer::Vector4ToJson(FVector4(Sphyl.Rotation.X, Sphyl.Rotation.Y, Sphyl.Rotation.Z, Sphyl.Rotation.W));
+				SphylJson["Radius"] = Sphyl.Radius;
+				SphylJson["Length"] = Sphyl.Length;
+				SphylElemsJson.append(SphylJson);
+			}
+			AggGeomJson["SphylElems"] = SphylElemsJson;
+			BodyJson["AggGeom"] = AggGeomJson;
+			BodySetupsJson.append(BodyJson);
+		}
+		InOutHandle["BodySetups"] = BodySetupsJson;
 	}
 }
 

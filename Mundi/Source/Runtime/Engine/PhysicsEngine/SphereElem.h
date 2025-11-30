@@ -1,58 +1,60 @@
 #pragma once
 #include "ShapeElem.h"
 #include "PhysXSupport.h"
+#include "FKSphereElem.generated.h"
 
 /** 충돌을 위해 사용되는 구 도형 */
 USTRUCT()
 struct FKSphereElem : public FKShapeElem
 {
-	static inline EAggCollisionShape StaticShapeType = EAggCollisionShape::Sphere;
+    GENERATED_REFLECTION_BODY()
 
-	/** 구의 중심 */
-	FVector Center;
+    static inline EAggCollisionShape StaticShapeType = EAggCollisionShape::Sphere;
 
-	/** 구의 반지름 */
-	float Radius;
+    /** 구의 중심 */
+    UPROPERTY()
+    FVector Center;
 
-	FKSphereElem()
-		: FKShapeElem(EAggCollisionShape::Sphere)
-		, Center(FVector::Zero())
-		, Radius(0.5f)
-	{
-	}
+    /** 구의 반지름 */
+    UPROPERTY()
+    float Radius;
 
-	FKSphereElem(float InRadius)
-		: FKShapeElem(EAggCollisionShape::Sphere)
-		, Center(FVector::Zero())
-		, Radius(InRadius)
-	{
-	}
+    FKSphereElem()
+        : FKShapeElem(EAggCollisionShape::Sphere)
+        , Center(FVector::Zero())
+        , Radius(0.5f)
+    {
+    }
 
-	virtual ~FKSphereElem() = default;
+    FKSphereElem(float InRadius)
+        : FKShapeElem(EAggCollisionShape::Sphere)
+        , Center(FVector::Zero())
+        , Radius(InRadius)
+    {
+    }
 
-	virtual FTransform GetTransform() const override final
-	{
-		FTransform Transform;
-		Transform.Translation = Center;
-		Transform.Rotation = FQuat::Identity();
-		return Transform;
-	}
+    virtual ~FKSphereElem() = default;
 
-	void SetTransform(const FTransform& InTransform)
-	{
-		Center = InTransform.Translation;
-		// Sphere는 회전 불필요
-	}
+    virtual FTransform GetTransform() const override final
+    {
+        FTransform Transform;
+        Transform.Translation = Center;
+        Transform.Rotation = FQuat::Identity();
+        return Transform;
+    }
 
-	PxSphereGeometry GetPxGeometry(const FVector& Scale3D) const
-	{
-		// 균일 스케일 적용 (최대 축 사용)
-		float MaxScale = FMath::Max(
-			FMath::Abs(Scale3D.X),
-			FMath::Max(FMath::Abs(Scale3D.Y), FMath::Abs(Scale3D.Z))
-		);
+    void SetTransform(const FTransform& InTransform)
+    {
+        Center = InTransform.Translation;
+    }
 
-		constexpr float MinRadius = 0.01f;
-		return physx::PxSphereGeometry(FMath::Max(Radius * MaxScale, MinRadius));
-	}
+    PxSphereGeometry GetPxGeometry(const FVector& Scale3D) const
+    {
+        float MaxScale = FMath::Max(
+            FMath::Abs(Scale3D.X),
+            FMath::Max(FMath::Abs(Scale3D.Y), FMath::Abs(Scale3D.Z))
+        );
+        constexpr float MinRadius = 0.01f;
+        return physx::PxSphereGeometry(FMath::Max(Radius * MaxScale, MinRadius));
+    }
 };

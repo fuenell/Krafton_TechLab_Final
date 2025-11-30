@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <ItemGroup>
     <FxCompile Include="Shaders\Materials\Fireball.hlsl">
@@ -1148,6 +1148,30 @@
     <ClCompile Include="Generated\FConstraintSetup.generated.cpp">
       <Filter>Generated</Filter>
     </ClCompile>
+    <ClCompile Include="Generated\FKAggregateGeom.generated.cpp">
+      <Filter>Generated</Filter>
+    </ClCompile>
+    <ClCompile Include="Generated\FKBoxElem.generated.cpp">
+      <Filter>Generated</Filter>
+    </ClCompile>
+    <ClCompile Include="Generated\FKShapeElem.generated.cpp">
+      <Filter>Generated</Filter>
+    </ClCompile>
+    <ClCompile Include="Generated\FKSphereElem.generated.cpp">
+      <Filter>Generated</Filter>
+    </ClCompile>
+    <ClCompile Include="Generated\FKSphylElem.generated.cpp">
+      <Filter>Generated</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Runtime\Engine\GameFramework\HudExampleGameMode.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\PhysicsEngine\PhysicsAsset.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\PhysicsEngine\PhysicsTypes.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Viewer\PhysicsAssetEditorBootstrap.cpp" />
+    <ClCompile Include="Source\Slate\Widgets\PhysicsAssetEditor\BodyPropertiesWidget.cpp" />
+    <ClCompile Include="Source\Slate\Widgets\PhysicsAssetEditor\ConstraintPropertiesWidget.cpp" />
+    <ClCompile Include="Source\Slate\Widgets\PhysicsAssetEditor\SkeletonTreeWidget.cpp" />
+    <ClCompile Include="Source\Slate\Windows\SPhysicsAssetEditorWindow.cpp" />
+    <ClCompile Include="Source\Slate\Widgets\ModalDialog.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Generated\UParticleModuleSizeScaleBySpeed.generated.h">
@@ -2413,6 +2437,38 @@
     <ClInclude Include="Generated\FConstraintSetup.generated.h">
       <Filter>Generated</Filter>
     </ClInclude>
+    <ClInclude Include="Generated\FKAggregateGeom.generated.h">
+      <Filter>Generated</Filter>
+    </ClInclude>
+    <ClInclude Include="Generated\FKBoxElem.generated.h">
+      <Filter>Generated</Filter>
+    </ClInclude>
+    <ClInclude Include="Generated\FKShapeElem.generated.h">
+      <Filter>Generated</Filter>
+    </ClInclude>
+    <ClInclude Include="Generated\FKSphereElem.generated.h">
+      <Filter>Generated</Filter>
+    </ClInclude>
+    <ClInclude Include="Generated\FKSphylElem.generated.h">
+      <Filter>Generated</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Runtime\Engine\GameFramework\HudExampleGameMode.h" />
+    <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\EAggCollisionShape.h" />
+    <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\FBodySetup.h" />
+    <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\FConstraintSetup.h" />
+    <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\PhysicsAsset.h" />
+    <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\PhysicsTypes.h" />
+    <ClInclude Include="Source\Runtime\Engine\Viewer\PhysicsAssetEditorBootstrap.h" />
+    <ClInclude Include="Source\Runtime\Engine\Viewer\PhysicsAssetEditorState.h" />
+    <ClInclude Include="Source\Slate\Widgets\PhysicsAssetEditor\BodyPropertiesWidget.h" />
+    <ClInclude Include="Source\Slate\Widgets\PhysicsAssetEditor\ConstraintPropertiesWidget.h" />
+    <ClInclude Include="Source\Slate\Widgets\PhysicsAssetEditor\SkeletonTreeWidget.h" />
+    <ClInclude Include="Source\Slate\Windows\SPhysicsAssetEditorWindow.h" />
+    <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\ECollisionEnabled.h" />
+    <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\EConstraintType.h" />
+    <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\EPhysicsShapeType.h" />
+    <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\SphereElem.h" />
+    <ClInclude Include="Source\Runtime\Engine\PhysicsEngine\SphylElem.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="BuildTools\CodeGenerator\generate.py">

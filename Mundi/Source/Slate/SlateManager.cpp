@@ -15,6 +15,7 @@
 #include "Windows/ContentBrowserWindow.h"
 #include "Widgets/MainToolbarWidget.h"
 #include "Widgets/ConsoleWidget.h"
+#include "Widgets/ModalDialog.h"
 #include "FViewportClient.h"
 #include "UIManager.h"
 #include "GlobalConsole.h"
@@ -567,6 +568,9 @@ void USlateManager::Render()
         CloseDetachedWindow(Window);
     }
     PendingCloseWindows.Empty();
+
+    // 모달 다이얼로그 렌더링 (항상 최상단에)
+    FModalDialog::Get().Render();
 }
 
 void USlateManager::RenderAfterUI()

@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "PhysicsAssetEditorBootstrap.h"
 #include "PhysicsAssetEditorState.h"
 #include "ViewerState.h"
@@ -89,8 +89,9 @@ ViewerState* PhysicsAssetEditorBootstrap::CreateViewerState(const char* Name, UW
 				Asset = CreateDefaultPhysicsAsset();
 				UE_LOG("[PhysicsAssetEditorBootstrap] 기본 Physics Asset 생성");
 
-				// USkeletalMeshComponent 생성자에서 기본 메시를 로드하므로 State에 저장
-				State->CurrentMesh = PreviewActor->GetSkeletalMeshComponent()->GetSkeletalMesh();
+				// 기본 메시 제거 (Physics Asset 에디터에서는 빈 상태로 시작)
+				PreviewActor->GetSkeletalMeshComponent()->SetSkeletalMesh("");
+				State->CurrentMesh = nullptr;
 			}
 
 			State->EditingAsset = Asset;

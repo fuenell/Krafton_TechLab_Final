@@ -1,46 +1,57 @@
 #pragma once
 #include "ShapeElem.h"
 #include "PhysXSupport.h"
+#include "FKBoxElem.generated.h"
 
 /** 충돌을 위해 사용되는 박스 도형 */
 USTRUCT()
 struct FKBoxElem : public FKShapeElem
 {
+    GENERATED_REFLECTION_BODY()
+
     static inline EAggCollisionShape StaticShapeType = EAggCollisionShape::Box;
-    
+
     /** 박스의 원점 */
+    UPROPERTY()
     FVector Center;
 
     /** 박스의 회전 (쿼터니언) */
+    UPROPERTY()
     FQuat Rotation;
 
     /** x축 방향 박스의 너비 (반지름이 아닌 지름) */
+    UPROPERTY()
     float X;
 
     /** Y축 방향 박스의 너비 (반지름이 아닌 지름) */
+    UPROPERTY()
     float Y;
 
     /** Z축 방향 박스의 너비 (반지름이 아닌 지름) */
+    UPROPERTY()
     float Z;
 
     FKBoxElem()
-    : Center(FVector::Zero())
-    , Rotation(FQuat::Identity())
-    , X(1.f), Y(1.f), Z(1.f)
+        : FKShapeElem(EAggCollisionShape::Box)
+        , Center(FVector::Zero())
+        , Rotation(FQuat::Identity())
+        , X(1.f), Y(1.f), Z(1.f)
     {
     }
 
     FKBoxElem(float s)
-    : Center(FVector::Zero())
-    , Rotation(FQuat::Identity())
-    , X(s), Y(s), Z(s)
+        : FKShapeElem(EAggCollisionShape::Box)
+        , Center(FVector::Zero())
+        , Rotation(FQuat::Identity())
+        , X(s), Y(s), Z(s)
     {
     }
 
     FKBoxElem(float InX, float InY, float InZ)
-    : Center(FVector::Zero())
-    , Rotation(FQuat::Identity())
-    , X(InX), Y(InY), Z(InZ)
+        : FKShapeElem(EAggCollisionShape::Box)
+        , Center(FVector::Zero())
+        , Rotation(FQuat::Identity())
+        , X(InX), Y(InY), Z(InZ)
     {
     }
 
@@ -66,7 +77,6 @@ struct FKBoxElem : public FKShapeElem
         float AbsScaleY = FMath::Abs(Scale3D.Y);
         float AbsScaleZ = FMath::Abs(Scale3D.Z);
 
-        // 지름 * 0.5 = 반지름 (HalfExtent)
         float HalfX = (X * 0.5f) * AbsScaleX;
         float HalfY = (Y * 0.5f) * AbsScaleY;
         float HalfZ = (Z * 0.5f) * AbsScaleZ;
