@@ -450,10 +450,6 @@ GEMINI.md
 /Mundi/Data/untracked/**
 /Mundi/DerivedDataCache/**
 
-# ThirdParty
-!/Mundi/ThirdParty/include/**
-/Mundi/ThirdParty/lib/**
-
 # BuildTools
 # Python 캐시와 임시 파일 제외
 /Mundi/BuildTools/**/__pycache__/
@@ -472,6 +468,3 @@ __pycache__/
 *$py.class
 *.so
 .Python
-
-
-!/Mundi/ThirdParty/lib/PhysX/**
