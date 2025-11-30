@@ -157,16 +157,17 @@ static void SerializeProperty(void* Instance, const FProperty& Prop, bool bIsLoa
     }
     case EPropertyType::Enum:
     {
-        int32* Value = Prop.GetValuePtr<int32>(Instance);
+        // Enum은 uint8로 처리 (PropertyRenderer와 일관성 유지)
+        uint8* Value = Prop.GetValuePtr<uint8>(Instance);
         if (bIsLoading)
         {
             int32 ReadValue;
             if (FJsonSerializer::ReadInt32(InOutJson, Prop.Name, ReadValue))
-                *Value = ReadValue;
+                *Value = static_cast<uint8>(ReadValue);
         }
         else
         {
-            InOutJson[Prop.Name] = *Value;
+            InOutJson[Prop.Name] = static_cast<int32>(*Value);
         }
         break;
     }
