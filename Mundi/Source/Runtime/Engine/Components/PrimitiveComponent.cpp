@@ -64,11 +64,16 @@ void UPrimitiveComponent::OnUnregister()
     Super::OnUnregister();
 }
 
-void UPrimitiveComponent::OnTransformUpdated()
+void UPrimitiveComponent::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
 {
-    USceneComponent::OnTransformUpdated();
+    USceneComponent::OnUpdateTransform(UpdateTransformFlags, Teleport);
 
-    // @todo 
+    if (BodyInstance.IsValidBodyInstance() &&
+        !((int32)UpdateTransformFlags & (int32)EUpdateTransformFlags::SkipPhysicsUpdate))
+    {
+        bool bIsTeleport = Teleport != ETeleportType::None;
+        BodyInstance.SetBodyTransform(GetWorldTransform(), bIsTeleport);
+    }
 }
 
 void UPrimitiveComponent::SetMaterialByName(uint32 InElementIndex, const FString& InMaterialName)

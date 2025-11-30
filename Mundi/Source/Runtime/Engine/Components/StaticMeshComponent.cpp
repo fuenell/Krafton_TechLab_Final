@@ -201,9 +201,9 @@ FAABB UStaticMeshComponent::GetWorldAABB() const
 	return FAABB(WorldMin, WorldMax);
 }
 
-void UStaticMeshComponent::OnTransformUpdated()
+void UStaticMeshComponent::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
 {
-	Super::OnTransformUpdated();
+	Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
 	MarkWorldPartitionDirty();
 }
 

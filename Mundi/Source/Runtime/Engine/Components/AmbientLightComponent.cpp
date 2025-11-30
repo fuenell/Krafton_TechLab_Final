@@ -32,7 +32,7 @@ void UAmbientLightComponent::UpdateLightData()
     }
 }
 
-void UAmbientLightComponent::OnTransformUpdated()
+void UAmbientLightComponent::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
 {
 	//Ambient는 방향이나 위치가 바꾸지 않으므로 처리 X
 }

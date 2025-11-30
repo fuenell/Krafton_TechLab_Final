@@ -44,7 +44,7 @@ public:
 	void DuplicateSubObjects() override;
 
 protected:
-	void OnTransformUpdated() override;
+	void OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport = ETeleportType::None) override;
 
 protected:
 };

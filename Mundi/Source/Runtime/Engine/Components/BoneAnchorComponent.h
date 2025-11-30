@@ -19,14 +19,14 @@ public:
     void UpdateAnchorFromBone();
 
     // When user moves gizmo, write back to the bone
-    void OnTransformUpdated() override;
+    void OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport = ETeleportType::None) override;
 
-    // Additive 시스템 사용 시 OnTransformUpdated에서 직접 본 수정을 방지
+    // Additive 시스템 사용 시 OnUpdateTransform에서 직접 본 수정을 방지
     void SetSuppressWriteback(bool bSuppress) { bSuppressWriteback = bSuppress; }
     bool IsSuppressingWriteback() const { return bSuppressWriteback; }
 
 private:
     USkeletalMeshComponent* Target = nullptr;
     int32 BoneIndex = -1;
-    bool bSuppressWriteback = false;  // true면 OnTransformUpdated에서 본 수정 안함
+    bool bSuppressWriteback = false;  // true면 OnUpdateTransform에서 본 수정 안함
 };

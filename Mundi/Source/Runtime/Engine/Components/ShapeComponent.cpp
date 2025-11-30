@@ -72,7 +72,7 @@ void UShapeComponent::OnUnregister()
     Super::OnUnregister();
 }
 
-void UShapeComponent::OnTransformUpdated()
+void UShapeComponent::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
 {
     // Bounds 업데이트 (자식 클래스의 CachedBounds 갱신)
     UpdateBounds();
@@ -93,7 +93,7 @@ void UShapeComponent::OnTransformUpdated()
     }
 
     //UpdateOverlaps();
-    Super::OnTransformUpdated();
+    Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
 }
 
 void UShapeComponent::TickComponent(float DeltaSeconds)

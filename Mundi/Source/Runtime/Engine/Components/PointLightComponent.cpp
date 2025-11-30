@@ -82,9 +82,9 @@ void UPointLightComponent::UpdateLightData()
     }
 }
 
-void UPointLightComponent::OnTransformUpdated()
+void UPointLightComponent::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
 {
-    Super::OnTransformUpdated();
+    Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
     if (UWorld* World = GetWorld())
     {
         if (World->GetLightManager())

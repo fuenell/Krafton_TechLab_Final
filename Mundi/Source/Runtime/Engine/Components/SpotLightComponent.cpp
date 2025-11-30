@@ -139,9 +139,9 @@ void USpotLightComponent::UpdateLightData()
 	UpdateDirectionGizmo();
 }
 
-void USpotLightComponent::OnTransformUpdated()
+void USpotLightComponent::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
 {
-    Super::OnTransformUpdated();
+    Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
     if (UWorld* World = GetWorld())
     {
         if (World->GetLightManager())

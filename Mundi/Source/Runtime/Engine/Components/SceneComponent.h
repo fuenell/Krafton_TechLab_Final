@@ -11,6 +11,30 @@ enum class EAttachmentRule
     KeepWorld
 };
 
+UENUM()
+enum class EUpdateTransformFlags : int32
+{
+    /** 기본 옵션 (에디터 기즈모 조작, 게임 로직에 의한 이동 등)      */
+    None                    = 0x0,
+    /** 물리를 업데이트하지 않음 (물리 시뮬레이션 결과에 의한 이동)    */
+    SkipPhysicsUpdate       = 0x1,
+    /** 부모의 업데이트 결과로부터 업데이트 정보가 전달되는 경우       */
+    // PropagateFromParent     = 0x2,
+    /** 소켓을 통해 부모에게 부착된 경우에만 자식 트랜스폼을 업데이트함 */
+    // OnlyUpdateIfUsingSocket = 0x4 
+};
+
+UENUM()
+enum class ETeleportType : uint8
+{
+    /** 물리 바디를 텔레포트하지 않음 (속도가 초기와 마지막 위치를 반영, 충돌 발생할 수 있음) */
+    None,                                                                        
+    /** 물리 바디를 텔레포트함 (속도가 유지되고 충돌이 발생하지 않음)                      */
+    TeleportPhysics,
+    /** 물리 바디를 텔레포트하고 물리 상태를 완전히 초기화                                */
+    ResetPhysics
+};
+
 class URenderer;
 UCLASS(DisplayName="씬 컴포넌트", Description="트랜스폼을 가진 기본 컴포넌트입니다")
 class USceneComponent : public UActorComponent
@@ -63,7 +87,9 @@ public:
     // World Transform API
     // ──────────────────────────────
     FTransform GetWorldTransform() const;
+    /** @note 물리가 도입되기 전에 사용된 레거시 코드. EUpdateTransformFlags는 디폴트로 None 사용함. */
     void SetWorldTransform(const FTransform& W);
+    void SetWorldTransform(const FTransform& W, EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport = ETeleportType::None);
 
     void SetWorldLocation(const FVector& L);
     FVector GetWorldLocation() const;
@@ -111,8 +137,6 @@ public:
     void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
     void OnRegister(UWorld* InWorld) override;
 
-    virtual void OnTransformUpdated();
-
     // SceneId
     uint32 GetSceneId() const { return SceneId; }
     void SetSceneId(uint32 InId) { SceneId = InId; }
@@ -135,15 +159,17 @@ public:
         return SceneIdMap;
     }
 protected:
-    /** @brief OnTransformUpdated() 내부에서 클래스 별 특수 로직을 처리하기 위한 가상함수 */
-    //virtual void OnTransformUpdatedChildImpl();
+    /** @brief OnUpdateTransform() 내부에서 클래스 별 특수 로직을 처리하기 위한 가상함수 */
+    //virtual void OnUpdateTransformChildImpl();
     
     /**
-     * @brief Transform 갱신시 자식 컴포넌트의 OnTransformUpdated를 강제 호출.
+     * @brief Transform 갱신시 자식 컴포넌트의 OnUpdateTransform를 강제 호출.
      * @note 부모 컴포넌트의 트랜스폼 변화로 인해 월드 관점에서 생길 영향을 처리하기 위한 메소드로,
      * 자식 컴포넌트들의 로컬 트랜스폼을 직접 변경시키지 않습니다. 
      */
    // void PropagateTransformUpdate();
+
+    virtual void OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport = ETeleportType::None);
 
     //Component 위치 나타내기 위함
     UBillboardComponent* SpriteComponent = nullptr;

@@ -165,12 +165,40 @@ FTransform FBodyInstance::GetUnrealWorldTransform() const
     return FTransform();
 }
 
+void FBodyInstance::SetBodyTransform(const FTransform& NewTransform, bool bTeleport)
+{
+    if (!IsValidBodyInstance() || !PhysScene) { return; }
+
+    PxScene* PScene = PhysScene->GetPxScene();
+
+    if (PScene) 
+    {
+        SCOPED_SCENE_WRITE_LOCK(PScene);
+
+        PxTransform PNewTransform = U2PTransform(NewTransform);
+        RigidActor->setGlobalPose(PNewTransform);
+
+        if (bTeleport && IsDynamic())
+        {
+            PxRigidDynamic* DynamicActor = RigidActor->is<PxRigidDynamic>();
+
+            DynamicActor->setLinearVelocity(PxVec3(0.0f));
+            DynamicActor->setAngularVelocity(PxVec3(0.0f));
+            DynamicActor->wakeUp();
+        }
+    }
+}
+
 void FBodyInstance::SetLinearVelocity(const FVector& NewVel, bool bAddToCurrent)
 {
-    if (IsValidBodyInstance() && IsDynamic())
-    {
-        PxRigidDynamic* DynamicActor = RigidActor->is<PxRigidDynamic>();
+    if (!IsValidBodyInstance() || !PhysScene) return;
 
+    if (IsDynamic())
+    {
+        SCOPED_SCENE_WRITE_LOCK(PhysScene->GetPxScene());
+        
+        PxRigidDynamic* DynamicActor = RigidActor->is<PxRigidDynamic>();
+        
         if (bAddToCurrent)
         {
             PxVec3 CurrentVel = DynamicActor->getLinearVelocity();
@@ -180,28 +208,39 @@ void FBodyInstance::SetLinearVelocity(const FVector& NewVel, bool bAddToCurrent)
         {
             DynamicActor->setLinearVelocity(U2PVector(NewVel));
         }
+        DynamicActor->wakeUp();
     }
 }
 
 void FBodyInstance::AddForce(const FVector& Force, bool bAccelChange)
 {
-    if (IsValidBodyInstance() && IsDynamic())
-    {
-        PxRigidDynamic* DynamicActor = RigidActor->is<PxRigidDynamic>();
-        PxForceMode::Enum Mode = bAccelChange ? PxForceMode::eACCELERATION : PxForceMode::eFORCE;
+    if (!IsValidBodyInstance() || !PhysScene) return;
 
+    if (IsDynamic())
+    {
+        SCOPED_SCENE_WRITE_LOCK(PhysScene->GetPxScene());
+        
+        PxRigidDynamic* DynamicActor = RigidActor->is<PxRigidDynamic>();
+        
+        PxForceMode::Enum Mode = bAccelChange ? PxForceMode::eACCELERATION : PxForceMode::eFORCE;
         DynamicActor->addForce(U2PVector(Force), Mode);
+        DynamicActor->wakeUp();
     }
 }
 
 void FBodyInstance::AddTorque(const FVector& Torque, bool bAccelChange)
 {
-    if (IsValidBodyInstance() && IsDynamic())
-    {
-        PxRigidDynamic* DynamicActor = RigidActor->is<PxRigidDynamic>();
-        PxForceMode::Enum Mode = bAccelChange ? PxForceMode::eACCELERATION : PxForceMode::eFORCE;
+    if (!IsValidBodyInstance() || !PhysScene) return;
 
+    if (IsDynamic())
+    {
+        SCOPED_SCENE_WRITE_LOCK(PhysScene->GetPxScene());
+        
+        PxRigidDynamic* DynamicActor = RigidActor->is<PxRigidDynamic>();
+        
+        PxForceMode::Enum Mode = bAccelChange ? PxForceMode::eACCELERATION : PxForceMode::eFORCE;
         DynamicActor->addTorque(U2PVector(Torque), Mode);
+        DynamicActor->wakeUp();
     }
 }
 

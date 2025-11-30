@@ -20,9 +20,9 @@ void UBoneAnchorComponent::UpdateAnchorFromBone()
     SetWorldTransform(BoneWorld) ;
 }
 
-void UBoneAnchorComponent::OnTransformUpdated()
+void UBoneAnchorComponent::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
 {
-    Super::OnTransformUpdated();
+    Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
 
     if (!Target || BoneIndex < 0)
         return;

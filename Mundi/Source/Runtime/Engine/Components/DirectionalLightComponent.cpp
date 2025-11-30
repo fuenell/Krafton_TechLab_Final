@@ -233,9 +233,9 @@ void UDirectionalLightComponent::UpdateLightData()
     UpdateDirectionGizmo();
 }
 
-void UDirectionalLightComponent::OnTransformUpdated()
+void UDirectionalLightComponent::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
 {
-    Super::OnTransformUpdated();
+    Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
     if (UWorld* World = GetWorld())
     {
         if (World->GetLightManager())

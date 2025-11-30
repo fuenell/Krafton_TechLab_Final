@@ -46,7 +46,8 @@ public:
     void OnPropertyChanged(const FProperty& Prop) override;
     void OnRegister(UWorld* InWorld) override;
     void OnUnregister() override;
-    void OnTransformUpdated() override;
+
+    void OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport = ETeleportType::None) override;
 
     virtual FAABB GetWorldAABB() const { return FAABB(); }
 

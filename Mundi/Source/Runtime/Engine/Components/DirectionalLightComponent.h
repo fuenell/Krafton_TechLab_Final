@@ -51,7 +51,7 @@ public:
 	void OnRegister(UWorld* InWorld) override;
 	void OnUnregister() override;
 	virtual void UpdateLightData() override;
-	void OnTransformUpdated() override;
+	void OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport = ETeleportType::None) override;
 
 	// Serialization & Duplication
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;

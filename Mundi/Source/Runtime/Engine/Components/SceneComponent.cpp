@@ -46,13 +46,13 @@ USceneComponent::~USceneComponent()
 
 // ──────────────────────────────
 // Relative API 더티플래그 사용해서 업데이트 하도록 수정할 것임.
-// 그리고 bWantsOnUpdateTransform이 True일때만 OnTransformUpdated호출
+// 그리고 bWantsOnUpdateTransform이 True일때만 OnUpdateTransform호출
 // ──────────────────────────────
 void USceneComponent::SetRelativeLocation(const FVector& NewLocation)
 {
     RelativeLocation = NewLocation;
     UpdateRelativeTransform();
-    OnTransformUpdated();
+    OnUpdateTransform(EUpdateTransformFlags::None, ETeleportType::None);
 }
 FVector USceneComponent::GetRelativeLocation() const { return RelativeLocation; }
 
@@ -61,7 +61,7 @@ void USceneComponent::SetRelativeRotation(const FQuat& NewRotation)
     RelativeRotation = NewRotation;
     RelativeRotationEuler = NewRotation.ToEulerZYXDeg(); // Euler 동기화
     UpdateRelativeTransform();
-    OnTransformUpdated();
+    OnUpdateTransform(EUpdateTransformFlags::None, ETeleportType::None);
 }
 FQuat USceneComponent::GetRelativeRotation() const { return RelativeRotation; }
 
@@ -75,7 +75,7 @@ void USceneComponent::SetRelativeRotationEuler(const FVector& EulerDegrees)
 
     // Euler 재계산 하지 않음 - UI에서 입력한 값을 그대로 유지
     UpdateRelativeTransform();
-    OnTransformUpdated();
+    OnUpdateTransform(EUpdateTransformFlags::None, ETeleportType::None);
 }
 
 FVector USceneComponent::GetRelativeRotationEuler() const
@@ -88,7 +88,7 @@ void USceneComponent::SetRelativeScale(const FVector& NewScale)
 {
     RelativeScale = NewScale;
     UpdateRelativeTransform();
-    OnTransformUpdated();
+    OnUpdateTransform(EUpdateTransformFlags::None, ETeleportType::None);
 }
 FVector USceneComponent::GetRelativeScale() const { return RelativeScale; }
 
@@ -96,7 +96,7 @@ void USceneComponent::AddRelativeLocation(const FVector& DeltaLocation)
 {
     RelativeLocation = RelativeLocation + DeltaLocation;
     UpdateRelativeTransform();
-    OnTransformUpdated();
+    OnUpdateTransform(EUpdateTransformFlags::None, ETeleportType::None);
 }
 
 void USceneComponent::AddRelativeRotation(const FQuat& DeltaRotation)
@@ -104,7 +104,7 @@ void USceneComponent::AddRelativeRotation(const FQuat& DeltaRotation)
     RelativeRotation = DeltaRotation * RelativeRotation;
     RelativeRotationEuler = RelativeRotation.ToEulerZYXDeg(); // Euler 동기화
     UpdateRelativeTransform();
-    OnTransformUpdated();
+    OnUpdateTransform(EUpdateTransformFlags::None, ETeleportType::None);
 }
 
 void USceneComponent::AddRelativeScale3D(const FVector& DeltaScale)
@@ -113,7 +113,7 @@ void USceneComponent::AddRelativeScale3D(const FVector& DeltaScale)
         RelativeScale.Y * DeltaScale.Y,
         RelativeScale.Z * DeltaScale.Z);
     UpdateRelativeTransform();
-    OnTransformUpdated();
+    OnUpdateTransform(EUpdateTransformFlags::None, ETeleportType::None);
 }
 
 // ──────────────────────────────
@@ -132,7 +132,11 @@ FTransform USceneComponent::GetWorldTransform() const
 
 void USceneComponent::SetWorldTransform(const FTransform& W)
 {
-    // Dangling pointer 방지를 위한 체크
+    SetWorldTransform(W, EUpdateTransformFlags::None);
+}
+
+void USceneComponent::SetWorldTransform(const FTransform& W, EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
+{
     if (AttachParent && !AttachParent->IsPendingDestroy())
     {
         const FTransform ParentWorld = AttachParent->GetWorldTransform();
@@ -145,11 +149,12 @@ void USceneComponent::SetWorldTransform(const FTransform& W)
 
     RelativeLocation = RelativeTransform.Translation;
     RelativeRotation = RelativeTransform.Rotation;
-    RelativeRotationEuler = RelativeRotation.ToEulerZYXDeg(); // Euler 동기화
+    RelativeRotationEuler = RelativeRotation.ToEulerZYXDeg(); 
     RelativeScale = RelativeTransform.Scale3D;
-    OnTransformUpdated();
+    
+    OnUpdateTransform(UpdateTransformFlags, Teleport);
 }
- 
+
 void USceneComponent::SetWorldLocation(const FVector& L)
 {
     FTransform W = GetWorldTransform();
@@ -249,7 +254,7 @@ void USceneComponent::AddLocalOffset(const FVector& Delta)
     const FVector parentDelta = RelativeRotation.RotateVector(Delta);
     RelativeLocation = RelativeLocation + parentDelta;
     UpdateRelativeTransform();
-    OnTransformUpdated();
+    OnUpdateTransform(EUpdateTransformFlags::None, ETeleportType::None);
 }
 
 void USceneComponent::AddLocalRotation(const FQuat& DeltaRot)
@@ -257,7 +262,7 @@ void USceneComponent::AddLocalRotation(const FQuat& DeltaRot)
     RelativeRotation = (RelativeRotation * DeltaRot).GetNormalized(); // 로컬: 우측곱
     RelativeRotationEuler = RelativeRotation.ToEulerZYXDeg(); // Euler 동기화
     UpdateRelativeTransform();
-    OnTransformUpdated();
+    OnUpdateTransform(EUpdateTransformFlags::None, ETeleportType::None);
 }
 
 void USceneComponent::SetLocalLocationAndRotation(const FVector& L, const FQuat& R)
@@ -266,7 +271,7 @@ void USceneComponent::SetLocalLocationAndRotation(const FVector& L, const FQuat&
     RelativeRotation = R.GetNormalized();
     RelativeRotationEuler = RelativeRotation.ToEulerZYXDeg(); // Euler 동기화
     UpdateRelativeTransform();
-    OnTransformUpdated();
+    OnUpdateTransform(EUpdateTransformFlags::None, ETeleportType::None);
 }
 
 
@@ -339,7 +344,7 @@ void USceneComponent::DetachFromParent(bool bKeepWorld)
     RelativeScale = RelativeTransform.Scale3D;
 
     // Notify transform update so shapes can refresh overlaps
-    OnTransformUpdated();
+    OnUpdateTransform(EUpdateTransformFlags::None, ETeleportType::None);
 }
 
 void USceneComponent::DuplicateSubObjects()
@@ -376,7 +381,7 @@ void USceneComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 
         // 해당 객체의 Transform을 위에서 읽은 값을 기반으로 변경 후, 자식에게 전파
         UpdateRelativeTransform();
-        OnTransformUpdated();
+        OnUpdateTransform(EUpdateTransformFlags::None, ETeleportType::None);
 	}
 	else
 	{
@@ -403,16 +408,15 @@ void USceneComponent::OnRegister(UWorld* InWorld)
         SpriteComponent->SetTexture(GDataDir + "/UI/Icons/EmptyActor.dds");
     }
 
-    // Notify transform update so shapes can refresh overlaps
-    OnTransformUpdated();
+    OnUpdateTransform(EUpdateTransformFlags::None, ETeleportType::None);
 }
 
-void USceneComponent::OnTransformUpdated()
+void USceneComponent::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
 {
     bIsTransformDirty = true;
     for (USceneComponent* Child : GetAttachChildren())
     {
-        Child->OnTransformUpdated();
+        Child->OnUpdateTransform(UpdateTransformFlags, Teleport);
     }
 }
 

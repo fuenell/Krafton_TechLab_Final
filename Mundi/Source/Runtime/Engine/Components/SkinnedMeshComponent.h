@@ -28,7 +28,7 @@ public:
     void CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View) override;
     
     FAABB GetWorldAABB() const override;
-    void OnTransformUpdated() override;
+    void OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport = ETeleportType::None) override;
 
 // Skeletal Section
 public:

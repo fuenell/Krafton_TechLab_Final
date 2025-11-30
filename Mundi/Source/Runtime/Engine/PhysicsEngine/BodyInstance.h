@@ -30,13 +30,32 @@ struct FBodyInstance
     /** 물리 바디로부터 현재 월드 공간 트랜스폼을 가져온다. */
     FTransform GetUnrealWorldTransform() const;
 
-    /** 바디의 선형 속도를 설정한다. */
+    /**
+     * 물리 바디의 위치를 강제로 설정 (텔레포트)
+     * @note 현재는 커맨드 큐가 없기 때문에 SCOPED_SCENE_WRITE_LOCK을 통해서 비동기 연산을 처리한다.
+     * @todo 시뮬레이션 중인지 확인한 후에, 시뮬레이션 중에만 락을 걸도록 변경한다.
+     *       bTeleport대신에 enum을 사용하도록 변경한다.
+     * @param NewTransform      이동할 목표 위치
+     * @param bTeleport         true면 속도를 초기화하고 순간이동, false면 kinematic 이동
+     */
+    void SetBodyTransform(const FTransform& NewTransform, bool bTeleport);
+
+    /**
+     * 바디의 선형 속도를 설정한다.
+     * @todo 시뮬레이션 중인지 확인한 후에, 시뮬레이션 중에만 락을 걸도록 변경한다.
+     */
     void SetLinearVelocity(const FVector& NewVel, bool bAddToCurrent = false);
 
-    /** 바디에 힘을 더한다. */
+    /**
+     * 바디에 힘을 더한다.
+     * @todo 시뮬레이션 중인지 확인한 후에, 시뮬레이션 중에만 락을 걸도록 변경한다.
+     */
     void AddForce(const FVector& Force, bool bAccelChange = false);
 
-    /** 바디에 토크를 더한다. */
+    /**
+     * 바디에 토크를 더한다.
+     * @todo 시뮬레이션 중인지 확인한 후에, 시뮬레이션 중에만 락을 걸도록 변경한다.
+     */
     void AddTorque(const FVector& Torque, bool bAccelChange = false);
 
     /** 동적 바디여부 확인*/

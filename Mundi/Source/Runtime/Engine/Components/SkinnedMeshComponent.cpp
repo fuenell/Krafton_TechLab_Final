@@ -303,9 +303,9 @@ FAABB USkinnedMeshComponent::GetWorldAABB() const
    // return FAABB(WorldMin, WorldMax);
 }
 
-void USkinnedMeshComponent::OnTransformUpdated()
+void USkinnedMeshComponent::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
 {
-   Super::OnTransformUpdated();
+   Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
    MarkWorldPartitionDirty();
 }
 

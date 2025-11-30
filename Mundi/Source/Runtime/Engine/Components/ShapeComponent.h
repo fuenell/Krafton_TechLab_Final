@@ -50,12 +50,11 @@ public:
 	virtual void GetShape(FShape& OutShape) const {};
 	virtual void BeginPlay() override;
 	virtual void EndPlay() override;
-    virtual void OnRegister(UWorld* InWorld) override;
-	virtual void OnUnregister() override;
-    virtual void OnTransformUpdated() override;
-
-    void UpdateOverlaps();
-
+    	virtual void OnRegister(UWorld* InWorld) override;
+    	virtual void OnUnregister() override;
+        void OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport = ETeleportType::None) override;
+    
+        void UpdateOverlaps();
     // Bounds 업데이트 (자식 클래스에서 구현)
     virtual void UpdateBounds() {}
 
