@@ -1,6 +1,6 @@
 {
   "Actors" : {
-    "1016" : {
+    "1055" : {
       "ObjectName" : "피사계 심도_0",
       "OwnedComponents" : [{
           "Aperture" : 4.000000,
@@ -10,8 +10,8 @@
           "FarBlurScale" : 1.000000,
           "FarTransitionRange" : 100.000000,
           "FocalDistance" : 50.000000,
-          "FocalLength" : 50.000000,
-          "Id" : 1017,
+          "FocalLength" : 35.000000,
+          "Id" : 1057,
           "MaxCocRadius" : 12.000000,
           "NearBlurScale" : 1.000000,
           "NearTransitionRange" : 25.000000,
@@ -31,16 +31,16 @@
           "bTickInEditor" : false,
           "bUnbounded" : false
         }],
-      "RootComponentId" : 1017,
+      "RootComponentId" : 1057,
       "Tag" : "",
       "Type" : "ADepthOfFieldActor",
       "bActorHiddenInGame" : false,
       "bActorIsActive" : true
     },
-    "1019" : {
+    "1058" : {
       "ObjectName" : "스태틱 메시_0",
       "OwnedComponents" : [{
-          "Id" : 1020,
+          "Id" : 1060,
           "MaterialSlots" : [{
               "AssetPath" : "texture",
               "Type" : "UMaterial"
@@ -61,16 +61,16 @@
           "bTickEnabled" : true,
           "bTickInEditor" : false
         }],
-      "RootComponentId" : 1020,
+      "RootComponentId" : 1060,
       "Tag" : "",
       "Type" : "AStaticMeshActor",
       "bActorHiddenInGame" : false,
       "bActorIsActive" : true
     },
-    "1021" : {
+    "1061" : {
       "ObjectName" : "AStaticMeshActor_0",
       "OwnedComponents" : [{
-          "Id" : 1022,
+          "Id" : 1063,
           "MaterialSlots" : [{
               "AssetPath" : "texture",
               "Type" : "UMaterial"
@@ -91,16 +91,16 @@
           "bTickEnabled" : true,
           "bTickInEditor" : false
         }],
-      "RootComponentId" : 1022,
+      "RootComponentId" : 1063,
       "Tag" : "",
       "Type" : "AStaticMeshActor",
       "bActorHiddenInGame" : false,
       "bActorIsActive" : true
     },
-    "1023" : {
+    "1064" : {
       "ObjectName" : "AStaticMeshActor_1",
       "OwnedComponents" : [{
-          "Id" : 1024,
+          "Id" : 1066,
           "MaterialSlots" : [{
               "AssetPath" : "texture",
               "Type" : "UMaterial"
@@ -121,13 +121,13 @@
           "bTickEnabled" : true,
           "bTickInEditor" : false
         }],
-      "RootComponentId" : 1024,
+      "RootComponentId" : 1066,
       "Tag" : "",
       "Type" : "AStaticMeshActor",
       "bActorHiddenInGame" : false,
       "bActorIsActive" : true
     },
-    "379" : {
+    "1067" : {
       "ObjectName" : "ADirectionalLightActor_1",
       "OwnedComponents" : [{
           "CascadedAreaColorDebugValue" : 0.000000,
@@ -135,7 +135,7 @@
           "CascadedCount" : 4,
           "CascadedLinearBlendingValue" : 0.500000,
           "CascadedOverlapValue" : 0.200000,
-          "Id" : 380,
+          "Id" : 1069,
           "Intensity" : 1.000000,
           "LightColor" : [1.000000, 1.000000, 1.000000, 1.000000],
           "ObjectName" : "UDirectionalLightComponent_1",
@@ -157,16 +157,16 @@
           "bTickEnabled" : true,
           "bTickInEditor" : false
         }],
-      "RootComponentId" : 380,
+      "RootComponentId" : 1069,
       "Tag" : "",
       "Type" : "ADirectionalLightActor",
       "bActorHiddenInGame" : false,
       "bActorIsActive" : true
     },
-    "381" : {
+    "1070" : {
       "ObjectName" : "AAmbientLightActor_1",
       "OwnedComponents" : [{
-          "Id" : 382,
+          "Id" : 1072,
           "Intensity" : 0.100000,
           "LightColor" : [1.000000, 1.000000, 1.000000, 1.000000],
           "ObjectName" : "UAmbientLightComponent_1",
@@ -187,19 +187,19 @@
           "bTickEnabled" : true,
           "bTickInEditor" : false
         }],
-      "RootComponentId" : 382,
+      "RootComponentId" : 1072,
       "Tag" : "",
       "Type" : "AAmbientLightActor",
       "bActorHiddenInGame" : false,
       "bActorIsActive" : true
     },
-    "389" : {
+    "1073" : {
       "ObjectName" : "APlayerCameraManager_1",
       "OwnedComponents" : [{
           "AspectRatio" : 1.000000,
           "FarClip" : 100.000000,
           "FieldOfView" : 60.000000,
-          "Id" : 390,
+          "Id" : 1075,
           "NearClip" : 0.100000,
           "ObjectName" : "UCameraComponent_1",
           "ParentId" : 0,
@@ -215,16 +215,16 @@
           "bTickEnabled" : true,
           "bTickInEditor" : false
         }],
-      "RootComponentId" : 390,
+      "RootComponentId" : 1075,
       "Tag" : "",
       "Type" : "APlayerCameraManager",
       "bActorHiddenInGame" : false,
       "bActorIsActive" : true
     },
-    "392" : {
+    "1076" : {
       "ObjectName" : "AParticleEventManager_1",
       "OwnedComponents" : [{
-          "Id" : 393,
+          "Id" : 1077,
           "ObjectName" : "USceneComponent_1",
           "ParentId" : 0,
           "RelativeLocation" : [0.000000, 0.000000, 0.000000],
@@ -237,14 +237,36 @@
           "bTickEnabled" : true,
           "bTickInEditor" : false
         }],
-      "RootComponentId" : 393,
+      "RootComponentId" : 1077,
+      "Tag" : "",
+      "Type" : "AParticleEventManager",
+      "bActorHiddenInGame" : false,
+      "bActorIsActive" : true
+    },
+    "1084" : {
+      "ObjectName" : "AParticleEventManager_5",
+      "OwnedComponents" : [{
+          "Id" : 1085,
+          "ObjectName" : "USceneComponent_6",
+          "ParentId" : 0,
+          "RelativeLocation" : [0.000000, 0.000000, 0.000000],
+          "RelativeRotationEuler" : [0.000000, 0.000000, 0.000000],
+          "RelativeScale" : [1.000000, 1.000000, 1.000000],
+          "Type" : "USceneComponent",
+          "bHiddenInGame" : false,
+          "bIsActive" : true,
+          "bIsVisible" : true,
+          "bTickEnabled" : true,
+          "bTickInEditor" : false
+        }],
+      "RootComponentId" : 1085,
       "Tag" : "",
       "Type" : "AParticleEventManager",
       "bActorHiddenInGame" : false,
       "bActorIsActive" : true
     }
   },
-  "NextUUID" : 1025,
+  "NextUUID" : 1087,
   "PerspectiveCamera" : {
     "FOV" : [60.000000],
     "FarClip" : [2000.000000],
