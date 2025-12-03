@@ -181,83 +181,111 @@ void USlateManager::OpenAssetViewer(UEditorAssetPreviewContext* Context)
 {
     if (!Context) return;
 
-    SViewerWindow* TargetWindow = nullptr;
     const EViewerType ViewerType = Context->ViewerType;
 
-    // 1. Find an existing window of the correct type by iterating through all detached windows.
-    // We also check pending open windows to handle rapid clicks.
+    // ========================================================================
+    // 단일 창 모드 (Single-Window Mode)
+    // - 한 번에 하나의 뷰어 창만 열 수 있음
+    // - 같은 타입 창이 있으면 → 기존 창에 탭 추가/포커스
+    // - 다른 타입 창이 있으면 → 기존 창 닫고 새 창 열기
+    // ========================================================================
+
+    SViewerWindow* SameTypeWindow = nullptr;
+    TArray<SWindow*> OtherTypeWindows;
+
+    // 1. 모든 창을 검사하여 같은 타입/다른 타입 분류
     TArray<SWindow*> AllWindows = DetachedWindows;
     AllWindows.Append(PendingOpenWindows);
 
     for (SWindow* Window : AllWindows)
     {
+        SViewerWindow* ViewerWindow = dynamic_cast<SViewerWindow*>(Window);
+        if (!ViewerWindow) continue;
+
+        bool bIsSameType = false;
         if (ViewerType == EViewerType::Skeletal && dynamic_cast<SSkeletalMeshViewerWindow*>(Window))
+            bIsSameType = true;
+        else if (ViewerType == EViewerType::Animation && dynamic_cast<SAnimationViewerWindow*>(Window))
+            bIsSameType = true;
+        else if (ViewerType == EViewerType::BlendSpace && dynamic_cast<SBlendSpaceEditorWindow*>(Window))
+            bIsSameType = true;
+        else if (ViewerType == EViewerType::Particle && dynamic_cast<SParticleEditorWindow*>(Window))
+            bIsSameType = true;
+
+        if (bIsSameType)
         {
-            TargetWindow = static_cast<SViewerWindow*>(Window);
-            break;
+            SameTypeWindow = ViewerWindow;
         }
-        if (ViewerType == EViewerType::Animation && dynamic_cast<SAnimationViewerWindow*>(Window))
+        else
         {
-            TargetWindow = static_cast<SViewerWindow*>(Window);
-            break;
-        }
-        if (ViewerType == EViewerType::BlendSpace && dynamic_cast<SBlendSpaceEditorWindow*>(Window))
-        {
-            TargetWindow = static_cast<SViewerWindow*>(Window);
-            break;
-        }
-        if (ViewerType == EViewerType::Particle && dynamic_cast<SParticleEditorWindow*>(Window))
-        {
-            TargetWindow = static_cast<SViewerWindow*>(Window);
-            break;
+            OtherTypeWindows.Add(Window);
         }
     }
 
-    // 2. If a window of the target type already exists, tell it to open or focus a tab.
-    if (TargetWindow)
+    // 2. 같은 타입 창이 있으면 탭 추가/포커스
+    if (SameTypeWindow)
     {
-        TargetWindow->OpenOrFocusTab(Context);
-        TargetWindow->RequestFocus();
-        UE_LOG("Found existing viewer window. Opening/focusing tab for: %s", Context->AssetPath.c_str());
+        SameTypeWindow->OpenOrFocusTab(Context);
+        SameTypeWindow->RequestFocus();
+        UE_LOG("[SingleWindow] Found existing viewer window. Opening/focusing tab for: %s", Context->AssetPath.c_str());
+        return;
     }
-    // 3. If no such window exists, create a new one.
-    else
+
+    // 3. 다른 타입 창이 있으면 모두 닫기 (단일 창 모드)
+    // 주의: Render 중에 호출될 수 있으므로 즉시 삭제하지 않고 지연 삭제 사용
+    for (SWindow* Window : OtherTypeWindows)
     {
-        SViewerWindow* NewViewer = nullptr;
-        switch (ViewerType)
+        // PendingOpenWindows에 있는 창은 직접 삭제 (아직 렌더링 대상 아님)
+        int32 PendingIndex = PendingOpenWindows.Find(Window);
+        if (PendingIndex != -1)
         {
-        case EViewerType::Skeletal:
-            NewViewer = new SSkeletalMeshViewerWindow();
-            break;
-        case EViewerType::Animation:
-            NewViewer = new SAnimationViewerWindow();
-            break;
-        case EViewerType::BlendSpace:
-            NewViewer = new SBlendSpaceEditorWindow();
-            break;
-        case EViewerType::Particle:
-            NewViewer = new SParticleEditorWindow();
-            break;
-        default:
-            UE_LOG("ERROR: Unsupported asset type for viewer.");
-            return;
+            PendingOpenWindows.RemoveAt(PendingIndex);
+            delete Window;
+            UE_LOG("[SingleWindow] Closed pending viewer window (different type)");
         }
-
-        if (NewViewer)
+        // DetachedWindows에 있는 창은 지연 삭제 요청 (dangling pointer 방지)
+        else
         {
-            // Open as a detached window at a default size and position
-            const float toolbarHeight = 50.0f;
-            const float availableHeight = Rect.GetHeight() - toolbarHeight;
-            const float w = Rect.GetWidth() * 0.8f;
-            const float h = availableHeight * 0.9f;
-            const float x = Rect.Left + (Rect.GetWidth() - w) * 0.5f;
-            const float y = Rect.Top + toolbarHeight + (availableHeight - h) * 0.5f;
-
-            // Initialize creates the first tab with the given context
-            NewViewer->Initialize(x, y, w, h, World, Device, Context);
-            PendingOpenWindows.Add(NewViewer);
-            UE_LOG("No existing viewer found. Opened a new asset viewer for asset: %s", Context->AssetPath.c_str());
+            RequestCloseDetachedWindow(Window);
+            UE_LOG("[SingleWindow] Requested close for viewer window (different type)");
         }
+    }
+
+    // 4. 새 창 생성
+    SViewerWindow* NewViewer = nullptr;
+    switch (ViewerType)
+    {
+    case EViewerType::Skeletal:
+        NewViewer = new SSkeletalMeshViewerWindow();
+        break;
+    case EViewerType::Animation:
+        NewViewer = new SAnimationViewerWindow();
+        break;
+    case EViewerType::BlendSpace:
+        NewViewer = new SBlendSpaceEditorWindow();
+        break;
+    case EViewerType::Particle:
+        NewViewer = new SParticleEditorWindow();
+        break;
+    default:
+        UE_LOG("ERROR: Unsupported asset type for viewer.");
+        return;
+    }
+
+    if (NewViewer)
+    {
+        // Open as a detached window at a default size and position
+        const float toolbarHeight = 50.0f;
+        const float availableHeight = Rect.GetHeight() - toolbarHeight;
+        const float w = Rect.GetWidth() * 0.8f;
+        const float h = availableHeight * 0.9f;
+        const float x = Rect.Left + (Rect.GetWidth() - w) * 0.5f;
+        const float y = Rect.Top + toolbarHeight + (availableHeight - h) * 0.5f;
+
+        // Initialize creates the first tab with the given context
+        NewViewer->Initialize(x, y, w, h, World, Device, Context);
+        PendingOpenWindows.Add(NewViewer);
+        UE_LOG("[SingleWindow] Opened new asset viewer for asset: %s", Context->AssetPath.c_str());
     }
 }
 
@@ -548,24 +576,27 @@ void USlateManager::Render()
     }
     
     // Render detached viewer on top
-    for (SWindow* Window : DetachedWindows)
+    // 복사본으로 반복 (OnRender 중 DetachedWindows가 수정될 수 있음)
+    TArray<SWindow*> WindowsToRender = DetachedWindows;
+    for (SWindow* Window : WindowsToRender)
     {
-        Window->OnRender();
+        // 아직 유효한 창인지 확인 (중간에 닫혔거나 닫기 요청됐을 수 있음)
+        if (DetachedWindows.Find(Window) != -1 && PendingCloseWindows.Find(Window) == -1)
+        {
+            Window->OnRender();
+        }
     }
+    // 참고: PendingCloseWindows는 RenderAfterUI()에서 처리됨 (ImGui::EndFrame() 이후)
+}
 
-    // Process pending close windows
+void USlateManager::RenderAfterUI()
+{
+    // ImGui::EndFrame() 이후에 창 삭제 (삭제된 텍스처 참조 방지)
     for (SWindow* Window : PendingCloseWindows)
     {
         CloseDetachedWindow(Window);
     }
     PendingCloseWindows.Empty();
-}
-
-void USlateManager::RenderAfterUI()
-{
-    // 뷰포트 렌더링은 이제 ImGui draw callback에서 처리됨
-    // (SAnimationViewerWindow::ViewportRenderCallback 참조)
-    // 따라서 여기서는 아무것도 하지 않음
 }
 
 void USlateManager::Update(float DeltaSeconds)
@@ -840,14 +871,8 @@ void USlateManager::ProcessInput()
     if (World->GetGizmoActor() && !bAnyViewerFocused)
         World->GetGizmoActor()->ProcessGizmoModeSwitch();
 
-    if (!PendingCloseWindows.IsEmpty())
-    {
-        for (SWindow* Window : PendingCloseWindows)
-        {
-            CloseDetachedWindow(Window);
-        }
-        PendingCloseWindows.Empty();
-    }
+    // 참고: PendingCloseWindows는 Render()의 끝에서만 처리됨 (이중 삭제 방지)
+    // PendingOpenWindows는 Update()에서만 처리됨 (렌더 전에 창 목록 갱신)
 
     if (!PendingOpenWindows.IsEmpty())
     {

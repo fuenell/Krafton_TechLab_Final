@@ -66,6 +66,7 @@ public:
 
     // Animation State
     UAnimSequence* CurrentAnimation = nullptr;
+    FString CurrentAnimSequencePath;  // .animsequence 파일 경로 (저장된 경우)
     bool bIsPlaying = false;
     bool bIsLooping = true;
     bool bReversePlay = false;
@@ -83,12 +84,11 @@ public:
     TArray<FNotifyTrack> NotifyTracks;
 
     bool bFoldNotifies = false;
-    bool bFoldCurves = false;
-    bool bFoldAttributes = false;
 
     FSelectedNotify SelectedNotify;
 
-    bool bIsDirty = false;
+    bool bIsDirty = false;              // 저장이 필요한지 (Save 버튼 활성화용)
+    bool bNotifyTracksNeedSync = false; // NotifyTracks 동기화가 필요한지
 
     // Additive bone transforms applied on top of animation
     TMap<int32, FTransform> BoneAdditiveTransforms;

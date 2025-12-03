@@ -490,6 +490,24 @@ void SBlendSpaceEditorWindow::LoadSkeletalMesh(ViewerState* State, const FString
     USkeletalMesh* Mesh = UResourceManager::GetInstance().Load<USkeletalMesh>(Path);
     if (Mesh && State->PreviewActor)
     {
+        // 새 메시 로드 전에 기존 상태 초기화 (힙 손상 및 잘못된 데이터 방지)
+        // 이전 애니메이션이 새 스켈레톤과 호환되지 않을 수 있음
+        State->CurrentAnimation = nullptr;
+        State->CurrentAnimSequencePath.clear();
+        State->TotalTime = 0.0f;
+        State->CurrentTime = 0.0f;
+        State->bIsPlaying = false;
+
+        // 본 관련 상태 초기화 (이전 스켈레톤의 인덱스가 새 스켈레톤과 맞지 않을 수 있음)
+        State->SelectedBoneIndex = -1;
+        State->BoneAdditiveTransforms.Empty();
+        State->bIsDirty = false;
+
+        if (auto* MeshComp = State->PreviewActor->GetSkeletalMeshComponent())
+        {
+            MeshComp->StopAnimation();
+        }
+
         // Set the mesh on the preview actor
         State->PreviewActor->SetSkeletalMesh(Path);
         State->CurrentMesh = Mesh;

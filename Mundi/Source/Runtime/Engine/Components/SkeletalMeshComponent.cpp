@@ -10,6 +10,9 @@
 
 USkeletalMeshComponent::USkeletalMeshComponent()
 {
+    // 애니메이션 틱을 위해 필수
+    bCanEverTick = true;
+
     // Keep constructor lightweight for editor/viewer usage.
     // Load a simple default test mesh if available; viewer UI can override.
     SetSkeletalMesh(GDataDir + "/DancingRacer.fbx");

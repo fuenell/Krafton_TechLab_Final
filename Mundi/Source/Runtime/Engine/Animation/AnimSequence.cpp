@@ -1,6 +1,9 @@
 #include "pch.h"
 #include "AnimSequence.h"
 #include "VertexData.h"
+#include "JsonSerializer.h"
+#include <fstream>
+#include <filesystem>
 
 UAnimSequence::UAnimSequence()
 	: AnimDataModel(nullptr)
@@ -248,4 +251,126 @@ FVector UAnimSequence::InterpolateScale(const TArray<FVector>& ScaleKeys, float 
 
 	// 선형 보간 (Lerp)
 	return FMath::Lerp(ScaleKeys[Index0], ScaleKeys[Index1], Alpha);
+}
+
+void UAnimSequence::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+{
+	// 부모 클래스 직렬화 (SequenceLength, SkeletonName 등)
+	UAnimSequenceBase::Serialize(bInIsLoading, InOutHandle);
+
+	if (bInIsLoading)
+	{
+		// === 로드 ===
+		// ResourceKey (SourceFilePath)만 로드
+		// 실제 애니메이션 데이터는 ResourceManager에서 참조
+		// NotifyTracks는 OnLoad에서 직접 처리
+		FString SourcePath;
+		FJsonSerializer::ReadString(InOutHandle, "SourceFilePath", SourcePath, "", false);
+
+		if (!SourcePath.empty())
+		{
+			SetFilePath(SourcePath);
+		}
+	}
+	else
+	{
+		// === 저장 ===
+		// ResourceKey (FilePath) 저장 - ResourceManager 조회에 사용
+		FString SourcePath = GetFilePath();
+		InOutHandle["SourceFilePath"] = SourcePath;
+
+		// 메타데이터
+		if (AnimDataModel)
+		{
+			InOutHandle["FrameRate"] = AnimDataModel->FrameRate;
+			InOutHandle["NumberOfFrames"] = AnimDataModel->NumberOfFrames;
+		}
+
+		// NotifyTracks 저장 (UAnimSequence에서 직접 관리)
+		JSON NotifyTracksArray = JSON::Make(JSON::Class::Array);
+		for (const FNotifyTrack& Track : NotifyTracks)
+		{
+			JSON TrackJson = JSON::Make(JSON::Class::Object);
+			TrackJson["Name"] = Track.Name;
+
+			JSON NotifiesArray = JSON::Make(JSON::Class::Array);
+			for (const FAnimNotifyEvent& Notify : Track.Notifies)
+			{
+				JSON NotifyJson = JSON::Make(JSON::Class::Object);
+				NotifyJson["TriggerTime"] = Notify.TriggerTime;
+				NotifyJson["Duration"] = Notify.Duration;
+				NotifyJson["NotifyName"] = Notify.NotifyName.ToString();
+				NotifyJson["SoundPath"] = Notify.SoundPath;
+				NotifyJson["Color"] = FJsonSerializer::Vector4ToJson(
+					FVector4(Notify.Color.R, Notify.Color.G, Notify.Color.B, Notify.Color.A));
+				NotifiesArray.append(NotifyJson);
+			}
+			TrackJson["Notifies"] = NotifiesArray;
+
+			NotifyTracksArray.append(TrackJson);
+		}
+		InOutHandle["NotifyTracks"] = NotifyTracksArray;
+	}
+}
+
+bool UAnimSequence::Save(const FString& InFilePath)
+{
+	try
+	{
+		// 디렉토리 생성
+		std::filesystem::path FilePath(InFilePath);
+		std::filesystem::path ParentDir = FilePath.parent_path();
+		if (!ParentDir.empty() && !std::filesystem::exists(ParentDir))
+		{
+			std::filesystem::create_directories(ParentDir);
+		}
+
+		// JSON 직렬화
+		JSON RootJson = JSON::Make(JSON::Class::Object);
+		Serialize(false, RootJson);
+
+		// 파일에 저장
+		FWideString WidePath(InFilePath.begin(), InFilePath.end());
+		if (!FJsonSerializer::SaveJsonToFile(RootJson, WidePath))
+		{
+			UE_LOG("[UAnimSequence] Save 실패: %s", InFilePath.c_str());
+			return false;
+		}
+
+		UE_LOG("[UAnimSequence] Save 성공: %s", InFilePath.c_str());
+		return true;
+	}
+	catch (const std::exception& e)
+	{
+		UE_LOG("[UAnimSequence] Save 예외: %s", e.what());
+		return false;
+	}
+}
+
+bool UAnimSequence::LoadAnimSequenceFile(const FString& InFilePath)
+{
+	try
+	{
+		// FString을 FWideString으로 변환
+		FWideString WidePath(InFilePath.begin(), InFilePath.end());
+
+		// 파일에서 JSON 로드
+		JSON JsonHandle;
+		if (!FJsonSerializer::LoadJsonFromFile(JsonHandle, WidePath))
+		{
+			UE_LOG("[UAnimSequence] LoadAnimSequenceFile 실패: %s", InFilePath.c_str());
+			return false;
+		}
+
+		// 역직렬화 (true = 로딩 모드)
+		Serialize(true, JsonHandle);
+
+		UE_LOG("[UAnimSequence] LoadAnimSequenceFile 성공: %s", InFilePath.c_str());
+		return true;
+	}
+	catch (const std::exception& e)
+	{
+		UE_LOG("[UAnimSequence] LoadAnimSequenceFile 예외: %s", e.what());
+		return false;
+	}
 }

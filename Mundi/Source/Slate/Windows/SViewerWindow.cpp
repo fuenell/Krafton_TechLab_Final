@@ -23,142 +23,50 @@ SViewerWindow::SViewerWindow()
 
 SViewerWindow::~SViewerWindow()
 {
-	// 뷰어 툴바 아이콘 정리
-	if (IconSelect)
+	// 모든 탭의 ViewerState 정리 (가상 함수 호출 불가하므로 직접 정리)
+	for (ViewerState* State : Tabs)
 	{
-		DeleteObject(IconSelect);
-		IconSelect = nullptr;
+		if (State)
+		{
+			if (State->Viewport) { delete State->Viewport; State->Viewport = nullptr; }
+			if (State->Client) { delete State->Client; State->Client = nullptr; }
+			if (State->World) { ObjectFactory::DeleteObject(State->World); State->World = nullptr; }
+			delete State;
+		}
 	}
-	if (IconMove)
-	{
-		DeleteObject(IconMove);
-		IconMove = nullptr;
-	}
-	if (IconRotate)
-	{
-		DeleteObject(IconRotate);
-		IconRotate = nullptr;
-	}
-	if (IconScale)
-	{
-		DeleteObject(IconScale);
-		IconScale = nullptr;
-	}
-	if (IconWorldSpace)
-	{
-		DeleteObject(IconWorldSpace);
-		IconWorldSpace = nullptr;
-	}
-	if (IconLocalSpace)
-	{
-		DeleteObject(IconLocalSpace);
-		IconLocalSpace = nullptr;
-	}
-	if (IconCamera)
-	{
-		DeleteObject(IconCamera);
-		IconCamera = nullptr;
-	}
-	if (IconPerspective)
-	{
-		DeleteObject(IconPerspective);
-		IconPerspective = nullptr;
-	}
-	if (IconTop)
-	{
-		DeleteObject(IconTop);
-		IconTop = nullptr;
-	}
-	if (IconBottom)
-	{
-		DeleteObject(IconBottom);
-		IconBottom = nullptr;
-	}
-	if (IconLeft)
-	{
-		DeleteObject(IconLeft);
-		IconLeft = nullptr;
-	}
-	if (IconRight)
-	{
-		DeleteObject(IconRight);
-		IconRight = nullptr;
-	}
-	if (IconFront)
-	{
-		DeleteObject(IconFront);
-		IconFront = nullptr;
-	}
-	if (IconBack)
-	{
-		DeleteObject(IconBack);
-		IconBack = nullptr;
-	}
-	if (IconSpeed)
-	{
-		DeleteObject(IconSpeed);
-		IconSpeed = nullptr;
-	}
-	if (IconFOV)
-	{
-		DeleteObject(IconFOV);
-		IconFOV = nullptr;
-	}
-	if (IconNearClip)
-	{
-		DeleteObject(IconNearClip);
-		IconNearClip = nullptr;
-	}
-	if (IconFarClip)
-	{
-		DeleteObject(IconFarClip);
-		IconFarClip = nullptr;
-	}
-	if (IconViewMode_Lit)
-	{
-		DeleteObject(IconViewMode_Lit);
-		IconViewMode_Lit = nullptr;
-	}
-	if (IconViewMode_Unlit)
-	{
-		DeleteObject(IconViewMode_Unlit);
-		IconViewMode_Unlit = nullptr;
-	}
-	if (IconViewMode_Wireframe)
-	{
-		DeleteObject(IconViewMode_Wireframe);
-		IconViewMode_Wireframe = nullptr;
-	}
-	if (IconViewMode_BufferVis)
-	{
-		DeleteObject(IconViewMode_BufferVis);
-		IconViewMode_BufferVis = nullptr;
-	}
-	if (IconBone)
-	{
-		DeleteObject(IconBone);
-		IconBone = nullptr;
-	}
-	if (IconSave)
-	{
-		DeleteObject(IconSave);
-		IconSave = nullptr;
-	}
-	if (IconSkeletalViewer)
-	{
-		DeleteObject(IconSkeletalViewer);
-		IconSkeletalViewer = nullptr;
-	}
-	if (IconAnimationViewer)
-	{
-		DeleteObject(IconAnimationViewer);
-		IconAnimationViewer = nullptr;
-	}
-	if (IconBlendSpaceEditor)
-	{
-		DeleteObject(IconBlendSpaceEditor);
-		IconBlendSpaceEditor = nullptr;
-	}
+	Tabs.Empty();
+	ActiveState = nullptr;
+
+	// 뷰어 툴바 아이콘 정리 (DeleteObject로 O(1) 삭제)
+	if (IconSelect) { DeleteObject(IconSelect); IconSelect = nullptr; }
+	if (IconMove) { DeleteObject(IconMove); IconMove = nullptr; }
+	if (IconRotate) { DeleteObject(IconRotate); IconRotate = nullptr; }
+	if (IconScale) { DeleteObject(IconScale); IconScale = nullptr; }
+	if (IconWorldSpace) { DeleteObject(IconWorldSpace); IconWorldSpace = nullptr; }
+	if (IconLocalSpace) { DeleteObject(IconLocalSpace); IconLocalSpace = nullptr; }
+	if (IconCamera) { DeleteObject(IconCamera); IconCamera = nullptr; }
+	if (IconPerspective) { DeleteObject(IconPerspective); IconPerspective = nullptr; }
+	if (IconTop) { DeleteObject(IconTop); IconTop = nullptr; }
+	if (IconBottom) { DeleteObject(IconBottom); IconBottom = nullptr; }
+	if (IconLeft) { DeleteObject(IconLeft); IconLeft = nullptr; }
+	if (IconRight) { DeleteObject(IconRight); IconRight = nullptr; }
+	if (IconFront) { DeleteObject(IconFront); IconFront = nullptr; }
+	if (IconBack) { DeleteObject(IconBack); IconBack = nullptr; }
+	if (IconSpeed) { DeleteObject(IconSpeed); IconSpeed = nullptr; }
+	if (IconFOV) { DeleteObject(IconFOV); IconFOV = nullptr; }
+	if (IconNearClip) { DeleteObject(IconNearClip); IconNearClip = nullptr; }
+	if (IconFarClip) { DeleteObject(IconFarClip); IconFarClip = nullptr; }
+	if (IconViewMode_Lit) { DeleteObject(IconViewMode_Lit); IconViewMode_Lit = nullptr; }
+	if (IconViewMode_Unlit) { DeleteObject(IconViewMode_Unlit); IconViewMode_Unlit = nullptr; }
+	if (IconViewMode_Wireframe) { DeleteObject(IconViewMode_Wireframe); IconViewMode_Wireframe = nullptr; }
+	if (IconViewMode_BufferVis) { DeleteObject(IconViewMode_BufferVis); IconViewMode_BufferVis = nullptr; }
+	if (IconBone) { DeleteObject(IconBone); IconBone = nullptr; }
+	if (IconSave) { DeleteObject(IconSave); IconSave = nullptr; }
+	if (IconSaveAs) { DeleteObject(IconSaveAs); IconSaveAs = nullptr; }
+	if (IconLoad) { DeleteObject(IconLoad); IconLoad = nullptr; }
+	if (IconSkeletalViewer) { DeleteObject(IconSkeletalViewer); IconSkeletalViewer = nullptr; }
+	if (IconAnimationViewer) { DeleteObject(IconAnimationViewer); IconAnimationViewer = nullptr; }
+	if (IconBlendSpaceEditor) { DeleteObject(IconBlendSpaceEditor); IconBlendSpaceEditor = nullptr; }
 }
 
 static inline FString GetBaseFilenameFromPath(const FString& InPath)
@@ -570,33 +478,43 @@ void SViewerWindow::RenderTabsAndToolbar(EViewerType CurrentViewerType)
     float availableHeight = ImGui::GetContentRegionAvail().y;
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (availableHeight - BtnHeight) * 0.5f);
 
-    // Save Button (Left-aligned)
-    const bool bIsSaveButtonDisabled = (ActiveState && !ActiveState->bIsDirty);
-    if (bIsSaveButtonDisabled)
-    {
-        ImGui::BeginDisabled();
-    }
+    // 애니메이션이 로드되어 있는지 확인 (Save/SaveAs/Load 버튼 활성화 조건)
+    const bool bHasAnimation = (ActiveState && ActiveState->CurrentAnimation != nullptr);
 
+    // Save Button (Left-aligned)
+    if (!bHasAnimation) ImGui::BeginDisabled();
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
     if (ImGui::ImageButton("##SaveBtn",
         (void*)IconSave->GetShaderResourceView(), IconSizeVec))
     {
-        if (ActiveState)
-        {
-            UE_LOG("Save button clicked for asset: %s", ActiveState->LoadedMeshPath.c_str());
-            // TODO: This should call a virtual OnSave() function
-            // Actual saving will happen in SAnimationViewerWindow::OnSave()
-            // For now, just resetting the dirty flag
-            ActiveState->bIsDirty = false;
-        }
+        OnSave();
     }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Save Changes");
-    
-    if (bIsSaveButtonDisabled)
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip(bHasAnimation ? "Save" : "Save (No animation loaded)");
+    ImGui::PopStyleColor();
+    if (!bHasAnimation) ImGui::EndDisabled();
+    ImGui::SameLine();
+
+    // Save As Button
+    if (!bHasAnimation) ImGui::BeginDisabled();
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+    if (ImGui::ImageButton("##SaveAsBtn",
+        (void*)IconSaveAs->GetShaderResourceView(), IconSizeVec))
     {
-        ImGui::EndDisabled();
+        OnSaveAs();
     }
-    
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip(bHasAnimation ? "Save As..." : "Save As (No animation loaded)");
+    ImGui::PopStyleColor();
+    if (!bHasAnimation) ImGui::EndDisabled();
+    ImGui::SameLine();
+
+    // Load Button (항상 활성화 - .animsequence에서 애니메이션 로드 가능)
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+    if (ImGui::ImageButton("##LoadBtn",
+        (void*)IconLoad->GetShaderResourceView(), IconSizeVec))
+    {
+        OnLoad();
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load AnimSequence");
     ImGui::PopStyleColor();
     ImGui::SameLine();
 
@@ -678,6 +596,11 @@ void SViewerWindow::RenderLeftPanel(float PanelWidth)
     ImGuiStyle& style = ImGui::GetStyle();
     float spacing = style.ItemSpacing.y;
 
+    // [DISABLED] Asset Browser Section - Browse/Load FBX 기능 비활성화
+    // 힙 손상 문제로 인해 임시로 비활성화됨
+    // SkeletalMesh는 Content Browser에서 선택 후 에디터로 여는 방식 사용
+    // TODO: FBXLoader의 힙 손상 버그 수정 후 재활성화
+    #if 0
     // Asset Browser Section
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 6);
     ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.30f, 0.30f, 0.30f, 0.8f));
@@ -738,6 +661,24 @@ void SViewerWindow::RenderLeftPanel(float PanelWidth)
             USkeletalMesh* Mesh = UResourceManager::GetInstance().Load<USkeletalMesh>(Path);
             if (Mesh && ActiveState->PreviewActor)
             {
+                // 새 메시 로드 전에 기존 상태 초기화 (힙 손상 및 잘못된 데이터 방지)
+                // 이전 애니메이션이 새 스켈레톤과 호환되지 않을 수 있음
+                ActiveState->CurrentAnimation = nullptr;
+                ActiveState->CurrentAnimSequencePath.clear();
+                ActiveState->TotalTime = 0.0f;
+                ActiveState->CurrentTime = 0.0f;
+                ActiveState->bIsPlaying = false;
+
+                // 본 관련 상태 초기화 (이전 스켈레톤의 인덱스가 새 스켈레톤과 맞지 않을 수 있음)
+                ActiveState->SelectedBoneIndex = -1;
+                ActiveState->BoneAdditiveTransforms.Empty();
+                ActiveState->bIsDirty = false;
+
+                if (auto* MeshComp = ActiveState->PreviewActor->GetSkeletalMeshComponent())
+                {
+                    MeshComp->StopAnimation();
+                }
+
                 ActiveState->PreviewActor->SetSkeletalMesh(Path);
                 ActiveState->CurrentMesh = Mesh;
 
@@ -791,6 +732,7 @@ void SViewerWindow::RenderLeftPanel(float PanelWidth)
     ImGui::PopStyleColor();
     ImGui::Dummy(ImVec2(0, 8));
     ImGui::Spacing();
+    #endif // DISABLED - Browse/Load FBX
 
     // Display Options
     ImGui::BeginGroup();
@@ -1414,6 +1356,12 @@ void SViewerWindow::LoadViewerToolbarIcons(ID3D11Device* Device)
     // 뷰어 아이콘 로드
     IconSave = NewObject<UTexture>();
     IconSave->Load(GDataDir + "/Icon/Toolbar_Save.png", Device);
+
+    IconSaveAs = NewObject<UTexture>();
+    IconSaveAs->Load(GDataDir + "/Icon/Toolbar_SaveAs.png", Device);
+
+    IconLoad = NewObject<UTexture>();
+    IconLoad->Load(GDataDir + "/Icon/Toolbar_Load.png", Device);
 
     IconSkeletalViewer = NewObject<UTexture>();
     IconSkeletalViewer->Load(GDataDir + "/Icon/Skeletal_Viewer.png", Device);
@@ -2530,14 +2478,18 @@ void SViewerWindow::RenderAnimationBrowser(
                         ActiveState->CurrentTime = 0.0f;
                         ActiveState->bIsPlaying = true;
 
-                        if (Anim && Anim->GetDataModel())
-                        {
-                            ActiveState->NotifyTracks = Anim->GetDataModel()->NotifyTracks;
-                        }
-                        else
-                        {
-                            ActiveState->NotifyTracks.clear();
-                        }
+                        // 새 애니메이션 선택 시 UI NotifyTracks 초기화
+                        // 캐싱된 UAnimSequence는 건드리지 않음 (다른 창에서 사용 중일 수 있음)
+                        // .animsequence 파일 로드 시에만 저장된 NotifyTracks를 복원함
+                        ActiveState->NotifyTracks.clear();
+                        ActiveState->NotifyTracks.Add(FNotifyTrack("Track 0"));
+                        ActiveState->SelectedNotify.Invalidate(); // 선택 해제
+                        ActiveState->bNotifyTracksNeedSync = true; // 동기화 필요
+
+                        // 새 애니메이션 선택 시 .animsequence 경로 초기화
+                        // Save 시 새 파일명 지정하도록
+                        ActiveState->CurrentAnimSequencePath.clear();
+                        ActiveState->bIsDirty = false;
 
                         USkeletalMeshComponent* MeshComp = ActiveState->PreviewActor->GetSkeletalMeshComponent();
                         if (MeshComp)

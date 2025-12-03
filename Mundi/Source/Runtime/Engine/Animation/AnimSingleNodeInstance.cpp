@@ -140,13 +140,12 @@ void UAnimSingleNodeInstance::EvaluateAnimation(FPoseContext& Output)
 void UAnimSingleNodeInstance::TriggerAnimNotifies(float PreviousTime, float CurrentTime)
 {
     UAnimSequence* Seq = Cast<UAnimSequence>(Player.GetSequence());
-    if (!Seq || !Seq->GetDataModel())   return;
+    if (!Seq) return;
 
-    const UAnimDataModel* DataModel = Seq->GetDataModel();
     USkeletalMeshComponent* OwingComp = GetOwningComponent();
     if (!OwingComp) return;
 
-    for (const FNotifyTrack& Track : DataModel->NotifyTracks)
+    for (const FNotifyTrack& Track : Seq->GetNotifyTracks())
     {
         for (const FAnimNotifyEvent& Notify : Track.Notifies)
         {

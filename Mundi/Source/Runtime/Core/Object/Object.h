@@ -262,6 +262,7 @@ protected:
     // Centralized deletion entry accessible to ObjectFactory only
     void DestroyInternal() { delete this; }
     friend void ObjectFactory::DeleteObject(UObject* Obj);
+    friend void ObjectFactory::DeleteObjectFast(UObject* Obj);
 
 public:
     // UObject-scoped allocation only

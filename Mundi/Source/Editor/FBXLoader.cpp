@@ -654,12 +654,31 @@ void UFbxLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<int
 
 			if (Index == 0)
 			{
-				// 클러스터를 담고 있는 Node의(Mesh) Fbx Scene World Transform, 한 번만 구해도 되고 
+				// 클러스터를 담고 있는 Node의(Mesh) Fbx Scene World Transform, 한 번만 구해도 되고
 				// 정점을 Fbx Scene World 좌표계로 저장하기 위해 사용(아티스트 의도를 그대로 반영 가능, 서브메시를 단일메시로 처리 가능)
 				// 모든 SkeletalMesh는 Scene World 원점을 기준으로 제작되어야함
 				Cluster->GetTransformMatrix(FbxSceneWorld);
 				FbxSceneWorldInverseTranspose = FbxSceneWorld.Inverse().Transpose();
 			}
+
+			// BoneToIndex 맵에서 안전하게 본 인덱스를 가져옴
+			FbxNode* LinkNode = Cluster->GetLink();
+			if (!LinkNode || !BoneToIndex.Contains(LinkNode))
+			{
+				// 클러스터가 연결된 본을 찾을 수 없음 - 스킵
+				UE_LOG("Warning: Cluster %d has no valid bone link, skipping", Index);
+				continue;
+			}
+			int32 BoneIdx = BoneToIndex[LinkNode];
+
+			// 본 인덱스가 유효한지 확인
+			if (BoneIdx < 0 || BoneIdx >= MeshData.Skeleton.Bones.Num())
+			{
+				UE_LOG("Warning: Invalid bone index %d (max: %d), skipping cluster %d",
+					BoneIdx, MeshData.Skeleton.Bones.Num() - 1, Index);
+				continue;
+			}
+
 			int IndexCount = Cluster->GetControlPointIndicesCount();
 			// 클러스터가 영향을 주는 ControlPointIndex를 구함.
 			int* Indices = Cluster->GetControlPointIndices();
@@ -677,8 +696,8 @@ void UFbxLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<int
             {
                 for (int Col = 0; Col < 4; Col++)
                 {
-                    MeshData.Skeleton.Bones[BoneToIndex[Cluster->GetLink()]].BindPose.M[Row][Col] = static_cast<float>(BoneBindGlobal[Row][Col]);
-                    MeshData.Skeleton.Bones[BoneToIndex[Cluster->GetLink()]].InverseBindPose.M[Row][Col] = static_cast<float>(BoneBindGlobalInv[Row][Col]);
+                    MeshData.Skeleton.Bones[BoneIdx].BindPose.M[Row][Col] = static_cast<float>(BoneBindGlobal[Row][Col]);
+                    MeshData.Skeleton.Bones[BoneIdx].InverseBindPose.M[Row][Col] = static_cast<float>(BoneBindGlobalInv[Row][Col]);
                 }
             }
 
@@ -688,7 +707,7 @@ void UFbxLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<int
 				// GetLink -> 아까 저장한 노드 To Index맵의 노드 (Cluster에 대응되는 뼈 인덱스를 ControlPointIndex에 대응시키는 과정)
 				// ControlPointIndex = 클러스터가 저장하는 ControlPointIndex 배열에 대한 Index
 				TArray<IndexWeight>& IndexWeightArray = ControlPointToBoneWeight[Indices[ControlPointIndex]];
-				IndexWeightArray.Add(IndexWeight(BoneToIndex[Cluster->GetLink()], Weights[ControlPointIndex]));
+				IndexWeightArray.Add(IndexWeight(BoneIdx, Weights[ControlPointIndex]));
 			}
 		}
 	}
@@ -731,7 +750,18 @@ void UFbxLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<int
 		{
 			FbxGeometryElementMaterial* Material = InMesh->GetElementMaterial(0);
 			int MaterialSlot = Material->GetIndexArray().GetAt(PolygonIndex);
-			MaterialIndex = MaterialSlotToIndex[MaterialSlot];
+			// 범위 검사: MaterialSlot이 유효한 인덱스인지 확인
+			if (MaterialSlot >= 0 && MaterialSlot < MaterialSlotToIndex.Num())
+			{
+				MaterialIndex = MaterialSlotToIndex[MaterialSlot];
+			}
+			else
+			{
+				// 잘못된 머티리얼 슬롯 인덱스 - 기본 머티리얼(0) 사용
+				UE_LOG("Warning: Invalid material slot %d (max: %d) at polygon %d, using default material",
+					MaterialSlot, MaterialSlotToIndex.Num() - 1, PolygonIndex);
+				MaterialIndex = 0;
+			}
 		}
 
 		// 하나의 Polygon 내에서의 VertexIndex, PolygonSize가 다를 수 있지만 위에서 삼각화를 해줬기 때문에 무조건 3임
@@ -1443,7 +1473,7 @@ UAnimSequence* UFbxLoader::LoadFbxAnimation(const FString& FilePath, const struc
 
 			// UAnimSequence 생성 및 설정
 			UAnimSequence* AnimSequence = NewObject<UAnimSequence>();
-			AnimSequence->SetFilePath(NormalizedPath);
+			AnimSequence->SetFilePath(ResourceKey);
 			AnimSequence->SetSkeletonName(TargetSkeleton->Name);
 			AnimSequence->SetAnimDataModel(DataModel);
 
@@ -1792,7 +1822,7 @@ UAnimSequence* UFbxLoader::LoadFbxAnimation(const FString& FilePath, const struc
 
 	// 16. UAnimSequence 생성 및 설정
 	UAnimSequence* AnimSequence = NewObject<UAnimSequence>();
-	AnimSequence->SetFilePath(NormalizedPath);
+	AnimSequence->SetFilePath(ResourceKey);
 	AnimSequence->SetSkeletonName(TargetSkeleton->Name);
 	AnimSequence->SetAnimDataModel(DataModel);
 

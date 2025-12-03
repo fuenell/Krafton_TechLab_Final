@@ -1,12 +1,14 @@
 ﻿#pragma once
 #include "AnimSequenceBase.h"
 #include "AnimDataModel.h"
+#include "Source/Runtime/Engine/Viewer/ViewerState.h"
 #include "UAnimSequence.generated.h"
 
 /**
  * 애니메이션 시퀀스
- * 실제 애니메이션 키프레임 데이터를 관리하는 구체 클래스
- * FBX에서 로드된 애니메이션 데이터를 저장하고 재생
+ * 키프레임 데이터(AnimDataModel)와 사용자 편집 데이터(NotifyTracks)를 관리
+ * 키프레임: FBX → .anim.bin 캐시
+ * NotifyTracks: .animsequence 파일에 저장
  */
 UCLASS(DisplayName="애니메이션 시퀀스", Description="키프레임 기반 스켈레탈 애니메이션")
 class UAnimSequence : public UAnimSequenceBase
@@ -51,9 +53,50 @@ public:
 	// UAnimSequenceBase override
 	virtual void ExtractBonePose(const FSkeleton& Skeleton, float Time, bool bLooping, bool bInterpolate, TArray<FTransform>& OutLocalPose) const override;
 
+	/**
+	 * JSON 직렬화 (AnimDataModel 포함 전체 데이터)
+	 * @param bInIsLoading true면 로드, false면 저장
+	 * @param InOutHandle JSON 데이터
+	 */
+	virtual void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+
+	/**
+	 * 애니메이션 시퀀스를 .animsequence 파일로 저장
+	 * @param InFilePath 저장할 파일 경로 (확장자 포함)
+	 * @return 성공하면 true
+	 */
+	bool Save(const FString& InFilePath);
+
+	/**
+	 * .animsequence 파일에서 NotifyTracks 및 메타데이터 로드
+	 * 키프레임 데이터는 SourceFilePath의 FBX에서 로드해야 함
+	 * @param InFilePath .animsequence 파일 경로
+	 * @return 성공하면 true
+	 */
+	bool LoadAnimSequenceFile(const FString& InFilePath);
+
+	/**
+	 * 캐시 파일 경로 설정 (.anim.bin)
+	 */
+	void SetCachePath(const FString& InPath) { CachePath = InPath; }
+	const FString& GetCachePath() const { return CachePath; }
+
+	/**
+	 * NotifyTracks 접근자
+	 */
+	TArray<FNotifyTrack>& GetNotifyTracks() { return NotifyTracks; }
+	const TArray<FNotifyTrack>& GetNotifyTracks() const { return NotifyTracks; }
+	void SetNotifyTracks(const TArray<FNotifyTrack>& InTracks) { NotifyTracks = InTracks; }
+
 protected:
 	/** 실제 애니메이션 키프레임 데이터를 저장하는 모델 */
 	UAnimDataModel* AnimDataModel = nullptr;
+
+	/** 사용자 편집 노티파이 트랙 (.animsequence에 저장) */
+	TArray<FNotifyTrack> NotifyTracks;
+
+	/** .anim.bin 캐시 파일 경로 (FBX 독립 로딩용) */
+	FString CachePath;
 
 private:
 	/**

@@ -68,10 +68,23 @@ void FPlatformCrashHandler::TickCrashMode()
     // 매 프레임마다 랜덤 객체를 삭제하여 빠르게 크래시
     static std::random_device rd;
     static std::mt19937 gen(rd());
-    // 랜덤 객체 삭제
+    // TMap에서 랜덤 객체 선택
     std::uniform_int_distribution<size_t> dist(0, GUObjectArray.size() - 1);
     size_t randomIndex = dist(gen);
-    UObject* targetObject = GUObjectArray[randomIndex];
+
+    // TMap 순회하여 랜덤 인덱스에 해당하는 객체 찾기
+    size_t currentIndex = 0;
+    UObject* targetObject = nullptr;
+    for (auto& pair : GUObjectArray)
+    {
+        if (currentIndex == randomIndex)
+        {
+            targetObject = pair.second;
+            break;
+        }
+        ++currentIndex;
+    }
+
     if (targetObject)
     {
         // 매 프레임마다 랜덤한 UObject 삭제

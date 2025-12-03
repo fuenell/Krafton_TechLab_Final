@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "AnimationAsset.h"
+#include "JsonSerializer.h"
 #include "UAnimSequenceBase.generated.h"
 
 /**
@@ -74,6 +75,13 @@ public:
 	 * @param OutLocalPose 본 개수 크기의 로컬 포즈 배열(출력)
 	 **/
 	virtual void ExtractBonePose(const FSkeleton& Skeleton, float Time, bool bLooping, bool bInterpolate, TArray<FTransform>& OutLocalPose) const;
+
+	/**
+	 * JSON 직렬화 (ResourceBase 패턴)
+	 * @param bInIsLoading true면 로드, false면 저장
+	 * @param InOutHandle JSON 데이터
+	 */
+	virtual void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
 protected:
 	/** 애니메이션 전체 재생 길이 (초 단위) */

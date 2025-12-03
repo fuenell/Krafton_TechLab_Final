@@ -148,7 +148,10 @@ UPrimitiveComponent* URenderer::GetPrimitiveCollided(int MouseX, int MouseY) con
 
 	if (PickedId == 0)
 		return nullptr;
-	return Cast<UPrimitiveComponent>(GUObjectArray[PickedId]);
+	auto it = GUObjectArray.find(PickedId);
+	if (it == GUObjectArray.end())
+		return nullptr;
+	return Cast<UPrimitiveComponent>(it->second);
 }
 
 void URenderer::InitializeLineBatch()

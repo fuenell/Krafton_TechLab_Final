@@ -37,10 +37,29 @@ bool FViewport::CreateRenderTarget(uint32 Width, uint32 Height)
 	if (!D3DDevice || Width == 0 || Height == 0)
 		return false;
 
-	// 기존 리소스 해제
-	ReleaseRenderTarget();
+	// ========================================================================
+	// Create-then-Release 패턴
+	// - 새 리소스를 먼저 생성하고, 성공 시에만 기존 리소스 해제
+	// - GPU가 아직 기존 리소스를 사용 중일 때 발생하는 크래시 방지
+	// ========================================================================
 
 	HRESULT hr;
+
+	// 새 리소스를 위한 임시 포인터
+	ID3D11Texture2D* NewTexture = nullptr;
+	ID3D11RenderTargetView* NewRTV = nullptr;
+	ID3D11ShaderResourceView* NewSRV = nullptr;
+	ID3D11Texture2D* NewDepthBuffer = nullptr;
+	ID3D11DepthStencilView* NewDSV = nullptr;
+
+	// 실패 시 부분 생성된 리소스 정리를 위한 람다
+	auto CleanupNewResources = [&]() {
+		if (NewDSV) { NewDSV->Release(); }
+		if (NewDepthBuffer) { NewDepthBuffer->Release(); }
+		if (NewSRV) { NewSRV->Release(); }
+		if (NewRTV) { NewRTV->Release(); }
+		if (NewTexture) { NewTexture->Release(); }
+	};
 
 	// 1. 렌더 타겟 텍스처 생성
 	D3D11_TEXTURE2D_DESC TexDesc = {};
@@ -56,9 +75,12 @@ bool FViewport::CreateRenderTarget(uint32 Width, uint32 Height)
 	TexDesc.CPUAccessFlags = 0;
 	TexDesc.MiscFlags = 0;
 
-	hr = D3DDevice->CreateTexture2D(&TexDesc, nullptr, &ViewportTexture);
+	hr = D3DDevice->CreateTexture2D(&TexDesc, nullptr, &NewTexture);
 	if (FAILED(hr))
+	{
+		CleanupNewResources();
 		return false;
+	}
 
 	// 2. RTV 생성
 	D3D11_RENDER_TARGET_VIEW_DESC RtvDesc = {};
@@ -66,9 +88,12 @@ bool FViewport::CreateRenderTarget(uint32 Width, uint32 Height)
 	RtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 	RtvDesc.Texture2D.MipSlice = 0;
 
-	hr = D3DDevice->CreateRenderTargetView(ViewportTexture, &RtvDesc, &ViewportRTV);
+	hr = D3DDevice->CreateRenderTargetView(NewTexture, &RtvDesc, &NewRTV);
 	if (FAILED(hr))
+	{
+		CleanupNewResources();
 		return false;
+	}
 
 	// 3. SRV 생성 (ImGui::Image용)
 	D3D11_SHADER_RESOURCE_VIEW_DESC SrvDesc = {};
@@ -77,9 +102,12 @@ bool FViewport::CreateRenderTarget(uint32 Width, uint32 Height)
 	SrvDesc.Texture2D.MostDetailedMip = 0;
 	SrvDesc.Texture2D.MipLevels = 1;
 
-	hr = D3DDevice->CreateShaderResourceView(ViewportTexture, &SrvDesc, &ViewportSRV);
+	hr = D3DDevice->CreateShaderResourceView(NewTexture, &SrvDesc, &NewSRV);
 	if (FAILED(hr))
+	{
+		CleanupNewResources();
 		return false;
+	}
 
 	// 4. 깊이 버퍼 생성
 	D3D11_TEXTURE2D_DESC DepthDesc = {};
@@ -95,14 +123,38 @@ bool FViewport::CreateRenderTarget(uint32 Width, uint32 Height)
 	DepthDesc.CPUAccessFlags = 0;
 	DepthDesc.MiscFlags = 0;
 
-	hr = D3DDevice->CreateTexture2D(&DepthDesc, nullptr, &ViewportDepthBuffer);
+	hr = D3DDevice->CreateTexture2D(&DepthDesc, nullptr, &NewDepthBuffer);
 	if (FAILED(hr))
+	{
+		CleanupNewResources();
 		return false;
+	}
 
 	// 5. DSV 생성
-	hr = D3DDevice->CreateDepthStencilView(ViewportDepthBuffer, nullptr, &ViewportDSV);
+	hr = D3DDevice->CreateDepthStencilView(NewDepthBuffer, nullptr, &NewDSV);
 	if (FAILED(hr))
+	{
+		CleanupNewResources();
 		return false;
+	}
+
+	// ========================================================================
+	// 모든 새 리소스 생성 성공 → 기존 리소스 해제 후 교체
+	// ========================================================================
+
+	// 기존 리소스 해제 (역순으로)
+	if (ViewportDSV) { ViewportDSV->Release(); }
+	if (ViewportDepthBuffer) { ViewportDepthBuffer->Release(); }
+	if (ViewportSRV) { ViewportSRV->Release(); }
+	if (ViewportRTV) { ViewportRTV->Release(); }
+	if (ViewportTexture) { ViewportTexture->Release(); }
+
+	// 새 리소스로 교체
+	ViewportTexture = NewTexture;
+	ViewportRTV = NewRTV;
+	ViewportSRV = NewSRV;
+	ViewportDepthBuffer = NewDepthBuffer;
+	ViewportDSV = NewDSV;
 
 	return true;
 }

@@ -5,7 +5,8 @@
 // ── 외부 심볼 ─────────────────────────────────────────────
 class UObject;
 struct UClass;
-extern TArray<UObject*> GUObjectArray;
+extern TMap<uint32, UObject*> GUObjectArray;
+extern uint32 GUObjectIndexCounter;
 
 // ── ObjectFactory 네임스페이스 ─────────────────────────────
 namespace ObjectFactory
@@ -42,8 +43,10 @@ namespace ObjectFactory
         return static_cast<T*>(AddToGUObjectArray(T::StaticClass(), Dest));
     }
 
-    // 개별 삭제(단일 소유자: Factory)
+    // 개별 삭제(단일 소유자: Factory) - 전체 순회로 안전하게 삭제 (느림)
     void DeleteObject(UObject* Obj);
+    // Index 기반 빠른 삭제 - InternalIndex로 O(1) 조회 후 포인터 검증 (빠름)
+    void DeleteObjectFast(UObject* Obj);
     // 종료시 일괄 정리
     void DeleteAll(bool bCallBeginDestroy = true);
     // Null 슬롯 압축하여 배열 크기 축소

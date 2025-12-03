@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ObjectFactory.h"
+
 // All necessary types should be included via pch.h
 // Forward declarations for types that may not be in pch.h
 class UTexture;
@@ -7,9 +9,6 @@ class UStaticMesh;
 class USkeletalMesh;
 class UMaterialInterface;
 class USound;
-
-// Forward declarations
-extern TArray<UObject*> GUObjectArray;
 
 // Map EPropertyType to expected UClass* for UObject pointer types
 // NOTE: Update this map when new UObject-derived types are added to EPropertyType enum
@@ -31,13 +30,14 @@ inline bool IsValidUObject(UObject* Ptr)
 {
     if (!Ptr) return false;
 
-    // Step 1: Check InternalIndex range
+    // Step 1: Check InternalIndex in TMap
     uint32_t idx = Ptr->InternalIndex;
-    if (idx >= static_cast<uint32_t>(GUObjectArray.Num()))
+    auto it = GUObjectArray.find(idx);
+    if (it == GUObjectArray.end())
         return false;
 
     // Step 2: Verify GUObjectArray slot points to the same object
-    UObject* RegisteredObj = GUObjectArray[idx];
+    UObject* RegisteredObj = it->second;
     if (RegisteredObj != Ptr)
         return false;  // Deleted or different object
 

@@ -23,6 +23,8 @@ public:
 	void OnRenderViewport();
 	virtual void PreRenderViewportUpdate() {}
 	virtual void OnSave() {}
+	virtual void OnSaveAs() {}
+	virtual void OnLoad() {}
 
 	// Accessors (active tab)
 	FViewport* GetViewport() const { return ActiveState ? ActiveState->Viewport : nullptr; }
@@ -159,6 +161,8 @@ private:
 
 	// 뷰어 아이콘
 	class UTexture* IconSave = nullptr;
+	class UTexture* IconSaveAs = nullptr;
+	class UTexture* IconLoad = nullptr;
 	class UTexture* IconSkeletalViewer = nullptr;
 	class UTexture* IconAnimationViewer = nullptr;
 	class UTexture* IconBlendSpaceEditor = nullptr;

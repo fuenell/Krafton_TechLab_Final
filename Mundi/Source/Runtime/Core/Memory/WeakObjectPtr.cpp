@@ -23,9 +23,10 @@ UObject* FWeakObjectPtr::Get() const
         return nullptr;
     }
 
-    if (InternalIndex < GUObjectArray.size())
+    auto it = GUObjectArray.find(InternalIndex);
+    if (it != GUObjectArray.end())
     {
-        return GUObjectArray[InternalIndex];
+        return it->second;
     }
 
     return nullptr;

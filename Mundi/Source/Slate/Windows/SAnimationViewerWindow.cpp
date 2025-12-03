@@ -5,9 +5,14 @@
 #include "Source/Runtime/Engine/GameFramework/SkeletalMeshActor.h"
 #include "Source/Runtime/Engine/Viewer/EditorAssetPreviewContext.h"
 #include "AnimSingleNodeInstance.h"
+#include "AnimSequence.h"
 #include "Source/Runtime/Renderer/FViewport.h"
 #include "Source/Runtime/Engine/Components/AudioComponent.h"
 #include "Source/Runtime/AssetManagement/Texture.h"
+#include "Source/Editor/PlatformProcess.h"
+#include "Source/Runtime/Core/Misc/PathUtils.h"
+#include "ResourceManager.h"
+#include <filesystem>
 
 SAnimationViewerWindow::SAnimationViewerWindow()
 {
@@ -260,6 +265,13 @@ void SAnimationViewerWindow::OnUpdate(float DeltaSeconds)
 
     if (!ActiveState || !ActiveState->PreviewActor || !ActiveState->CurrentAnimation) return;
 
+    // NotifyTracks 실시간 동기화 (편집 내용이 런타임에 즉시 반영되도록)
+    if (ActiveState->bNotifyTracksNeedSync)
+    {
+        ActiveState->CurrentAnimation->SetNotifyTracks(ActiveState->NotifyTracks);
+        ActiveState->bNotifyTracksNeedSync = false;
+    }
+
     USkeletalMeshComponent* MeshComp = ActiveState->PreviewActor->GetSkeletalMeshComponent();
     if (!MeshComp)  return;
 
@@ -459,12 +471,241 @@ void SAnimationViewerWindow::PreRenderViewportUpdate()
 
 void SAnimationViewerWindow::OnSave()
 {
-    if (ActiveState && ActiveState->bIsDirty)
+    if (!ActiveState || !ActiveState->CurrentAnimation)
     {
-        SyncNotifyTracksToDataModel();
-        ActiveState->bIsDirty = false;
-        UE_LOG("Animation data saved for: %s", ActiveState->LoadedMeshPath.c_str());
+        UE_LOG("[AnimationViewer] OnSave: No active animation to save");
+        return;
     }
+
+    // 저장된 경로가 없으면 Save As로 전환
+    if (ActiveState->CurrentAnimSequencePath.empty())
+    {
+        OnSaveAs();
+        return;
+    }
+
+    // NotifyTracks를 DataModel에 동기화
+    SyncNotifyTracksToDataModel();
+
+    // 기존 경로에 저장
+    UAnimSequence* Anim = ActiveState->CurrentAnimation;
+    if (Anim->Save(ActiveState->CurrentAnimSequencePath))
+    {
+        // ResourceManager에 등록/갱신
+        UResourceManager::GetInstance().AddOrReplace<UAnimSequence>(ActiveState->CurrentAnimSequencePath, Anim);
+
+        ActiveState->bIsDirty = false;
+        UE_LOG("[AnimationViewer] Saved animation to: %s", ActiveState->CurrentAnimSequencePath.c_str());
+    }
+    else
+    {
+        UE_LOG("[AnimationViewer] Failed to save animation to: %s", ActiveState->CurrentAnimSequencePath.c_str());
+    }
+}
+
+void SAnimationViewerWindow::OnSaveAs()
+{
+    if (!ActiveState || !ActiveState->CurrentAnimation)
+    {
+        UE_LOG("[AnimationViewer] OnSaveAs: No active animation to save");
+        return;
+    }
+
+    // NotifyTracks를 DataModel에 동기화
+    SyncNotifyTracksToDataModel();
+
+    // 기본 파일명 결정
+    UAnimSequence* Anim = ActiveState->CurrentAnimation;
+    FWideString DefaultFileName = L"NewAnimation";
+
+    // 기존 .animsequence 경로가 있으면 그 이름 사용
+    if (!ActiveState->CurrentAnimSequencePath.empty())
+    {
+        std::filesystem::path fsPath(ActiveState->CurrentAnimSequencePath);
+        FString BaseName = fsPath.stem().string();
+        DefaultFileName = FWideString(BaseName.begin(), BaseName.end());
+    }
+    // 없으면 FBX 파일명 기반
+    else if (!Anim->GetFilePath().empty())
+    {
+        std::filesystem::path fsPath(Anim->GetFilePath());
+        FString BaseName = fsPath.stem().string();
+        DefaultFileName = FWideString(BaseName.begin(), BaseName.end());
+    }
+
+    // 저장 파일 다이얼로그 열기
+    std::filesystem::path SavePath = FPlatformProcess::OpenSaveFileDialog(
+        L"Data/Animations",
+        L"animsequence",
+        L"AnimSequence File",
+        DefaultFileName
+    );
+
+    if (SavePath.empty())
+    {
+        return;  // 사용자가 취소함
+    }
+
+    // 상대 경로로 변환 (ParticleSystem 패턴과 동일)
+    FString SavePathStr = ResolveAssetRelativePath(NormalizePath(WideToUTF8(SavePath.wstring())), "");
+
+    // 저장 수행
+    if (Anim->Save(SavePathStr))
+    {
+        // ResourceManager에 등록/갱신
+        UResourceManager::GetInstance().AddOrReplace<UAnimSequence>(SavePathStr, Anim);
+
+        ActiveState->CurrentAnimSequencePath = SavePathStr;  // 경로 저장
+        ActiveState->bIsDirty = false;
+        UE_LOG("[AnimationViewer] Saved animation to: %s", SavePathStr.c_str());
+    }
+    else
+    {
+        UE_LOG("[AnimationViewer] Failed to save animation to: %s", SavePathStr.c_str());
+    }
+}
+
+void SAnimationViewerWindow::OnLoad()
+{
+    if (!ActiveState)
+    {
+        UE_LOG("[AnimationViewer] OnLoad: No active state");
+        return;
+    }
+
+    // 파일 다이얼로그를 통해 .animsequence 파일 선택
+    std::filesystem::path SelectedPath = FPlatformProcess::OpenLoadFileDialog(
+        L"Data/Animations",
+        L"animsequence",
+        L"AnimSequence File"
+    );
+
+    if (SelectedPath.empty())
+    {
+        return;  // 사용자가 취소함
+    }
+
+    // 상대 경로로 변환
+    FString LoadPath = ResolveAssetRelativePath(NormalizePath(WideToUTF8(SelectedPath.wstring())), "");
+
+    // JSON 직접 파싱
+    FWideString WidePath(LoadPath.begin(), LoadPath.end());
+    JSON JsonHandle;
+    if (!FJsonSerializer::LoadJsonFromFile(JsonHandle, WidePath))
+    {
+        UE_LOG("[AnimationViewer] Failed to load JSON: %s", LoadPath.c_str());
+        return;
+    }
+
+    // SourceFilePath 읽기 (ResourceKey)
+    FString SourceFilePath;
+    FJsonSerializer::ReadString(JsonHandle, "SourceFilePath", SourceFilePath, "", false);
+
+    if (SourceFilePath.empty())
+    {
+        UE_LOG("[AnimationViewer] SourceFilePath not found in: %s", LoadPath.c_str());
+        return;
+    }
+
+    // 경로 정규화 (백슬래시 → 슬래시)
+    SourceFilePath = NormalizePath(SourceFilePath);
+
+    UE_LOG("[AnimationViewer] OnLoad: Looking for animation with key: %s", SourceFilePath.c_str());
+
+    // ResourceManager에서 애니메이션 찾기
+    UAnimSequence* Anim = UResourceManager::GetInstance().Get<UAnimSequence>(SourceFilePath);
+    if (!Anim)
+    {
+        UE_LOG("[AnimationViewer] Animation not found in ResourceManager: %s", SourceFilePath.c_str());
+
+        // 디버그: ResourceManager에 등록된 애니메이션 목록 출력
+        const auto& Animations = UResourceManager::GetInstance().GetAnimations();
+        UE_LOG("[AnimationViewer] Available animations in ResourceManager (%d):", Animations.Num());
+        for (const auto* A : Animations)
+        {
+            if (A) UE_LOG("  - %s", A->GetFilePath().c_str());
+        }
+
+        UE_LOG("[AnimationViewer] Please load the FBX file first.");
+        return;
+    }
+
+    // CurrentAnimation 설정
+    ActiveState->CurrentAnimation = Anim;
+    ActiveState->TotalTime = Anim->GetSequenceLength();
+    ActiveState->CurrentTime = 0.0f;
+
+    // NotifyTracks 파싱하여 DataModel에 오버레이
+    TArray<FNotifyTrack> LoadedNotifyTracks;
+    JSON NotifyTracksJson;
+    if (FJsonSerializer::ReadArray(JsonHandle, "NotifyTracks", NotifyTracksJson, nullptr, false))
+    {
+        for (int32 i = 0; i < static_cast<int32>(NotifyTracksJson.size()); ++i)
+        {
+            JSON& TrackJson = NotifyTracksJson[i];
+            FNotifyTrack Track;
+
+            FJsonSerializer::ReadString(TrackJson, "Name", Track.Name, "", false);
+
+            JSON NotifiesJson;
+            if (FJsonSerializer::ReadArray(TrackJson, "Notifies", NotifiesJson, nullptr, false))
+            {
+                for (int32 j = 0; j < static_cast<int32>(NotifiesJson.size()); ++j)
+                {
+                    JSON& NotifyJson = NotifiesJson[j];
+                    FAnimNotifyEvent Notify;
+
+                    FJsonSerializer::ReadFloat(NotifyJson, "TriggerTime", Notify.TriggerTime, 0.0f, false);
+                    FJsonSerializer::ReadFloat(NotifyJson, "Duration", Notify.Duration, 0.0f, false);
+
+                    FString NotifyNameStr;
+                    FJsonSerializer::ReadString(NotifyJson, "NotifyName", NotifyNameStr, "", false);
+                    Notify.NotifyName = FName(NotifyNameStr.c_str());
+
+                    FJsonSerializer::ReadString(NotifyJson, "SoundPath", Notify.SoundPath, "", false);
+
+                    FVector4 ColorVec;
+                    FJsonSerializer::ReadVector4(NotifyJson, "Color", ColorVec, FVector4(1, 1, 1, 1), false);
+                    Notify.Color = FLinearColor(ColorVec.X, ColorVec.Y, ColorVec.Z, ColorVec.W);
+
+                    Track.Notifies.Add(Notify);
+                }
+            }
+
+            LoadedNotifyTracks.Add(Track);
+        }
+    }
+
+    // UAnimSequence에 NotifyTracks 적용
+    Anim->SetNotifyTracks(LoadedNotifyTracks);
+
+    // UI의 NotifyTracks 동기화
+    ActiveState->NotifyTracks = LoadedNotifyTracks;
+
+    // 기본 NotifyTrack 보장 (최소 1개)
+    if (ActiveState->NotifyTracks.IsEmpty())
+    {
+        ActiveState->NotifyTracks.Add(FNotifyTrack("Track 0"));
+    }
+
+    // 선택 상태 초기화 (새 NotifyTracks로 변경되었으므로)
+    ActiveState->SelectedNotify.Invalidate();
+
+    ActiveState->CurrentAnimSequencePath = LoadPath;
+    ActiveState->bIsDirty = false;
+
+    // 메시가 있으면 재생 시작
+    if (ActiveState->PreviewActor)
+    {
+        if (USkeletalMeshComponent* MeshComp = ActiveState->PreviewActor->GetSkeletalMeshComponent())
+        {
+            MeshComp->PlayAnimation(Anim, ActiveState->bIsLooping, ActiveState->PlaybackSpeed);
+            ActiveState->bIsPlaying = true;
+        }
+    }
+
+    UE_LOG("[AnimationViewer] Loaded animsequence: %s -> Animation: %s",
+        LoadPath.c_str(), SourceFilePath.c_str());
 }
 
 ViewerState* SAnimationViewerWindow::CreateViewerState(const char* Name, UEditorAssetPreviewContext* Context)
@@ -547,6 +788,14 @@ void SAnimationViewerWindow::OnSkeletalMeshLoaded(ViewerState* State, const FStr
         UE_LOG("SAnimationViewerWindow: Found %d compatible animations for skeleton '%s'",
             CompatibleCount, MeshSkeletonName.c_str());
     }
+
+    // 초기화 시 항상 기본 NotifyTracks로 시작
+    // 캐싱된 UAnimSequence는 건드리지 않음 (다른 창에서 사용 중일 수 있음)
+    // .animsequence 파일 로드 시에만 저장된 NotifyTracks를 복원함
+    State->NotifyTracks.clear();
+    State->NotifyTracks.Add(FNotifyTrack("Track 0"));
+    State->SelectedNotify.Invalidate(); // 선택 해제
+    State->bNotifyTracksNeedSync = true; // 동기화 필요
 }
 
 void SAnimationViewerWindow::RenderRightPanel()
@@ -572,18 +821,30 @@ void SAnimationViewerWindow::LoadSkeletalMesh(ViewerState* State, const FString&
     USkeletalMesh* Mesh = UResourceManager::GetInstance().Load<USkeletalMesh>(Path);
     if (Mesh && State->PreviewActor)
     {
+        // 새 메시 로드 전에 기존 상태 초기화 (힙 손상 및 잘못된 데이터 방지)
+        // 이전 애니메이션이 새 스켈레톤과 호환되지 않을 수 있음
+        State->CurrentAnimation = nullptr;
+        State->CurrentAnimSequencePath.clear();
+        State->TotalTime = 0.0f;
+        State->CurrentTime = 0.0f;
+        State->bIsPlaying = false;
+
+        // 본 관련 상태 초기화 (이전 스켈레톤의 인덱스가 새 스켈레톤과 맞지 않을 수 있음)
+        State->SelectedBoneIndex = -1;
+        State->BoneAdditiveTransforms.Empty();
+        State->bIsDirty = false;
+
+        if (auto* MeshComp = State->PreviewActor->GetSkeletalMeshComponent())
+        {
+            MeshComp->StopAnimation();
+        }
+
         // Set the mesh on the preview actor
         State->PreviewActor->SetSkeletalMesh(Path);
         State->CurrentMesh = Mesh;
 
         // Call the hook to update compatible animations (same as asset browser)
         OnSkeletalMeshLoaded(State, Path);
-
-        // Reset current animation state
-        State->CurrentAnimation = nullptr;
-        State->TotalTime = 0.0f;
-        State->CurrentTime = 0.0f;
-        State->bIsPlaying = false;
 
         // Expand all bone nodes by default on mesh load
         State->ExpandedBoneIndices.clear();
@@ -629,6 +890,21 @@ void SAnimationViewerWindow::RenderNotifyProperties()
     if (!ActiveState || !ActiveState->SelectedNotify.IsValid())
         return;
 
+    // 인덱스 범위 검사 (NotifyTracks 초기화 후 SelectedNotify가 무효해질 수 있음)
+    int trackIdx = ActiveState->SelectedNotify.TrackIndex;
+    int notifyIdx = ActiveState->SelectedNotify.NotifyIndex;
+
+    if (trackIdx < 0 || trackIdx >= static_cast<int>(ActiveState->NotifyTracks.Num()))
+    {
+        ActiveState->SelectedNotify.Invalidate();
+        return;
+    }
+    if (notifyIdx < 0 || notifyIdx >= static_cast<int>(ActiveState->NotifyTracks[trackIdx].Notifies.Num()))
+    {
+        ActiveState->SelectedNotify.Invalidate();
+        return;
+    }
+
     ImGuiStyle& style = ImGui::GetStyle();
     float spacing = style.ItemSpacing.y;
 
@@ -650,9 +926,6 @@ void SAnimationViewerWindow::RenderNotifyProperties()
     // -------------------------
     // Local ref
     // -------------------------
-    int trackIdx = ActiveState->SelectedNotify.TrackIndex;
-    int notifyIdx = ActiveState->SelectedNotify.NotifyIndex;
-
     FAnimNotifyEvent& notify =
         ActiveState->NotifyTracks[trackIdx].Notifies[notifyIdx];
 
@@ -670,16 +943,9 @@ void SAnimationViewerWindow::RenderNotifyProperties()
         ImGuiInputTextFlags_EnterReturnsTrue |
         ImGuiInputTextFlags_AutoSelectAll))
     {
-        FName NewName(nameBuffer);
-        notify.NotifyName = NewName;
-
-        if (UAnimSequence* Anim = ActiveState->CurrentAnimation)
-        {
-            if (UAnimDataModel* Model = Anim->GetDataModel())
-            {
-                Model->NotifyTracks[trackIdx].Notifies[notifyIdx].NotifyName = NewName;
-            }
-        }
+        notify.NotifyName = FName(nameBuffer);
+        ActiveState->bIsDirty = true;
+        ActiveState->bNotifyTracksNeedSync = true;
     }
 
     ImGui::Dummy(ImVec2(0, 10));
@@ -694,15 +960,8 @@ void SAnimationViewerWindow::RenderNotifyProperties()
         0.01f, 0.0f, ActiveState->TotalTime, "%.2f s"))
     {
         notify.TriggerTime = std::clamp(notify.TriggerTime, 0.0f, ActiveState->TotalTime);
-
-        // Model sync
-        if (UAnimSequence* Anim = ActiveState->CurrentAnimation)
-        {
-            if (UAnimDataModel* Model = Anim->GetDataModel())
-            {
-                Model->NotifyTracks[trackIdx].Notifies[notifyIdx].TriggerTime = notify.TriggerTime;
-            }
-        }
+        ActiveState->bIsDirty = true;
+        ActiveState->bNotifyTracksNeedSync = true;
     }
 
     ImGui::Dummy(ImVec2(0, 8));
@@ -717,15 +976,8 @@ void SAnimationViewerWindow::RenderNotifyProperties()
         0.01f, 0.0f, ActiveState->TotalTime, "%.2f s"))
     {
         notify.Duration = std::max(0.0f, notify.Duration);
-
-        // Model sync
-        if (UAnimSequence* Anim = ActiveState->CurrentAnimation)
-        {
-            if (UAnimDataModel* Model = Anim->GetDataModel())
-            {
-                Model->NotifyTracks[trackIdx].Notifies[notifyIdx].Duration = notify.Duration;
-            }
-        }
+        ActiveState->bIsDirty = true;
+        ActiveState->bNotifyTracksNeedSync = true;
     }
 
     ImGui::Dummy(ImVec2(0, 10));
@@ -749,15 +1001,8 @@ void SAnimationViewerWindow::RenderNotifyProperties()
         ImGuiColorEditFlags_DisplayRGB))
     {
         notify.Color = FLinearColor(col[0], col[1], col[2], col[3]);
-
-        // Model sync
-        if (UAnimSequence* Anim = ActiveState->CurrentAnimation)
-        {
-            if (UAnimDataModel* Model = Anim->GetDataModel())
-            {
-                Model->NotifyTracks[trackIdx].Notifies[notifyIdx].Color = notify.Color;
-            }
-        }
+        ActiveState->bIsDirty = true;
+        ActiveState->bNotifyTracksNeedSync = true;
     }
 
     ImGui::Spacing();
@@ -1270,6 +1515,7 @@ void SAnimationViewerWindow::RenderLeftTrackList(float width, float RowHeight, f
             int idx = ActiveState->NotifyTracks.size();
             ActiveState->NotifyTracks.push_back(FNotifyTrack("Track " + std::to_string(idx)));
             ActiveState->bIsDirty = true;
+            ActiveState->bNotifyTracksNeedSync = true;
         }
         ImGui::PopStyleColor();
         ImGui::EndPopup();
@@ -1506,11 +1752,19 @@ void SAnimationViewerWindow::RenderTimelineGridBody(float RowHeight, const TArra
                     if (ImGui::MenuItem("Delete"))
                     {
                         Track.Notifies.erase(Track.Notifies.begin() + i);
+                        ActiveState->SelectedNotify.Invalidate(); // 삭제 시 선택 해제
                         ActiveState->bIsDirty = true;
+                        ActiveState->bNotifyTracksNeedSync = true;
+                        ImGui::EndPopup();
+                        break; // 삭제 후 루프 종료 (인덱스 무효화 방지)
                     }
 
                     if (ImGui::MenuItem("Add Duration +0.2s"))
+                    {
                         Track.Notifies[i].Duration += 0.2f;
+                        ActiveState->bIsDirty = true;
+                        ActiveState->bNotifyTracksNeedSync = true;
+                    }
 
                     ImGui::EndPopup();
                 }
@@ -1529,6 +1783,7 @@ void SAnimationViewerWindow::RenderTimelineGridBody(float RowHeight, const TArra
                 if (ImGui::IsItemDeactivatedAfterEdit())
                 {
                     ActiveState->bIsDirty = true;
+                    ActiveState->bNotifyTracksNeedSync = true;
                 }
             }
         }
@@ -1574,6 +1829,7 @@ void SAnimationViewerWindow::RenderTimelineGridBody(float RowHeight, const TArra
 
                     ActiveState->NotifyTracks[NotifyIndex].Notifies.Add(newNotify);
                     ActiveState->bIsDirty = true;
+                    ActiveState->bNotifyTracksNeedSync = true;
                 }
                 ImGui::PopStyleColor();
                 ImGui::EndPopup();
@@ -1649,9 +1905,6 @@ void SAnimationViewerWindow::BuildLeftRows(TArray<FString>& OutRows)
         for (auto& Track : ActiveState->NotifyTracks)
             OutRows.push_back(Track.Name);
     }
-
-    OutRows.push_back("Curves");
-    OutRows.push_back("Attributes");
 }
 
 void SAnimationViewerWindow::BuildRowToNotifyIndex(const TArray<FString>& InRows, TArray<int>& OutMapping)
@@ -1666,24 +1919,19 @@ void SAnimationViewerWindow::BuildRowToNotifyIndex(const TArray<FString>& InRows
     // i.e., LeftRows:
     // [0] Notifies
     // [1..N] NotifyTrack (only when expanded)
-    // [... ] Curves
-    // [... ] Attributes
 
     // Notify Tracks only if unfolded
     if (!ActiveState->bFoldNotifies) {
         for (int i = 0; i < ActiveState->NotifyTracks.size(); ++i)
             OutMapping.push_back(i);
     }
-
-    OutMapping.push_back(-1);     // Curves
-    OutMapping.push_back(-1);     // Attributes
 }
 
 void SAnimationViewerWindow::SyncNotifyTracksToDataModel()
 {
-    if (ActiveState && ActiveState->CurrentAnimation && ActiveState->CurrentAnimation->GetDataModel())
+    if (ActiveState && ActiveState->CurrentAnimation)
     {
-        ActiveState->CurrentAnimation->GetDataModel()->NotifyTracks = ActiveState->NotifyTracks;
+        ActiveState->CurrentAnimation->SetNotifyTracks(ActiveState->NotifyTracks);
     }
 }
 

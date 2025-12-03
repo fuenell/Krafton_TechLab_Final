@@ -1,7 +1,8 @@
 ﻿#include "pch.h"
 #include "ObjectFactory.h"
-// 전역 오브젝트 배열 정의 (한 번만!)
-TArray<UObject*> GUObjectArray;
+// 전역 오브젝트 맵 정의 (O(1) 삭제를 위해 TMap 사용)
+TMap<uint32, UObject*> GUObjectArray;
+uint32 GUObjectIndexCounter = 0;
 
 namespace ObjectFactory
 {
@@ -23,17 +24,16 @@ namespace ObjectFactory
         if (it == reg.end()) return nullptr;
         return it->second();
     }
-    
+
     UObject* NewObject(UClass* Class)
     {
         UObject* Obj = ConstructObject(Class);
         if (!Obj) return nullptr;
 
-        int32 idx = -1;
-
-        idx = GUObjectArray.Add(Obj);
-
-        Obj->InternalIndex = static_cast<uint32>(idx);
+        // 고유 인덱스 할당
+        uint32 idx = ++GUObjectIndexCounter;
+        GUObjectArray[idx] = Obj;
+        Obj->InternalIndex = idx;
 
         static TMap<UClass*, int> NameCounters;
         int Count = ++NameCounters[Class];
@@ -54,25 +54,13 @@ namespace ObjectFactory
     {
         if (!Obj) return nullptr;
 
-        // 배열에 등록: 빈 슬롯 재사용
-        int32 idx = -1;
-
-        idx = GUObjectArray.Add(Obj);
-        //}
-        Obj->InternalIndex = static_cast<uint32>(idx);
+        // 고유 인덱스 할당
+        uint32 idx = ++GUObjectIndexCounter;
+        GUObjectArray[idx] = Obj;
+        Obj->InternalIndex = idx;
 
         static TMap<UClass*, int> NameCounters;
         int Count = ++NameCounters[Class];
-
-        // NOTE: 복제 시 이름을 그대로 유지
-        //const std::string base = Class->Name; // FName -> string
-        //std::string unique;
-        //unique.reserve(base.size() + 1 + 12);            // "_" + 최대 10~12자리 여유
-        //unique.append(base);
-        //unique.push_back('_');
-        //unique.append(std::to_string(Count));
-
-        //Obj->ObjectName = FName(unique);
 
         return Obj;
     }
@@ -81,59 +69,60 @@ namespace ObjectFactory
     {
         if (!Obj) return;
 
-        // Important: DO NOT dereference Obj fields before verifying it is still in GUObjectArray.
-        int32 foundIndex = -1;
-        for (int32 i = 0; i < GUObjectArray.Num(); ++i)
+        // 안전하게 전체 순회하여 포인터 비교로 찾기 (dangling pointer 대응)
+        for (auto it = GUObjectArray.begin(); it != GUObjectArray.end(); ++it)
         {
-            if (GUObjectArray[i] == Obj)
+            if (it->second == Obj)
             {
-                foundIndex = i;
-                break;
+                GUObjectArray.erase(it);  // 실제로 엔트리 제거 (sparse 유지)
+                Obj->DestroyInternal();
+                return;
             }
         }
-        if (foundIndex < 0)
-        {
-            // Not managed or already deleted.
-            return;
-        }
+        // Not managed or already deleted.
+    }
 
-        GUObjectArray[foundIndex] = nullptr;
-        // Safe to delete now; Obj still valid since we found it in GUObjectArray
-        Obj->DestroyInternal();
+    void DeleteObjectFast(UObject* Obj)
+    {
+        if (!Obj) return;
+
+        // InternalIndex로 O(1) 조회
+        uint32 idx = Obj->InternalIndex;
+        auto it = GUObjectArray.find(idx);
+
+        // 안전 검증: 맵에 있고, 같은 객체인지 확인 (dangling pointer 대응)
+        if (it != GUObjectArray.end() && it->second == Obj)
+        {
+            GUObjectArray.erase(it);
+            Obj->DestroyInternal();
+        }
+        // else: Not managed or already deleted (dangling pointer case)
     }
 
     void DeleteAll(bool bCallBeginDestroy)
     {
-        // 실제 삭제 (역순 안전)
-        for (int32 i = GUObjectArray.Num() - 1; i >= 0; --i)
+        // 복사본으로 순회 (삭제 중 맵 수정 방지)
+        TArray<UObject*> ObjectsToDelete;
+        for (auto& pair : GUObjectArray)
         {
-            if (UObject* Obj = GUObjectArray[i])
+            if (pair.second)
             {
-                DeleteObject(Obj);
+                ObjectsToDelete.Add(pair.second);
             }
         }
-        GUObjectArray.Empty();
-        GUObjectArray.Shrink();
+
+        for (UObject* Obj : ObjectsToDelete)
+        {
+            DeleteObject(Obj);
+        }
+
+        GUObjectArray.clear();
+        GUObjectIndexCounter = 0;
     }
 
-    // (선택) null 슬롯 압축
+    // TMap 사용 시 CompactNullSlots는 더 이상 필요 없음
     void CompactNullSlots()
     {
-        int32 write = 0;
-        for (int32 read = 0; read < GUObjectArray.Num(); ++read)
-        {
-            if (UObject* Obj = GUObjectArray[read])
-            {
-                if (write != read)
-                {
-                    GUObjectArray[write] = Obj;
-                    Obj->InternalIndex = static_cast<uint32>(write);
-                    GUObjectArray[read] = nullptr;
-                }
-                ++write;
-            }
-        }
-        // 크기(Num) 축소 + 불필요한 capacity도 반환
-        GUObjectArray.SetNum(write);
+        // TMap은 삭제 시 자동으로 엔트리가 제거되므로 별도 압축 불필요
     }
 }

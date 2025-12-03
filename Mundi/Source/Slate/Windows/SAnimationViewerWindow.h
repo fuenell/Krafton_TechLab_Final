@@ -18,6 +18,8 @@ public:
     virtual void OnUpdate(float DeltaSeconds) override;
     virtual void PreRenderViewportUpdate() override;
     virtual void OnSave() override;
+    virtual void OnSaveAs() override;
+    virtual void OnLoad() override;
 
 protected:
     virtual ViewerState* CreateViewerState(const char* Name, UEditorAssetPreviewContext* Context) override;

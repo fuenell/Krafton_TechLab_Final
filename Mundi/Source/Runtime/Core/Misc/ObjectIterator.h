@@ -8,22 +8,30 @@ class TObjectIterator
 public:
 	TObjectIterator()
 	{
-		++(*this); // 첫 번째 유효 객체로 이동
+		// TMap의 begin()으로 시작
+		MapIterator = GUObjectArray.begin();
+		AdvanceToNextValidObject();
 	}
 
 	// 다음 객체로 이동
 	TObjectIterator& operator++()
 	{
-		++CurrentIndex;
-		AdvanceToNextValidObject();
+		if (MapIterator != GUObjectArray.end())
+		{
+			++MapIterator;
+			AdvanceToNextValidObject();
+		}
 		return *this;
 	}
 
 	// 현재 객체에 접근
 	TObject* operator*() const
 	{
-		// 이 시점의 CurrentIndex는 유효한 TObject를 가리키고 있어야 함
-		return static_cast<TObject*>(GUObjectArray[CurrentIndex]);
+		if (MapIterator != GUObjectArray.end())
+		{
+			return static_cast<TObject*>(MapIterator->second);
+		}
+		return nullptr;
 	}
 
 	// 현재 객체에 접근 (포인터 연산자)
@@ -35,34 +43,31 @@ public:
 	// 비교 연산자
 	bool operator!=(const TObjectIterator& Other) const
 	{
-		return CurrentIndex != Other.CurrentIndex;
+		return MapIterator != Other.MapIterator;
 	}
 
 	// bool 변환 연산자
 	explicit operator bool() const
 	{
-		// CurrentIndex가 배열 범위 내에 있는지 확인
-		return CurrentIndex < GUObjectArray.Num();
+		return MapIterator != GUObjectArray.end();
 	}
 
 private:
-	// 현재 인덱스부터 시작하여 다음 유효 객체를 찾는 헬퍼 함수
+	// 현재 위치부터 다음 유효 객체를 찾는 헬퍼 함수
 	void AdvanceToNextValidObject()
 	{
-		while (CurrentIndex < GUObjectArray.Num())
+		while (MapIterator != GUObjectArray.end())
 		{
-			UObject* Object = GUObjectArray[CurrentIndex];
+			UObject* Object = MapIterator->second;
 			// 현재 객체가 유효하고, TObject 타입이면 검색 종료
 			if (Object && Object->IsA<TObject>())
 			{
 				break;
 			}
-
-			// 다음 인덱스로 이동
-			++CurrentIndex;
+			++MapIterator;
 		}
 	}
 
 private:
-	int32 CurrentIndex = -1;
+	typename TMap<uint32, UObject*>::iterator MapIterator;
 };
